@@ -1,0 +1,206 @@
+@model List<SchoolMS.Domain.TestMark>
+@{ Layout = null; }
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Test Result — @ViewBag.ExamName</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#fff;color:#1a1035;font-size:13px;}
+.page{max-width:900px;margin:0 auto;padding:24px;}
+.school-hdr{text-align:center;border-bottom:2px solid #6d28d9;padding-bottom:14px;margin-bottom:18px;}
+.school-hdr h1{font-size:22px;font-weight:800;color:#6d28d9;}
+.school-hdr p{font-size:13px;color:#666;margin-top:3px;}
+.result-meta{display:flex;gap:24px;background:#f5f3ff;border-radius:10px;padding:12px 16px;margin-bottom:18px;flex-wrap:wrap;}
+.meta-item label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#7c6fa0;}
+.meta-item div{font-size:14px;font-weight:800;color:#1a1035;margin-top:2px;}
+table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+thead th{background:#6d28d9;color:#fff;padding:9px 12px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;text-align:left;}
+tbody td{padding:9px 12px;border-bottom:1px solid #e5e0fa;font-size:13px;font-weight:500;}
+tbody tr:nth-child(even){background:#faf9ff;}
+tbody tr:last-child td{border-bottom:none;}
+.grade{display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;border-radius:6px;font-size:11px;font-weight:800;}
+.g-ap,.g-a{background:#ecfdf5;color:#065f46;}
+.g-b{background:#dbeafe;color:#1e40af;}
+.g-c{background:#fffbeb;color:#92400e;}
+.g-d{background:#ffedd5;color:#9a3412;}
+.g-f{background:#fef2f2;color:#991b1b;}
+.pass{color:#059669;font-weight:800;}
+.fail{color:#dc2626;font-weight:800;}
+.summary-row{background:#f5f3ff!important;font-weight:800;}
+.section-hdr{background:#ede9fe;padding:10px 14px;border-radius:8px;font-size:14px;font-weight:800;color:#5b21b6;margin:18px 0 8px;}
+.sign-row{display:flex;justify-content:space-between;margin-top:40px;padding-top:16px;border-top:1px solid #e5e0fa;}
+.sign-box{text-align:center;min-width:150px;}
+.sign-box .line{border-bottom:1px solid #333;margin-bottom:6px;height:30px;}
+.sign-box label{font-size:11px;color:#666;}
+@@media print {
+  .no-print{display:none!important;}
+  body{font-size:12px;}
+  .page{padding:10px;}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  @* ── Print controls ─────────────────────────────────────────── *@
+  <div class="no-print" style="display:flex;gap:10px;margin-bottom:16px;justify-content:flex-end;">
+    <button onclick="window.print()"
+      style="padding:9px 18px;background:linear-gradient(90deg,#6d28d9,#db2777);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">
+      🖨️ Print
+    </button>
+    <button onclick="window.close()"
+      style="padding:9px 18px;background:#f5f3ff;color:#6d28d9;border:1.5px solid #c4b5fd;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">
+      ✕ Close
+    </button>
+  </div>
+
+  @* ── School header ──────────────────────────────────────────── *@
+  <div class="school-hdr">
+    <img src="/images/rk-logo.png" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid #e8a020;margin:0 auto 8px;display:block;"/>
+    <h1>RK Classes</h1>
+    <p>Test Result Report</p>
+  </div>
+
+  @* ── Meta info ──────────────────────────────────────────────── *@
+  @{
+    var examName = ViewBag.ExamName as string ?? "";
+    var first    = Model.FirstOrDefault();
+  }
+  <div class="result-meta">
+    <div class="meta-item"><label>Exam / Test</label><div>@examName</div></div>
+    @if (first != null)
+    {
+      <div class="meta-item"><label>Class</label><div>@first.ClassName</div></div>
+    }
+    <div class="meta-item"><label>Date</label><div>@DateTime.Today.ToString("dd MMM yyyy")</div></div>
+    <div class="meta-item"><label>Total Students</label><div>@Model.Select(m=>m.StudentId).Distinct().Count()</div></div>
+  </div>
+
+  @if (!Model.Any())
+  {
+    <p style="text-align:center;color:#666;padding:30px;">No marks data found for the selected filters.</p>
+  }
+  else
+  {
+    @* Group by student for student-wise view *@
+    var byStudent = Model
+        .GroupBy(m => m.StudentId)
+        .OrderBy(g => g.First().RollNo)
+        .ToList();
+
+    @* ── Class Summary Table ──────────────────────────────────── *@
+    <div class="section-hdr">📊 Class Summary</div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Roll No</th><th>Student Name</th>
+          @foreach(var sub in Model.Select(m=>m.SubjectName).Distinct().OrderBy(s=>s))
+          {<th>@sub</th>}
+          <th>Total</th><th>Max</th><th>%</th><th>Grade</th><th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+      @{ int sn=0; }
+      @foreach (var sg in byStudent)
+      {
+        sn++;
+        var sf = sg.First();
+        var subNames = Model.Select(m=>m.SubjectName).Distinct().OrderBy(s=>s).ToList();
+        var total  = sg.Sum(m => m.MarksObtained ?? 0);
+        var maxTot = sg.Sum(m => m.MaxMarks);
+        var pct    = maxTot > 0 ? total * 100 / maxTot : 0;
+        var grade  = pct>=90?"A+":pct>=80?"A":pct>=70?"B+":pct>=60?"B":pct>=50?"C":pct>=35?"D":"F";
+        var pass   = sg.All(m => m.MarksObtained.HasValue && m.MarksObtained.Value * 100 / m.MaxMarks >= 35);
+        var gc     = new[]{"A+","A"}.Contains(grade)?"g-a g-ap":grade=="B+"||grade=="B"?"g-b":grade=="C"?"g-c":grade=="D"?"g-d":"g-f";
+        <tr>
+          <td>@sn</td>
+          <td><strong>@(sf.RollNo??"—")</strong></td>
+          <td>@sf.FullName</td>
+          @foreach (var sub in subNames)
+          {
+            var mk = sg.FirstOrDefault(m=>m.SubjectName==sub);
+            var isAb = mk?.Grade == "AB";
+            <td style="@(isAb?"color:#991b1b;font-weight:800;":"")">@(isAb ? "AB" : mk?.MarksObtained?.ToString("0") ?? "—")</td>
+          }
+          <td><strong>@total.ToString("0")</strong></td>
+          <td>@maxTot</td>
+          <td><strong>@pct.ToString("0")%</strong></td>
+          <td><span class="grade @gc">@grade</span></td>
+          <td class="@(pass?"pass":"fail")">@(pass?"PASS":"FAIL")</td>
+        </tr>
+      }
+      @* Stats row *@
+      @{
+        var allPct  = byStudent.Select(sg => { var t=sg.Sum(m=>m.MarksObtained??0); var mx=sg.Sum(m=>m.MaxMarks); return mx>0?t*100m/mx:0; }).ToList();
+        var avgPct  = allPct.Any() ? allPct.Average() : 0;
+        var passCount = byStudent.Count(sg => sg.All(m=>m.MarksObtained.HasValue && m.MarksObtained.Value*100/m.MaxMarks>=35));
+      }
+      <tr class="summary-row">
+        <td colspan="3" style="color:#5b21b6;">📊 Class Statistics</td>
+        @foreach (var _ in Model.Select(m=>m.SubjectName).Distinct()) {<td>—</td>}
+        <td colspan="3" style="color:#5b21b6;">Average: @avgPct.ToString("0.1")%</td>
+        <td colspan="2" style="color:#059669;">Pass: @passCount / @byStudent.Count</td>
+      </tr>
+      </tbody>
+    </table>
+
+    @* ── Individual Student Cards ────────────────────────────── *@
+    <div class="section-hdr">📋 Individual Student Results</div>
+    @foreach (var sg in byStudent)
+    {
+      var sf     = sg.First();
+      var total  = sg.Sum(m => m.MarksObtained ?? 0);
+      var maxTot = sg.Sum(m => m.MaxMarks);
+      var pct    = maxTot > 0 ? total * 100 / maxTot : 0;
+      var grade  = pct>=90?"A+":pct>=80?"A":pct>=70?"B+":pct>=60?"B":pct>=50?"C":pct>=35?"D":"F";
+      var pass   = sg.All(m => m.MarksObtained.HasValue && m.MarksObtained.Value * 100 / m.MaxMarks >= 35);
+
+      <div style="border:1.5px solid #e5e0fa;border-radius:10px;padding:14px;margin-bottom:14px;break-inside:avoid;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div>
+            <div style="font-size:15px;font-weight:800;">@sf.FullName</div>
+            <div style="font-size:12px;color:#7c6fa0;">Adm: @sf.AdmissionNo | Roll: @(sf.RollNo??"—") | @sf.ClassName</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:20px;font-weight:800;color:#6d28d9;">@pct.ToString("0")%</div>
+            <div class="@(pass?"pass":"fail")" style="font-size:13px;">@grade — @(pass?"PASS":"FAIL")</div>
+          </div>
+        </div>
+        <table style="margin-bottom:0;">
+          <thead><tr><th>Subject</th><th>Marks</th><th>Max</th><th>%</th><th>Grade</th></tr></thead>
+          <tbody>
+          @foreach (var mk in sg.OrderBy(m=>m.SubjectName))
+          {
+            var mp  = mk.MaxMarks > 0 ? (double)(mk.MarksObtained??0) * 100 / mk.MaxMarks : 0;
+            var mg  = mp>=90?"A+":mp>=80?"A":mp>=70?"B+":mp>=60?"B":mp>=50?"C":mp>=35?"D":"F";
+            var mgc = new[]{"A+","A"}.Contains(mg)?"g-a g-ap":mg=="B+"||mg=="B"?"g-b":mg=="C"?"g-c":mg=="D"?"g-d":"g-f";
+            <tr>
+              <td>@mk.SubjectName</td>
+              <td><strong>@(mk.MarksObtained?.ToString("0")??"AB")</strong></td>
+              <td>@mk.MaxMarks</td>
+              <td>@mp.ToString("0")%</td>
+              <td><span class="grade @mgc">@mg</span></td>
+            </tr>
+          }
+          <tr style="background:#f5f3ff;font-weight:800;">
+            <td>TOTAL</td><td>@total.ToString("0")</td><td>@maxTot</td>
+            <td>@pct.ToString("0")%</td>
+            <td class="@(pass?"pass":"fail")">@(pass?"PASS":"FAIL")</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+
+  <div class="sign-row no-print">
+    <div class="sign-box"><div class="line"></div><label>Class Teacher</label></div>
+    <div class="sign-box"><div class="line"></div><label>Principal</label></div>
+    <div class="sign-box"><div class="line"></div><label>Parent / Guardian</label></div>
+  </div>
+</div>
+</body>
+</html>

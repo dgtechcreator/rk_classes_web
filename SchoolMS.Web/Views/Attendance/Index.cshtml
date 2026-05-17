@@ -1,0 +1,157 @@
+@model SchoolMS.Web.ViewModels.AttendanceVM
+@{ ViewData["Title"] = "Attendance"; }
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div><h1>📅 Attendance</h1><p>Mark daily student attendance</p></div>
+    <a href="/Attendance/Report" class="btn btn-outline"><i class="fas fa-chart-bar"></i> View Report</a>
+  </div>
+</div>
+
+<form method="get" action="/Attendance/Index" id="flt">
+<div class="filter-bar">
+  <i class="fas fa-filter" style="color:var(--mu);font-size:13px;"></i>
+  <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" class="fc" style="width:160px;"/>
+  <select name="sectionId" class="fs">
+    <option value="">All Sections</option>
+    @foreach(var s in Model.Sections){<option value="@s.SectionId" selected=@(Model.SectionId==s.SectionId?"selected":"")>@s.SectionName</option>}
+  </select>
+  <select name="classId" class="fs">
+    <option value="">— Select Class —</option>
+    @foreach(var c in Model.Classes){<option value="@c.ClassId" selected=@(Model.ClassId==c.ClassId?"selected":"")>@c.ClassName</option>}
+  </select>
+  <select name="batchId" class="fs">
+    <option value="">All Batches</option>
+    @foreach(var b in Model.Batches){<option value="@b.BatchId" selected=@(Model.BatchId==b.BatchId?"selected":"")>@b.BatchName</option>}
+  </select>
+  <button type="submit" class="btn btn-primary" style="white-space:nowrap;">
+    <i class="fas fa-search"></i> Search
+  </button>
+  @if (Model.ClassId.HasValue || Model.SectionId.HasValue || Model.BatchId.HasValue)
+  {
+    <a href="/Attendance/Index?date=@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-outline" style="white-space:nowrap;">
+      <i class="fas fa-times"></i> Clear
+    </a>
+  }
+</div>
+</form>
+
+@if (Model.Records.Any())
+{
+<div class="card">
+  <div class="card-hdr">
+    <span class="card-ttl"><i class="fas fa-users" style="color:var(--p);margin-right:6px;"></i>
+      @Model.Records.Count Students — @Model.Date.ToString("dddd, dd MMMM yyyy")
+    </span>
+    <div class="df g8">
+      <button class="btn btn-success btn-sm" onclick="markAll('Present')"><i class="fas fa-check"></i> All Present</button>
+      <button class="btn btn-danger btn-sm"  onclick="markAll('Absent')"><i class="fas fa-times"></i> All Absent</button>
+      <button class="btn btn-primary"        onclick="saveAtt()"><i class="fas fa-save"></i> Save Attendance</button>
+    </div>
+  </div>
+
+  <!-- Summary Bar -->
+  <div style="display:flex;gap:14px;margin-bottom:16px;padding:10px 14px;background:var(--sur2);border-radius:var(--rs);border:1px solid var(--bdr);">
+    <span style="font-size:13px;font-weight:700;">Total: <strong>@Model.Records.Count</strong></span>
+    <span style="font-size:13px;font-weight:700;color:var(--ok);">Present: <strong id="cP">0</strong></span>
+    <span style="font-size:13px;font-weight:700;color:var(--err);">Absent: <strong id="cA">0</strong></span>
+    <span style="font-size:13px;font-weight:700;color:var(--warn);">Late: <strong id="cL">0</strong></span>
+  </div>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead>
+      <tr><th>#</th><th>Photo</th><th>Roll</th><th>Student Name</th><th>Class / Section</th><th>Batch</th><th style="min-width:200px;">Attendance</th></tr>
+    </thead>
+    <tbody>
+    @{ int idx = 0; }
+    @foreach (var r in Model.Records)
+    {
+      idx++;
+      <tr>
+        <td class="text-mu fw7">@idx</td>
+        <td>
+          @if (!string.IsNullOrEmpty(r.ProfilePicPath)){<img src="@r.ProfilePicPath" class="stu-pic"/>}
+          else{<div class="stu-av" style="width:34px;height:34px;font-size:12px;">@r.FullName[0]</div>}
+        </td>
+        <td><span class="mono" style="font-size:12px;">@(r.RollNo??"—")</span></td>
+        <td><div class="fw7">@r.FullName</div><div style="font-size:11px;" class="text-mu">@r.AdmissionNo</div></td>
+        <td style="font-size:12.5px;">@r.ClassName / @r.SectionName</td>
+        <td><span class="badge b-purple" style="font-size:11px;">@r.BatchName</span></td>
+        <td>
+          <div class="att-grp" data-sid="@r.StudentId">
+            <button type="button" class="att-btn p @(r.AttendanceStatus=="Present"?"sel":"")" onclick="setAtt(@r.StudentId,'Present',this)">✓ Present</button>
+            <button type="button" class="att-btn a @(r.AttendanceStatus=="Absent"?"sel":"")"  onclick="setAtt(@r.StudentId,'Absent',this)">✗ Absent</button>
+            <button type="button" class="att-btn l @(r.AttendanceStatus=="Late"?"sel":"")"   onclick="setAtt(@r.StudentId,'Late',this)">⏰ Late</button>
+          </div>
+        </td>
+      </tr>
+    }
+    </tbody>
+  </table>
+  </div>
+</div>
+}
+else if (Model.ClassId.HasValue)
+{
+  <div class="card"><div class="empty"><div class="empty-ico">👥</div><h3>No students found</h3><p>No active students match your filter.</p></div></div>
+}
+else
+{
+  <div class="card"><div class="empty"><div class="empty-ico">📅</div><h3>Select Filters &amp; Search</h3><p>Choose a date, section, class and/or batch, then click <strong>Search</strong> to load students for the current academic year.</p></div></div>
+}
+
+@section Scripts {
+<script>
+const att = {};
+@foreach(var r in Model.Records){@Html.Raw($"att[{r.StudentId}]='{r.AttendanceStatus}';")}
+
+function setAtt(sid, status, btn) {
+  att[sid] = status;
+  const grp = btn.closest('.att-grp');
+  grp.querySelectorAll('.att-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  updateCounts();
+}
+function markAll(status) {
+  document.querySelectorAll('.att-grp').forEach(grp => {
+    const sid = parseInt(grp.dataset.sid);
+    att[sid] = status;
+    grp.querySelectorAll('.att-btn').forEach(b => b.classList.remove('sel'));
+    grp.querySelector('.att-btn.' + status[0].toLowerCase())?.classList.add('sel');
+  });
+  updateCounts();
+}
+function updateCounts() {
+  const vs = Object.values(att);
+  document.getElementById('cP').textContent = vs.filter(v=>v==='Present').length;
+  document.getElementById('cA').textContent = vs.filter(v=>v==='Absent').length;
+  document.getElementById('cL').textContent = vs.filter(v=>v==='Late').length;
+}
+async function saveAtt() {
+  const entries = Object.entries(att).map(([id,status])=>({studentId:parseInt(id),status,remarks:null}));
+  const res = await fetch('/Attendance/Save', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      date: '@Model.Date.ToString("yyyy-MM-dd")',
+      classId: @(Model.ClassId?.ToString()??"null"),
+      sectionId: @(Model.SectionId?.ToString()??"null"),
+      batchId: @(Model.BatchId?.ToString()??"null"),
+      entries
+    })
+  });
+  const d = await res.json();
+  if (d.success) toast('✅ ' + d.message, 'success');
+  else toast('❌ Error saving attendance', 'danger');
+}
+updateCounts();
+function toast(msg, type) {
+  const el = document.createElement('div');
+  el.className = 'alert alert-' + (type==='success'?'success':'danger');
+  el.textContent = msg;
+  Object.assign(el.style, {position:'fixed',top:'76px',right:'22px',zIndex:'9999',minWidth:'260px',boxShadow:'0 4px 20px rgba(0,0,0,.13)'});
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 4000);
+}
+</script>
+}

@@ -1,0 +1,238 @@
+@model List<SchoolMS.Domain.StudentFee>
+@{
+    ViewData["Title"] = "Fees Due";
+    var years    = ViewBag.Years    as List<SchoolMS.Domain.AcademicYear> ?? new();
+    var classes  = ViewBag.Classes  as List<SchoolMS.Domain.Class>        ?? new();
+    var sections = ViewBag.Sections as List<SchoolMS.Domain.Section>      ?? new();
+    var feeTypes = ViewBag.FeeTypes as List<SchoolMS.Domain.FeeType>      ?? new();
+    int page = ViewBag.Page ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    int total = ViewBag.Total ?? 0;
+}
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <div class="breadcrumb"><a href="/FeeStructure/Index">Fee Structure</a> / <span>Fees Due</span></div>
+      <h1>📋 Fees Due Ledger</h1>
+      <p>@total fee entries found</p>
+    </div>
+    <a href="/FeeStructure/Index" class="btn btn-outline"><i class="fas fa-cog"></i> Fee Setup</a>
+  </div>
+</div>
+
+@* ── Summary strip ──────────────────────────────────────────── *@
+@if (Model.Any())
+{
+  var totalAmt  = Model.Sum(f => f.Amount);
+  var totalPaid = Model.Sum(f => f.PaidAmount);
+  var totalBal  = Model.Sum(f => f.BalanceAmount);
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
+    <div class="card" style="padding:14px 16px;border-top:3.5px solid var(--p);">
+      <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Total Billed</div>
+      <div style="font-size:20px;font-weight:800;color:var(--txt);">₹@totalAmt.ToString("N0")</div>
+    </div>
+    <div class="card" style="padding:14px 16px;border-top:3.5px solid var(--ok);">
+      <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Collected</div>
+      <div style="font-size:20px;font-weight:800;color:var(--ok);">₹@totalPaid.ToString("N0")</div>
+    </div>
+    <div class="card" style="padding:14px 16px;border-top:3.5px solid var(--err);">
+      <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Balance Due</div>
+      <div style="font-size:20px;font-weight:800;color:var(--err);">₹@totalBal.ToString("N0")</div>
+    </div>
+    <div class="card" style="padding:14px 16px;border-top:3.5px solid var(--warn);">
+      <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Overdue</div>
+      <div style="font-size:20px;font-weight:800;color:var(--warn);">@Model.Count(f=>f.Status=="Pending" && f.DueDate<DateTime.Today)</div>
+    </div>
+  </div>
+}
+
+@* ── Filters ────────────────────────────────────────────────── *@
+<form method="get" action="/FeeStructure/FeesDue">
+<div class="filter-bar">
+  <i class="fas fa-filter" style="color:var(--mu);font-size:13px;"></i>
+  <select name="yearId" class="fs">
+    <option value="">All Years</option>
+    @foreach(var y in years){<option value="@y.YearId" selected=@((int?)ViewBag.YearId==y.YearId?"selected":"")>@y.YearName @(y.IsCurrent?"✓ Current":"")</option>}
+  </select>
+  <select name="sectionId" class="fs">
+    <option value="">All Sections</option>
+    @foreach(var s in sections){<option value="@s.SectionId" selected=@((int?)ViewBag.SectionId==s.SectionId?"selected":"")>@s.SectionName</option>}
+  </select>
+  <select name="classId" class="fs">
+    <option value="">All Classes</option>
+    @foreach(var c in classes){<option value="@c.ClassId" selected=@((int?)ViewBag.ClassId==c.ClassId?"selected":"")>@c.ClassName</option>}
+  </select>
+  <select name="feeTypeId" class="fs">
+    <option value="">All Fee Types</option>
+    @foreach(var ft in feeTypes){<option value="@ft.FeeTypeId" selected=@((int?)ViewBag.FeeTypeId==ft.FeeTypeId?"selected":"")>@ft.TypeName</option>}
+  </select>
+  <select name="status" class="fs">
+    <option value="">All Status</option>
+    @foreach(var s in new[]{"Pending","Partial","Paid","Waived"}){<option value="@s" selected=@(ViewBag.Status==s?"selected":"")>@s</option>}
+  </select>
+  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Filter</button>
+  <a href="/FeeStructure/FeesDue" class="btn btn-outline btn-sm"><i class="fas fa-times"></i> Clear</a>
+</div>
+</form>
+
+@* ── Table ──────────────────────────────────────────────────── *@
+<div class="card">
+  <div class="tbl-wrap">
+    @if (!Model.Any())
+    {
+      <div class="empty">
+        <div class="empty-ico">📋</div>
+        <h3>No fee records found</h3>
+        <p>Generate monthly fees or apply filters to see records.</p>
+      </div>
+    }
+    else
+    {
+    <table>
+      <thead>
+        <tr>
+          <th>Student</th><th>Class / Section</th><th>Fee Type</th>
+          <th>Month</th><th>Due Date</th>
+          <th>Billed</th><th>Paid</th><th>Balance</th>
+          <th>Status</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+      @foreach (var f in Model)
+      {
+        var isOverdue = f.Status != "Paid" && f.DueDate.HasValue && f.DueDate < DateTime.Today;
+        var balClr = f.BalanceAmount <= 0 ? "var(--ok)" : isOverdue ? "var(--err)" : "var(--warn)";
+        <tr>
+          <td>
+            <div class="fw7">@f.StudentName</div>
+            <div style="font-size:11px;" class="text-mu">@f.AdmissionNo | Roll: @(f.RollNo??"—")</div>
+          </td>
+          <td style="font-size:13px;">@f.ClassName / @f.SectionName</td>
+          <td><span class="badge b-purple">@f.FeeTypeName</span></td>
+          <td style="font-size:13px;color:var(--mu);">@(f.Month ?? "—")</td>
+          <td>
+            <span style="font-size:12.5px;@(isOverdue?"color:var(--err);font-weight:700;":"color:var(--mu);")" >
+              @(f.DueDate?.ToString("dd MMM yyyy") ?? "—")
+              @if(isOverdue){<text> ⚠️</text>}
+            </span>
+          </td>
+          <td style="font-weight:700;">₹@f.Amount.ToString("N0")</td>
+          <td style="color:var(--ok);font-weight:700;">₹@f.PaidAmount.ToString("N0")</td>
+          <td style="font-weight:800;color:@balClr;">₹@f.BalanceAmount.ToString("N0")</td>
+          <td>
+            <span class="badge @(f.Status=="Paid"?"b-present":f.Status=="Partial"?"b-late":f.Status=="Waived"?"b-inactive":"b-absent")">
+              @f.Status
+            </span>
+          </td>
+          <td>
+            @if (f.Status != "Paid" && f.Status != "Waived")
+            {
+              <button class="btn btn-primary btn-sm"
+                      onclick="openCollect(@f.StudentFeeId,'@f.StudentName','@f.FeeTypeName','@f.Month',@f.BalanceAmount)">
+                <i class="fas fa-rupee-sign"></i> Collect
+              </button>
+            }
+            else
+            {
+              <span style="font-size:12px;color:var(--ok);font-weight:700;"><i class="fas fa-check-circle"></i> Done</span>
+            }
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+    }
+  </div>
+
+  @* Pagination *@
+  @if (totalPages > 1)
+  {
+    <div class="pagi">
+      @for (int i = 1; i <= totalPages; i++)
+      {
+        <a href="/FeeStructure/FeesDue?page=@i&yearId=@ViewBag.YearId&classId=@ViewBag.ClassId&sectionId=@ViewBag.SectionId&feeTypeId=@ViewBag.FeeTypeId&status=@ViewBag.Status"
+           class="pg-btn @(i == page ? "active" : "")">@i</a>
+      }
+    </div>
+  }
+</div>
+
+@* ── Collect Fee Modal ───────────────────────────────────────── *@
+<div id="collectModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:#fff;border:1.5px solid var(--bdr);border-radius:var(--r);padding:28px;width:100%;max-width:480px;box-shadow:var(--sh2);">
+    <div style="font-size:17px;font-weight:900;margin-bottom:4px;color:var(--txt);">💰 Collect Fee Payment</div>
+    <div id="collectInfo" style="font-size:13px;color:var(--mu);margin-bottom:18px;"></div>
+
+    <form method="post" action="/FeeStructure/CollectFee">
+      <input type="hidden" name="studentFeeId" id="sfId"/>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+        <div class="fg" style="grid-column:1/-1;">
+          <label>Amount to Collect (₹) *</label>
+          <input type="number" name="paidAmount" id="payAmt" class="fc" step="0.01" min="1" required oninput="calcModal()"/>
+        </div>
+        <div class="fg">
+          <label>Discount (₹)</label>
+          <input type="number" name="discount" id="discAmt" class="fc" value="0" step="0.01" min="0" oninput="calcModal()"/>
+        </div>
+        <div class="fg">
+          <label>Late Fine (₹)</label>
+          <input type="number" name="lateFine" id="fineAmt" class="fc" value="0" step="0.01" min="0" oninput="calcModal()"/>
+        </div>
+        <div class="fg">
+          <label>Payment Mode *</label>
+          <select name="paymentMode" class="fs" required>
+            @foreach(var m in new[]{"Cash","Online Transfer","Cheque","Demand Draft"})
+            {<option value="@m">@m</option>}
+          </select>
+        </div>
+        <div class="fg">
+          <label>Transaction Ref</label>
+          <input type="text" name="transactionRef" class="fc" placeholder="UTR / Cheque No."/>
+        </div>
+        <div class="fg" style="grid-column:1/-1;">
+          <label>Remarks</label>
+          <input type="text" name="remarks" class="fc" placeholder="Optional remarks"/>
+        </div>
+      </div>
+
+      <div class="net-box" style="margin-top:12px;">
+        <span class="net-lbl">Net Amount</span>
+        <span class="net-val" id="modalNet">₹0.00</span>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+        <button type="button" class="btn btn-outline" onclick="closeCollect()">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Record Payment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+function openCollect(sfId, name, feeType, month, balance) {
+    document.getElementById('sfId').value = sfId;
+    document.getElementById('payAmt').value = balance;
+    document.getElementById('discAmt').value = 0;
+    document.getElementById('fineAmt').value = 0;
+    document.getElementById('collectInfo').textContent =
+        `Student: ${name} | Fee: ${feeType}${month ? ' | Month: '+month : ''} | Balance: ₹${balance.toFixed(2)}`;
+    calcModal();
+    document.getElementById('collectModal').style.display = 'flex';
+}
+function closeCollect() {
+    document.getElementById('collectModal').style.display = 'none';
+}
+function calcModal() {
+    const p = parseFloat(document.getElementById('payAmt')?.value)  || 0;
+    const d = parseFloat(document.getElementById('discAmt')?.value) || 0;
+    const f = parseFloat(document.getElementById('fineAmt')?.value) || 0;
+    document.getElementById('modalNet').textContent = '₹' + (p - d + f).toFixed(2);
+}
+// Close on backdrop click
+document.getElementById('collectModal').addEventListener('click', function(e) {
+    if (e.target === this) closeCollect();
+});
+</script>
+}

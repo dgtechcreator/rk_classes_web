@@ -1,0 +1,66 @@
+@model List<SchoolMS.Domain.AppUser>
+@{ ViewData["Title"] = "User Management"; }
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div><h1>👥 User Management</h1><p>Manage system users and access permissions</p></div>
+    <a href="/Users/Create" class="btn btn-primary"><i class="fas fa-user-plus"></i> Add User</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="tbl-wrap">
+    @if (!Model.Any())
+    {<div class="empty"><div class="empty-ico">👥</div><h3>No users found</h3></div>}
+    else
+    {
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Username</th><th>Role</th><th>Email</th><th>Phone</th><th>Permissions</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+      @foreach (var u in Model)
+      {
+        <tr>
+          <td>
+            <div class="fw7">@u.FullName</div>
+            @if (u.UserId == 1){<span class="badge b-purple" style="font-size:10px;">Super Admin</span>}
+          </td>
+          <td><span class="mono" style="font-size:12px;color:var(--p);">@u.Username</span></td>
+          <td><span class="badge b-blue">@u.RoleName</span></td>
+          <td class="text-mu" style="font-size:12.5px;">@(u.Email??"—")</td>
+          <td style="font-size:12.5px;">@(u.Phone??"—")</td>
+          <td>
+            @if (u.UserId == 1)
+            {<span style="font-size:12px;color:var(--ok);font-weight:700;"><i class="fas fa-infinity"></i> All Access</span>}
+            else
+            {<span class="badge @(u.PermCount>0?"b-present":"b-inactive")">@u.PermCount module@(u.PermCount==1?"":"s")</span>}
+          </td>
+          <td><span class="badge @(u.IsActive?"b-active":"b-inactive")">@(u.IsActive?"Active":"Inactive")</span></td>
+          <td>
+            <div class="df g8">
+              <a href="/Users/Permissions/@u.UserId" class="btn btn-outline btn-sm" title="Permissions"
+                 @(u.UserId==1?"style='display:none'":"")>
+                <i class="fas fa-key"></i>
+              </a>
+              <a href="/Users/Edit/@u.UserId" class="btn btn-outline btn-sm btn-icon" title="Edit">
+                <i class="fas fa-edit"></i>
+              </a>
+              @if (u.UserId != 1)
+              {
+                <form method="post" action="/Users/ToggleActive/@u.UserId">
+                  <button type="submit" class="btn @(u.IsActive?"btn-warning":"btn-success") btn-sm"
+                          title="@(u.IsActive?"Deactivate":"Activate")">
+                    <i class="fas @(u.IsActive?"fa-ban":"fa-check")"></i>
+                  </button>
+                </form>
+              }
+            </div>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+    }
+  </div>
+</div>

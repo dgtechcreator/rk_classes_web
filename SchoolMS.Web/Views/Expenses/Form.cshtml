@@ -1,0 +1,76 @@
+@model SchoolMS.Web.ViewModels.ExpenseFormVM
+@{ ViewData["Title"] = Model.Expense.ExpenseId == 0 ? "Record Expense" : "Edit Expense"; }
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <div class="breadcrumb"><a href="/Expenses/Index">Expenses</a> / <span>@ViewData["Title"]</span></div>
+      <h1>@ViewData["Title"]</h1>
+    </div>
+  </div>
+</div>
+
+<form method="post" action="/Expenses/Save" style="max-width:700px;">
+  <input type="hidden" name="Expense.ExpenseId" value="@Model.Expense.ExpenseId"/>
+
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-ttl"><i class="fas fa-receipt" style="color:var(--p);margin-right:6px;"></i>Expense Details</span>
+    </div>
+
+    <div class="form-grid">
+      <div class="fg" style="grid-column:1/-1;">
+        <label>Title / Description *</label>
+        <input type="text" name="Expense.Title" value="@Model.Expense.Title" class="fc" placeholder="e.g. Monthly electricity bill" required/>
+      </div>
+
+      <div class="fg">
+        <label>Category *</label>
+        <select name="Expense.CategoryId" class="fs" required>
+          <option value="">— Select Category —</option>
+          @foreach(var c in Model.Categories)
+          {<option value="@c.CategoryId" selected=@(Model.Expense.CategoryId==c.CategoryId?"selected":"")>@c.CategoryName</option>}
+        </select>
+      </div>
+
+      <div class="fg">
+        <label>Amount (₹) *</label>
+        <input type="number" name="Expense.Amount" value="@(Model.Expense.Amount > 0 ? Model.Expense.Amount.ToString() : "")"
+          class="fc" placeholder="0.00" step="0.01" min="0" required/>
+      </div>
+
+      <div class="fg">
+        <label>Expense Date *</label>
+        <input type="date" name="Expense.ExpenseDate" value="@Model.Expense.ExpenseDate.ToString("yyyy-MM-dd")" class="fc" required/>
+      </div>
+
+      <div class="fg">
+        <label>Payment Mode</label>
+        <select name="Expense.PaymentMode" class="fs">
+          @foreach(var m in new[]{"Cash","Online Transfer","Cheque","Demand Draft"})
+          {<option value="@m" selected=@(Model.Expense.PaymentMode==m?"selected":"")>@m</option>}
+        </select>
+      </div>
+
+      <div class="fg">
+        <label>Bill / Invoice No</label>
+        <input type="text" name="Expense.BillNo" value="@Model.Expense.BillNo" class="fc" placeholder="Bill or invoice reference"/>
+      </div>
+
+      <div class="fg">
+        <label>Vendor / Payee Name</label>
+        <input type="text" name="Expense.VendorName" value="@Model.Expense.VendorName" class="fc" placeholder="Vendor or payee name"/>
+      </div>
+
+      <div class="fg" style="grid-column:1/-1;">
+        <label>Additional Notes</label>
+        <textarea name="Expense.Description" class="fc" rows="3" placeholder="Any additional details...">@Model.Expense.Description</textarea>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:1px solid var(--bdr);">
+      <a href="/Expenses/Index" class="btn btn-outline"><i class="fas fa-times"></i> Cancel</a>
+      <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Expense</button>
+    </div>
+  </div>
+</form>

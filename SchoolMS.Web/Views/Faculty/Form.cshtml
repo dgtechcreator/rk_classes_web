@@ -1,0 +1,164 @@
+@model SchoolMS.Domain.Faculty
+@{
+    ViewData["Title"] = Model.FacultyId == 0 ? "Add Faculty" : "Edit Faculty";
+    var designations = ViewBag.Designations as List<SchoolMS.Domain.Designation> ?? new();
+    var classes      = ViewBag.Classes      as List<SchoolMS.Domain.Class>        ?? new();
+    var sections     = ViewBag.Sections     as List<SchoolMS.Domain.Section>      ?? new();
+}
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <div class="breadcrumb"><a href="/Faculty/Index">Faculty</a> / <span>@ViewData["Title"]</span></div>
+      <h1>@ViewData["Title"]</h1>
+    </div>
+  </div>
+</div>
+
+<form method="post" action="/Faculty/Save" enctype="multipart/form-data">
+  <input type="hidden" name="FacultyId"      value="@Model.FacultyId"/>
+  <input type="hidden" name="ProfilePicPath" value="@Model.ProfilePicPath"/>
+
+  <div style="display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:start;">
+
+    @* Photo *@
+    <div class="card" style="text-align:center;padding:22px;">
+      <div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Profile Photo</div>
+      <label for="picInput" style="cursor:pointer;display:block;">
+        @if (!string.IsNullOrEmpty(Model.ProfilePicPath))
+        {<img id="picPrev" src="@Model.ProfilePicPath" class="pic-preview" style="margin:0 auto 10px;display:block;"/>
+         <div id="picZone" class="pic-zone" style="display:none;padding:12px;">
+           <i class="fas fa-camera" style="font-size:22px;color:var(--mu2);"></i>
+           <div style="font-size:11.5px;color:var(--mu);">Click to change</div>
+         </div>}
+        else
+        {<img id="picPrev" src="" class="pic-preview" style="margin:0 auto 10px;display:none;"/>
+         <div id="picZone" class="pic-zone">
+           <i class="fas fa-camera" style="font-size:28px;color:var(--mu2);"></i>
+           <div style="font-size:12.5px;font-weight:700;color:var(--mu);">Click to upload</div>
+           <div style="font-size:11px;color:var(--mu2);">JPG, PNG up to 2MB</div>
+         </div>}
+        <input type="file" id="picInput" name="ProfilePic" accept="image/*" style="display:none;" onchange="previewPic(this)"/>
+      </label>
+    </div>
+
+    @* Form body *@
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+      @* Personal Info *@
+      <div class="card">
+        <div class="card-hdr">
+          <span class="card-ttl"><i class="fas fa-user" style="color:var(--p);margin-right:6px;"></i>Personal Information</span>
+        </div>
+        <div class="form-grid">
+          <div class="fg full">
+            <label>Full Name *</label>
+            <input type="text" name="FullName" value="@Model.FullName" class="fc" placeholder="Faculty full name" required/>
+          </div>
+          <div class="fg">
+            <label>Date of Birth</label>
+            <input type="date" name="DateOfBirth" value="@Model.DateOfBirth?.ToString("yyyy-MM-dd")" class="fc"/>
+          </div>
+          <div class="fg">
+            <label>Gender</label>
+            <select name="Gender" class="fs">
+              <option value="">— Select —</option>
+              @foreach(var g in new[]{"Male","Female","Other"}){<option value="@g" selected=@(Model.Gender==g?"selected":"")>@g</option>}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Blood Group</label>
+            <select name="BloodGroup" class="fs">
+              <option value="">— Select —</option>
+              @foreach(var b in new[]{"A+","A-","B+","B-","O+","O-","AB+","AB-"}){<option value="@b" selected=@(Model.BloodGroup==b?"selected":"")>@b</option>}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Aadhar No</label>
+            <input type="text" name="AadharNo" value="@Model.AadharNo" class="fc" placeholder="XXXX XXXX XXXX"/>
+          </div>
+          <div class="fg">
+            <label>Phone *</label>
+            <input type="text" name="Phone" value="@Model.Phone" class="fc" placeholder="Primary contact"/>
+          </div>
+          <div class="fg">
+            <label>Alternate Phone</label>
+            <input type="text" name="AlternatePhone" value="@Model.AlternatePhone" class="fc" placeholder="Alternate contact"/>
+          </div>
+          <div class="fg">
+            <label>Email</label>
+            <input type="email" name="Email" value="@Model.Email" class="fc" placeholder="email@example.com"/>
+          </div>
+          <div class="fg full">
+            <label>Address</label>
+            <textarea name="Address" class="fc" rows="2" placeholder="Residential address">@Model.Address</textarea>
+          </div>
+        </div>
+      </div>
+
+      @* Professional Info *@
+      <div class="card">
+        <div class="card-hdr">
+          <span class="card-ttl"><i class="fas fa-chalkboard-teacher" style="color:var(--p);margin-right:6px;"></i>Professional Details</span>
+        </div>
+        <div class="form-grid">
+          <div class="fg">
+            <label>Designation *</label>
+            <select name="DesignationId" class="fs" required>
+              <option value="">— Select Designation —</option>
+              @foreach(var d in designations){<option value="@d.DesignationId" selected=@(Model.DesignationId==d.DesignationId?"selected":"")>@d.DesignationName</option>}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Date of Joining</label>
+            <input type="date" name="DateOfJoining" value="@Model.DateOfJoining?.ToString("yyyy-MM-dd")" class="fc"/>
+          </div>
+          <div class="fg">
+            <label>Qualification</label>
+            <input type="text" name="Qualification" value="@Model.Qualification" class="fc" placeholder="e.g. B.Ed, M.A., M.Sc."/>
+          </div>
+          <div class="fg">
+            <label>Specialization / Subjects</label>
+            <input type="text" name="Specialization" value="@Model.Specialization" class="fc" placeholder="e.g. Mathematics, Science"/>
+          </div>
+          <div class="fg">
+            <label>Monthly Salary (₹)</label>
+            <input type="number" name="Salary" value="@Model.Salary" class="fc" placeholder="0.00" step="0.01" min="0"/>
+          </div>
+          <div class="fg">
+            <label>Status</label>
+            <select name="Status" class="fs">
+              @foreach(var s in new[]{"Active","Inactive","Relieved"}){<option value="@s" selected=@(Model.Status==s?"selected":"")>@s</option>}
+            </select>
+          </div>
+          <div class="fg full">
+            <label>Remarks</label>
+            <textarea name="Remarks" class="fc" rows="2" placeholder="Any additional notes">@Model.Remarks</textarea>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:1px solid var(--bdr);">
+          <a href="/Faculty/Index" class="btn btn-outline"><i class="fas fa-times"></i> Cancel</a>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Faculty</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+@section Scripts {
+<script>
+function previewPic(input) {
+  if (input.files && input.files[0]) {
+    const r = new FileReader();
+    r.onload = e => {
+      const prev = document.getElementById('picPrev');
+      const zone = document.getElementById('picZone');
+      prev.src = e.target.result; prev.style.display = 'block';
+      if (zone) zone.style.display = 'none';
+    };
+    r.readAsDataURL(input.files[0]);
+  }
+}
+</script>
+}

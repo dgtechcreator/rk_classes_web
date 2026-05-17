@@ -1,0 +1,185 @@
+@model SchoolMS.Web.ViewModels.StudentFormVM
+@{ ViewData["Title"] = Model.Student.StudentId == 0 ? "New Student Registration" : "Edit Student"; }
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <div class="breadcrumb"><a href="/Student/Index">Students</a> / <span>@ViewData["Title"]</span></div>
+      <h1>@ViewData["Title"]</h1>
+    </div>
+  </div>
+</div>
+
+<form method="post" action="/Student/Save" enctype="multipart/form-data">
+  <input type="hidden" name="Student.StudentId"      value="@Model.Student.StudentId"/>
+  <input type="hidden" name="Student.ProfilePicPath" value="@Model.Student.ProfilePicPath"/>
+
+  <div style="display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:start;">
+
+    <!-- Photo Column -->
+    <div class="card" style="text-align:center;padding:22px;">
+      <div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;">Profile Photo</div>
+      <label for="picInput" style="cursor:pointer;display:block;">
+        @if (!string.IsNullOrEmpty(Model.Student.ProfilePicPath))
+        {
+          <img id="picPrev" src="@Model.Student.ProfilePicPath" class="pic-preview" style="margin:0 auto 10px;display:block;"/>
+          <div id="picZone" class="pic-zone" style="display:none;">
+            <i class="fas fa-camera" style="font-size:28px;color:var(--mu2);"></i>
+            <div style="font-size:12.5px;font-weight:700;color:var(--mu);">Click to change</div>
+          </div>
+        }
+        else
+        {
+          <img id="picPrev" src="" class="pic-preview" style="margin:0 auto 10px;display:none;"/>
+          <div id="picZone" class="pic-zone">
+            <i class="fas fa-camera" style="font-size:28px;color:var(--mu2);"></i>
+            <div style="font-size:12.5px;font-weight:700;color:var(--mu);">Click to upload</div>
+            <div style="font-size:11px;color:var(--mu2);">JPG, PNG up to 2MB</div>
+          </div>
+        }
+        <input type="file" id="picInput" name="ProfilePic" accept="image/*" style="display:none;" onchange="previewPic(this)"/>
+      </label>
+      <div style="font-size:11px;color:var(--mu2);margin-top:8px;">Student profile photo</div>
+    </div>
+
+    <!-- Main Form -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+      <!-- Personal -->
+      <div class="card">
+        <div class="card-hdr">
+          <span class="card-ttl"><i class="fas fa-user" style="color:var(--p);margin-right:6px;"></i>Personal Information</span>
+        </div>
+        <div class="form-grid">
+          <div class="fg full">
+            <label>Full Name *</label>
+            <input type="text" name="Student.FullName" value="@Model.Student.FullName" class="fc" placeholder="Student's full name" required/>
+          </div>
+          <div class="fg">
+            <label>Date of Birth</label>
+            <input type="date" name="Student.DateOfBirth" value="@Model.Student.DateOfBirth?.ToString("yyyy-MM-dd")" class="fc"/>
+          </div>
+          <div class="fg">
+            <label>Gender</label>
+            <select name="Student.Gender" class="fs">
+              <option value="">— Select —</option>
+              @foreach(var g in new[]{"Male","Female","Other"})
+              {<option value="@g" selected=@(Model.Student.Gender==g?"selected":"")>@g</option>}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Blood Group</label>
+            <select name="Student.BloodGroup" class="fs">
+              <option value="">— Select —</option>
+              @foreach(var b in new[]{"A+","A-","B+","B-","O+","O-","AB+","AB-"})
+              {<option value="@b" selected=@(Model.Student.BloodGroup==b?"selected":"")>@b</option>}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Father's Name</label>
+            <input type="text" name="Student.FatherName" value="@Model.Student.FatherName" class="fc" placeholder="Father's full name"/>
+          </div>
+          <div class="fg">
+            <label>Mother's Name</label>
+            <input type="text" name="Student.MotherName" value="@Model.Student.MotherName" class="fc" placeholder="Mother's full name"/>
+          </div>
+          <div class="fg">
+            <label>Contact No.</label>
+            <input type="text" name="Student.Phone" value="@Model.Student.Phone" class="fc" placeholder="Primary contact number"/>
+          </div>
+          <div class="fg">
+            <label>Father Contact No.</label>
+            <input type="text" name="Student.FatherPhone" value="@Model.Student.FatherPhone" class="fc" placeholder="Father's phone number"/>
+          </div>
+          <div class="fg">
+            <label>Mother Contact No.</label>
+            <input type="text" name="Student.MotherPhone" value="@Model.Student.MotherPhone" class="fc" placeholder="Mother's phone number"/>
+          </div>
+          <div class="fg">
+            <label>Email</label>
+            <input type="email" name="Student.Email" value="@Model.Student.Email" class="fc" placeholder="email@example.com"/>
+          </div>
+          <div class="fg full">
+            <label>Address</label>
+            <textarea name="Student.Address" class="fc" rows="2" placeholder="Full address...">@Model.Student.Address</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Academic -->
+      <div class="card">
+        <div class="card-hdr">
+          <span class="card-ttl"><i class="fas fa-school" style="color:var(--p);margin-right:6px;"></i>Academic Details</span>
+        </div>
+        <div class="form-grid">
+          <div class="fg">
+            <label>Academic Year *</label>
+            <select name="Student.AcademicYearId" class="fs" required>
+              <option value="">— Select Year —</option>
+              @foreach(var y in Model.Years)
+              {<option value="@y.YearId" selected=@(Model.Student.AcademicYearId==y.YearId?"selected":"")>@y.YearName @(y.IsCurrent?"(Current)":"")</option>}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Section *</label>
+            <select name="Student.SectionId" class="fs" required>
+              <option value="">— Select Section —</option>
+              @foreach(var s in Model.Sections)
+              {<option value="@s.SectionId" selected=@(Model.Student.SectionId==s.SectionId?"selected":"")>@s.SectionName</option>}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Class *</label>
+            <select name="Student.ClassId" class="fs" required>
+              <option value="">— Select Class —</option>
+              @foreach(var c in Model.Classes)
+              {<option value="@c.ClassId" selected=@(Model.Student.ClassId==c.ClassId?"selected":"")>@c.ClassName</option>}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Batch *</label>
+            <select name="Student.BatchId" class="fs" required>
+              <option value="">— Select Batch —</option>
+              @foreach(var b in Model.Batches)
+              {<option value="@b.BatchId" selected=@(Model.Student.BatchId==b.BatchId?"selected":"")>@b.BatchName</option>}
+            </select>
+          </div>
+          <div class="fg">
+            <label>Roll Number</label>
+            <input type="text" name="Student.RollNo" value="@Model.Student.RollNo" class="fc" placeholder="Roll No."/>
+          </div>
+          <div class="fg">
+            <label>Status</label>
+            <select name="Student.Status" class="fs">
+              @foreach(var s in new[]{"Active","Inactive","Transferred"})
+              {<option value="@s" selected=@(Model.Student.Status==s?"selected":"")>@s</option>}
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:1px solid var(--bdr);">
+          <a href="/Student/Index" class="btn btn-outline"><i class="fas fa-times"></i> Cancel</a>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Student</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+@section Scripts {
+<script>
+function previewPic(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const prev = document.getElementById('picPrev');
+      const zone = document.getElementById('picZone');
+      prev.src = e.target.result;
+      prev.style.display = 'block';
+      if (zone) zone.style.display = 'none';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+</script>
+}

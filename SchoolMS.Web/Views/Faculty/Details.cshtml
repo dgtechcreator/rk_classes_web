@@ -1,0 +1,92 @@
+@model SchoolMS.Domain.Faculty
+@{
+    ViewData["Title"] = "Faculty Profile";
+    var subjects = ViewBag.Subjects as List<SchoolMS.Domain.FacultySubject> ?? new();
+}
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <div class="breadcrumb"><a href="/Faculty/Index">Faculty</a> / <span>Profile</span></div>
+      <h1>Faculty Profile</h1>
+    </div>
+    <a href="/Faculty/Edit/@Model.FacultyId" class="btn btn-primary"><i class="fas fa-edit"></i> Edit</a>
+  </div>
+</div>
+
+<div class="g2" style="align-items:start;">
+
+  @* Left — Photo + quick info *@
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div class="card" style="text-align:center;padding:28px;">
+      @if (!string.IsNullOrEmpty(Model.ProfilePicPath))
+      {<img src="@Model.ProfilePicPath" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--bdr2);margin-bottom:14px;"/>}
+      else
+      {<div style="width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,#4338ca,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:900;color:#fff;margin:0 auto 14px;">@Model.FullName[0]</div>}
+
+      <div style="font-size:18px;font-weight:800;color:var(--txt);">@Model.FullName</div>
+      <div style="font-size:13px;color:var(--mu);margin-top:3px;">@Model.DesignationName</div>
+      <span class="mono text-p" style="font-size:12px;display:block;margin-top:5px;">@Model.EmployeeCode</span>
+      <span class="badge @(Model.Status=="Active"?"b-active":Model.Status=="Relieved"?"b-absent":"b-inactive")" style="margin-top:10px;">@Model.Status</span>
+
+      <div style="margin-top:18px;">
+        @foreach(var (lbl,val) in new[]{
+          ("Phone",     Model.Phone??"—"),
+          ("Alt. Phone",Model.AlternatePhone??"—"),
+          ("Email",     Model.Email??"—"),
+          ("Blood Group",Model.BloodGroup??"—")
+        })
+        {<div class="info-row"><span class="info-lbl">@lbl</span><span class="info-val">@val</span></div>}
+      </div>
+    </div>
+
+    @* Assigned Subjects *@
+    @if (subjects.Any())
+    {
+      <div class="card">
+        <div class="card-hdr"><span class="card-ttl"><i class="fas fa-book" style="color:var(--p);margin-right:6px;"></i>Assigned Subjects</span></div>
+        @foreach (var s in subjects)
+        {
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr);">
+            <span class="badge b-purple" style="font-size:11px;">@s.SubjectName</span>
+            <span style="font-size:12px;color:var(--mu);">@s.ClassName @(s.SectionName != null ? $"({s.SectionName})" : "")</span>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  @* Right — Details *@
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div class="card">
+      <div class="card-hdr"><span class="card-ttl">Personal Information</span></div>
+      @foreach(var (lbl,val) in new[]{
+        ("Date of Birth",    Model.DateOfBirth?.ToString("dd MMM yyyy")??"—"),
+        ("Gender",           Model.Gender??"—"),
+        ("Aadhar No",        Model.AadharNo??"—"),
+        ("Address",          Model.Address??"—")
+      })
+      {<div class="info-row"><span class="info-lbl">@lbl</span><span class="info-val">@val</span></div>}
+    </div>
+
+    <div class="card">
+      <div class="card-hdr"><span class="card-ttl">Professional Information</span></div>
+      @foreach(var (lbl,val) in new[]{
+        ("Qualification",   Model.Qualification??"—"),
+        ("Specialization",  Model.Specialization??"—"),
+        ("Date of Joining", Model.DateOfJoining?.ToString("dd MMM yyyy")??"—"),
+        ("Monthly Salary",  Model.Salary.HasValue ? $"₹{Model.Salary.Value:N0}" : "—"),
+        ("Remarks",         Model.Remarks??"—")
+      })
+      {<div class="info-row"><span class="info-lbl">@lbl</span><span class="info-val">@val</span></div>}
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.Remarks))
+    {
+      <div class="card">
+        <div class="card-hdr"><span class="card-ttl">Remarks</span></div>
+        <p style="font-size:13.5px;color:var(--txt);">@Model.Remarks</p>
+      </div>
+    }
+  </div>
+</div>

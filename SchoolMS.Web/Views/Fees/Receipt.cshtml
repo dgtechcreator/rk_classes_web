@@ -1,0 +1,158 @@
+@model SchoolMS.Domain.FeePayment
+@{ Layout = null; }
+@functions {
+    static string AmountInWords(decimal number)
+    {
+        if (number == 0) return "Zero";
+        string[] ones = { "", "One","Two","Three","Four","Five","Six","Seven","Eight","Nine",
+            "Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen" };
+        string[] tens = { "","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety" };
+        long n = (long)number;
+        string w = "";
+        if (n >= 10000000) { w += AmountInWords(n / 10000000) + " Crore "; n %= 10000000; }
+        if (n >= 100000)   { w += AmountInWords(n / 100000)   + " Lakh ";  n %= 100000; }
+        if (n >= 1000)     { w += AmountInWords(n / 1000)     + " Thousand "; n %= 1000; }
+        if (n >= 100)      { w += ones[n / 100] + " Hundred "; n %= 100; }
+        if (n >= 20)       { w += tens[n / 10] + " "; n %= 10; }
+        if (n > 0)         { w += ones[n] + " "; }
+        return w.Trim();
+    }
+}
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Fee Receipt — @Model.ReceiptNo</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
+.page { background: #fff; max-width: 780px; margin: 0 auto; border: 2px solid #000; padding: 0; }
+.no-print { max-width: 780px; margin: 0 auto 16px; display: flex; gap: 10px; }
+.no-print button { flex: 1; padding: 10px; font-size: 14px; font-weight: 700; cursor: pointer; border-radius: 6px; border: none; }
+.btn-print { background: #1a237e; color: #fff; }
+.btn-close  { background: #fff; color: #1a237e; border: 2px solid #1a237e !important; }
+
+/* ── Header ───── */
+.top-label { font-size: 11px; font-weight: 700; padding: 4px 10px; border-bottom: 1px solid #000; }
+.institute-name { text-align: center; font-size: 22px; font-weight: 900; letter-spacing: 1px;
+  padding: 8px 10px 4px; text-transform: uppercase; }
+.logo-addr-row { display: flex; border-top: 1px solid #000; }
+.logo-side { display: flex; align-items: center; gap: 12px; padding: 10px 14px; flex: 1.4; border-right: 1px solid #000; }
+.logo-side img { height: 70px; object-fit: contain; }
+.addr-text { font-size: 11px; line-height: 1.6; }
+.student-side { flex: 1; padding: 10px 14px; font-size: 11.5px; line-height: 1.8; }
+.student-side .s-name { font-weight: 700; font-size: 13px; }
+
+/* ── Receipt Table ───── */
+.rtable { width: 100%; border-collapse: collapse; border-top: 1px solid #000; }
+.rtable td { border: 1px solid #000; padding: 6px 10px; font-size: 12px; vertical-align: middle; }
+.rtable .hdr-cell { font-weight: 700; font-size: 13px; }
+.rtable .wide { width: 40%; }
+.rtable .mid  { width: 35%; }
+.rtable .sml  { width: 25%; }
+
+/* ── Terms ───── */
+.terms { border-top: 1px solid #000; padding: 8px 14px 12px; font-size: 11px; line-height: 1.7; }
+.terms strong { font-size: 12px; }
+
+@@media print {
+  body { background: #fff; padding: 0; }
+  .no-print { display: none !important; }
+  .page { border: 1px solid #000; max-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div class="no-print">
+  <button class="btn-print" onclick="window.print()">🖨️ Print Receipt</button>
+  <button class="btn-close"  onclick="history.back()">✕ Close</button>
+</div>
+
+@{
+  var payYear    = Model.PaymentDate.Month >= 4
+                     ? $"{Model.PaymentDate.Year}-{Model.PaymentDate.Year+1}"
+                     : $"{Model.PaymentDate.Year-1}-{Model.PaymentDate.Year}";
+  var amtWords   = AmountInWords(Model.NetAmount) + " Only/-";
+  var isCheque   = Model.PaymentMode == "Cheque" || Model.PaymentMode == "Demand Draft";
+  var isOnline   = Model.PaymentMode == "Online Transfer" || Model.PaymentMode == "UPI";
+  var chequeNo   = isCheque  ? (Model.TransactionRef ?? "") : "";
+  var onlineRef  = isOnline  ? (Model.TransactionRef ?? "") : "";
+}
+
+<div class="page">
+
+  @* ── Top label ─────────────────────────────────────────── *@
+  <div class="top-label">Kapil Sir's</div>
+
+  @* ── Institute name ────────────────────────────────────── *@
+  <div class="institute-name">Ramjeet Kalavati Educational Institute</div>
+
+  @* ── Logo + address | Student info ─────────────────────── *@
+  <div class="logo-addr-row">
+    <div class="logo-side">
+      <img src="/images/rk-logo.png" alt="RK Classes"/>
+      <div class="addr-text">
+        Shop No. 2, Santosh Society, Krishna Naga,<br/>
+        Near Eden School Kajupada Pipe Line,<br/>
+        Sakinaka, Mumbai 400072.<br/>
+        <b>E-Mail:</b> rkclasseskapilsir2002@gmail.com<br/>
+        <b>Website:</b> www.myrkclasses.com<br/>
+        <b>Mobile No:</b> 9870375795 / 8108499214
+      </div>
+    </div>
+    <div class="student-side">
+      <div class="s-name">@(Model.StudentName?.ToUpper() ?? "—")</div>
+      <div>Address:</div>
+      <div><b>Contact No.:</b> @("—")</div>
+      <div><b>E-Mail:</b> @(Model.Remarks ?? "-")</div>
+    </div>
+  </div>
+
+  @* ── Receipt details table ──────────────────────────────── *@
+  <table class="rtable">
+    <tr>
+      <td class="hdr-cell wide">Fees Receipt (@payYear)</td>
+      <td class="mid">Receipt Date: @Model.PaymentDate.ToString("dd-MM-yyyy")</td>
+      <td class="sml">Receipt No.: @Model.ReceiptNo</td>
+    </tr>
+    <tr>
+      <td>Course:- @(Model.ClassName ?? "—")</td>
+      <td colspan="2">Stream / Medium:- @(Model.SectionName ?? "—")</td>
+    </tr>
+    <tr>
+      <td colspan="3">Amount received:- @Model.NetAmount.ToString("N0")/-</td>
+    </tr>
+    <tr>
+      <td colspan="3">Amount received (in words):- @amtWords</td>
+    </tr>
+    <tr>
+      <td>Payment Mode:- @Model.PaymentMode</td>
+      <td colspan="2">Cheque No.: @chequeNo</td>
+    </tr>
+    <tr>
+      <td>Cheque Dated:-</td>
+      <td colspan="2">Bank Name:-</td>
+    </tr>
+    <tr>
+      <td>IFSC Code:-</td>
+      <td colspan="2">Online Tranx. No.:- @onlineRef</td>
+    </tr>
+    <tr>
+      <td>Due Date:-</td>
+      <td colspan="2">Due fees:-</td>
+    </tr>
+  </table>
+
+  @* ── Terms ──────────────────────────────────────────────── *@
+  <div class="terms">
+    <strong>Term and Conditions:</strong><br/>
+    1) This receipt of fees is an acknowledgement of the payment made to<br/>
+    2) Present this receipt of fees whenever demanded.<br/>
+    3) Fees once paid is neither refundable nor transferable under any circumstances<br/>
+    4) This is a computer generated voucher, signature is not required
+  </div>
+
+</div>
+</body>
+</html>

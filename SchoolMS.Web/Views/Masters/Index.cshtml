@@ -1,0 +1,625 @@
+@{
+    ViewData["Title"] = "Masters";
+    var years        = ViewBag.Years    as List<SchoolMS.Domain.AcademicYear> ?? new();
+    var classes      = ViewBag.Classes  as List<SchoolMS.Domain.Class>        ?? new();
+    var sections     = ViewBag.Sections as List<SchoolMS.Domain.Section>      ?? new();
+    var batches      = ViewBag.Batches  as List<SchoolMS.Domain.Batch>        ?? new();
+    var subjects     = ViewBag.Subjects as List<SchoolMS.Domain.Subject>      ?? new();
+    var feeTypes     = ViewBag.FeeTypes as List<SchoolMS.Domain.FeeType>      ?? new();
+    var feeList      = ViewBag.FeeList  as List<SchoolMS.Domain.FeeStructure> ?? new();
+    int currentYearId   = (int)(ViewBag.CurrentYearId ?? 0);
+    string currentYearName = (string)(ViewBag.CurrentYearName ?? "");
+    var openTab      = TempData["OpenTab"]?.ToString() ?? "years";
+}
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <h1>🗂️ Masters</h1>
+      <p>Manage Academic Years, Classes, Sections, Batches and Fee Types</p>
+    </div>
+  </div>
+</div>
+
+@if (TempData["Success"] != null)
+{<div class="alert alert-success"><i class="fas fa-check-circle"></i> @TempData["Success"]</div>}
+@if (TempData["Error"] != null)
+{<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> @TempData["Error"]</div>}
+
+@* ── Tab bar ──────────────────────────────────────────────── *@
+<div style="display:flex;gap:4px;border-bottom:2px solid var(--bdr);margin-bottom:22px;" id="tabBar">
+  @{
+    var tabs = new[] {
+      ("years",    "🎓", "Academic Years",  years.Count(y=>y.IsActive)),
+      ("classes",  "🏫", "Std",            classes.Count(c=>c.IsActive)),
+      ("sections", "📚", "Medium/Stream",  sections.Count(s=>s.IsActive)),
+      ("batches",  "⏰", "Batches",        batches.Count(b=>b.IsActive)),
+      ("feesetup", "💰", "Fee Setup",      feeList.Count),
+      ("subjects", "📖", "Subjects",       subjects.Count(s=>s.IsActive))
+    };
+  }
+  @foreach (var (id, ico, lbl, cnt) in tabs)
+  {
+    <button class="tab-btn" data-tab="@id" onclick="switchTab('@id')"
+      style="padding:10px 20px;border:none;background:none;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--mu);border-bottom:2.5px solid transparent;margin-bottom:-2px;transition:all .15s;display:flex;align-items:center;gap:7px;">
+      <span>@ico</span> @lbl
+      <span style="background:#f5f3ff;color:var(--p);font-size:11px;font-weight:800;padding:2px 7px;border-radius:99px;border:1px solid #c4b5fd;">@cnt</span>
+    </button>
+  }
+</div>
+
+@* ════════════════════════════════════════════════════════════
+   TAB 1 — ACADEMIC YEARS
+   ════════════════════════════════════════════════════════════ *@
+<div id="tab-years" class="tab-panel">
+  <div class="g2" style="align-items:start;">
+
+    @* Add / Edit form *@
+    <div class="card" id="yearFormCard">
+      <div class="card-hdr">
+        <span class="card-ttl"><i class="fas fa-plus-circle" style="color:var(--p);margin-right:6px;"></i><span id="yearFormTitle">Add Academic Year</span></span>
+      </div>
+      <form method="post" action="/Masters/SaveYear">
+        <input type="hidden" name="yearId" id="yearId" value="0"/>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Year Name * <span style="font-weight:400;color:var(--mu);">(e.g. 2025-2026)</span></label>
+          <input type="text" name="yearName" id="yearName" class="fc" placeholder="2025-2026" required
+                 pattern="\d{4}-\d{4}" title="Format: YYYY-YYYY"/>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+          <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;cursor:pointer;">
+            <input type="checkbox" name="isCurrent" id="isCurrent" value="true" style="accent-color:var(--p);width:15px;height:15px;"/>
+            Set as Current Year
+          </label>
+          <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;cursor:pointer;">
+            <input type="checkbox" name="isActive" id="yearActive" value="true" checked style="accent-color:var(--p);width:15px;height:15px;"/>
+            Active
+          </label>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+          <button type="button" class="btn btn-outline" onclick="resetYearForm()"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    @* List *@
+    <div class="card" style="padding:0;">
+      <div class="card-hdr" style="padding:16px 18px;">
+        <span class="card-ttl">Academic Years (@years.Count total)</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Year</th><th>Status</th><th>Students</th><th></th></tr></thead>
+          <tbody>
+          @{ int n=0; }
+          @foreach (var y in years)
+          {
+            n++;
+            <tr>
+              <td class="text-mu fw7">@n</td>
+              <td>
+                <div class="fw7">@y.YearName</div>
+                @if (y.IsCurrent){<span class="badge b-present" style="margin-top:3px;">✓ Current</span>}
+              </td>
+              <td><span class="badge @(y.IsActive?"b-active":"b-inactive")">@(y.IsActive?"Active":"Inactive")</span></td>
+              <td><span class="badge b-blue">@y.StudentCount students</span></td>
+              <td>
+                <div class="df g8">
+                  <button class="btn btn-outline btn-sm btn-icon"
+                    onclick="editYear(@y.YearId,'@y.YearName',@(y.IsCurrent?"true":"false"),@(y.IsActive?"true":"false"))"
+                    title="Edit"><i class="fas fa-edit"></i></button>
+                  @if (y.StudentCount == 0)
+                  {
+                    <form method="post" action="/Masters/DeleteYear/@y.YearId"
+                          onsubmit="return confirm('Delete @y.YearName?')">
+                      <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+                    </form>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+          @if (!years.Any())
+          {<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--mu);">No academic years yet</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+@* ════════════════════════════════════════════════════════════
+   TAB 2 — CLASSES
+   ════════════════════════════════════════════════════════════ *@
+<div id="tab-classes" class="tab-panel" style="display:none;">
+  <div class="g2" style="align-items:start;">
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-ttl"><i class="fas fa-plus-circle" style="color:var(--p);margin-right:6px;"></i><span id="classFormTitle">Add Std</span></span>
+      </div>
+      <form method="post" action="/Masters/SaveClass">
+        <input type="hidden" name="classId" id="classId" value="0"/>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Std Name * <span style="font-weight:400;color:var(--mu);">(e.g. Class 1, LKG, UKG)</span></label>
+          <input type="text" name="className" id="className" class="fc" placeholder="Class 1" required/>
+        </div>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Display Order <span style="font-weight:400;color:var(--mu);">(lower = first in lists)</span></label>
+          <input type="number" name="orderNo" id="orderNo" class="fc" placeholder="1" min="0" value="0"/>
+        </div>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px;">
+          <input type="checkbox" name="isActive" value="true" id="classActive" checked style="accent-color:var(--p);width:15px;height:15px;"/> Active
+        </label>
+        <div style="display:flex;gap:8px;">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+          <button type="button" class="btn btn-outline" onclick="resetClassForm()"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="padding:0;">
+      <div class="card-hdr" style="padding:16px 18px;">
+        <span class="card-ttl">Std (@classes.Count total)</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Order</th><th>Std Name</th><th>Status</th><th>Students</th><th></th></tr></thead>
+          <tbody>
+          @foreach (var c in classes)
+          {
+            <tr>
+              <td class="text-mu fw7">@c.OrderNo</td>
+              <td class="fw7">@c.ClassName</td>
+              <td><span class="badge @(c.IsActive?"b-active":"b-inactive")">@(c.IsActive?"Active":"Inactive")</span></td>
+              <td><span class="badge b-blue">@c.StudentCount students</span></td>
+              <td>
+                <div class="df g8">
+                  <button class="btn btn-outline btn-sm btn-icon"
+                    onclick="editClass(@c.ClassId,'@c.ClassName',@c.OrderNo,@(c.IsActive?"true":"false"))"
+                    title="Edit"><i class="fas fa-edit"></i></button>
+                  @if (c.StudentCount == 0)
+                  {
+                    <form method="post" action="/Masters/DeleteClass/@c.ClassId"
+                          onsubmit="return confirm('Delete @c.ClassName?')">
+                      <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+                    </form>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+          @if (!classes.Any())
+          {<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--mu);">No std yet</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+@* ════════════════════════════════════════════════════════════
+   TAB 3 — SECTIONS
+   ════════════════════════════════════════════════════════════ *@
+<div id="tab-sections" class="tab-panel" style="display:none;">
+  <div class="g2" style="align-items:start;">
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-ttl"><i class="fas fa-plus-circle" style="color:var(--p);margin-right:6px;"></i><span id="sectionFormTitle">Add Medium/Stream</span></span>
+      </div>
+      <form method="post" action="/Masters/SaveSection">
+        <input type="hidden" name="sectionId" id="sectionId" value="0"/>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Medium/Stream Name * <span style="font-weight:400;color:var(--mu);">(e.g. Hindi, English, Semi-English)</span></label>
+          <input type="text" name="sectionName" id="sectionName" class="fc" placeholder="Hindi" required/>
+        </div>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px;">
+          <input type="checkbox" name="isActive" value="true" id="sectionActive" checked style="accent-color:var(--p);width:15px;height:15px;"/> Active
+        </label>
+        <div style="display:flex;gap:8px;">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+          <button type="button" class="btn btn-outline" onclick="resetSectionForm()"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="padding:0;">
+      <div class="card-hdr" style="padding:16px 18px;">
+        <span class="card-ttl">Medium/Stream (@sections.Count total)</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Medium/Stream Name</th><th>Status</th><th>Students</th><th></th></tr></thead>
+          <tbody>
+          @{ int sn=0; }
+          @foreach (var s in sections)
+          {
+            sn++;
+            <tr>
+              <td class="text-mu fw7">@sn</td>
+              <td class="fw7">@s.SectionName</td>
+              <td><span class="badge @(s.IsActive?"b-active":"b-inactive")">@(s.IsActive?"Active":"Inactive")</span></td>
+              <td><span class="badge b-blue">@s.StudentCount students</span></td>
+              <td>
+                <div class="df g8">
+                  <button class="btn btn-outline btn-sm btn-icon"
+                    onclick="editSection(@s.SectionId,'@s.SectionName',@(s.IsActive?"true":"false"))"
+                    title="Edit"><i class="fas fa-edit"></i></button>
+                  @if (s.StudentCount == 0)
+                  {
+                    <form method="post" action="/Masters/DeleteSection/@s.SectionId"
+                          onsubmit="return confirm('Delete @s.SectionName?')">
+                      <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+                    </form>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+          @if (!sections.Any())
+          {<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--mu);">No medium/stream yet</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+@* ════════════════════════════════════════════════════════════
+   TAB 4 — BATCHES
+   ════════════════════════════════════════════════════════════ *@
+<div id="tab-batches" class="tab-panel" style="display:none;">
+  <div class="g2" style="align-items:start;">
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-ttl"><i class="fas fa-plus-circle" style="color:var(--p);margin-right:6px;"></i><span id="batchFormTitle">Add Batch</span></span>
+      </div>
+      <form method="post" action="/Masters/SaveBatch">
+        <input type="hidden" name="batchId" id="batchId" value="0"/>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Batch Name * <span style="font-weight:400;color:var(--mu);">(e.g. Morning, Afternoon, Evening)</span></label>
+          <input type="text" name="batchName" id="batchName" class="fc" placeholder="Morning" required/>
+        </div>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px;">
+          <input type="checkbox" name="isActive" value="true" id="batchActive" checked style="accent-color:var(--p);width:15px;height:15px;"/> Active
+        </label>
+        <div style="display:flex;gap:8px;">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+          <button type="button" class="btn btn-outline" onclick="resetBatchForm()"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="padding:0;">
+      <div class="card-hdr" style="padding:16px 18px;">
+        <span class="card-ttl">Batches (@batches.Count total)</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Batch Name</th><th>Status</th><th>Students</th><th></th></tr></thead>
+          <tbody>
+          @{ int bn=0; }
+          @foreach (var b in batches)
+          {
+            bn++;
+            <tr>
+              <td class="text-mu fw7">@bn</td>
+              <td class="fw7">@b.BatchName</td>
+              <td><span class="badge @(b.IsActive?"b-active":"b-inactive")">@(b.IsActive?"Active":"Inactive")</span></td>
+              <td><span class="badge b-blue">@b.StudentCount students</span></td>
+              <td>
+                <div class="df g8">
+                  <button class="btn btn-outline btn-sm btn-icon"
+                    onclick="editBatch(@b.BatchId,'@b.BatchName',@(b.IsActive?"true":"false"))"
+                    title="Edit"><i class="fas fa-edit"></i></button>
+                  @if (b.StudentCount == 0)
+                  {
+                    <form method="post" action="/Masters/DeleteBatch/@b.BatchId"
+                          onsubmit="return confirm('Delete @b.BatchName?')">
+                      <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+                    </form>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+          @if (!batches.Any())
+          {<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--mu);">No batches yet</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+@* ════════════════════════════════════════════════════════════
+   TAB 5 — FEE SETUP  (mirrors /FeeStructure)
+   ════════════════════════════════════════════════════════════ *@
+<div id="tab-feesetup" class="tab-panel" style="display:none;">
+  <div class="g2" style="align-items:start;">
+
+    @* ── Add form ─────────────────────────────────────────── *@
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-ttl"><i class="fas fa-plus-circle" style="color:var(--p);margin-right:6px;"></i>Add Fee Head</span>
+      </div>
+      <form method="post" action="/FeeStructure/Save">
+        <input type="hidden" name="StructureId"    value="0"/>
+        <input type="hidden" name="IsMonthly" value="true"/>
+        <input type="hidden" name="DueDay"    value="10"/>
+
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Academic Year *</label>
+          <select name="AcademicYearId" class="fs" required>
+            <option value="">— Select Year —</option>
+            @foreach(var y in years)
+            {<option value="@y.YearId" selected=@(y.YearId==currentYearId?"selected":"")>@y.YearName @(y.IsCurrent?"(Current)":"")</option>}
+          </select>
+        </div>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Medium / Stream *</label>
+          <select name="SectionId" class="fs" required>
+            <option value="">— Select Medium/Stream —</option>
+            @foreach(var s in sections){<option value="@s.SectionId">@s.SectionName</option>}
+          </select>
+        </div>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Class *</label>
+          <select name="ClassId" class="fs" required>
+            <option value="">— Select Class —</option>
+            @foreach(var c in classes){<option value="@c.ClassId">@c.ClassName</option>}
+          </select>
+        </div>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Fee Type *</label>
+          <select name="FeeTypeId" class="fs" required>
+            <option value="">— Select Fee Type —</option>
+            @foreach(var ft in feeTypes){<option value="@ft.FeeTypeId">@ft.TypeName</option>}
+          </select>
+        </div>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Amount (₹) *</label>
+          <input type="number" name="Amount" class="fc" placeholder="0.00" step="0.01" min="1" required/>
+        </div>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Remarks</label>
+          <input type="text" name="Remarks" class="fc" placeholder="Optional note"/>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Fee Head</button>
+        </div>
+      </form>
+    </div>
+
+    @* ── List ─────────────────────────────────────────────── *@
+    <div class="card" style="padding:0;">
+      <div class="card-hdr" style="padding:16px 18px;display:flex;align-items:center;justify-content:space-between;">
+        <span class="card-ttl">Fee Heads — @currentYearName (@feeList.Count entries)</span>
+        <a href="/FeeStructure/Index" class="btn btn-outline btn-sm"><i class="fas fa-external-link-alt"></i> Full View</a>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Class</th><th>Medium/Stream</th><th>Fee Type</th><th>Amount (₹)</th><th></th></tr></thead>
+          <tbody>
+          @foreach (var fs in feeList.OrderBy(x => x.ClassName).ThenBy(x => x.SectionName).ThenBy(x => x.FeeTypeName))
+          {
+            <tr>
+              <td class="fw7">@fs.ClassName</td>
+              <td><span class="badge b-purple">@fs.SectionName</span></td>
+              <td style="font-size:12.5px;">@fs.FeeTypeName</td>
+              <td><strong style="color:var(--p);">₹@fs.Amount.ToString("N0")</strong></td>
+              <td>
+                <div class="df g8">
+                  <a href="/FeeStructure/Edit/@fs.StructureId" class="btn btn-outline btn-sm btn-icon" title="Edit"><i class="fas fa-edit"></i></a>
+                  <form method="post" action="/FeeStructure/Delete/@fs.StructureId"
+                        onsubmit="return confirm('Delete this fee head?')">
+                    <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          }
+          @if (!feeList.Any())
+          {<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--mu);">No fee heads yet. Add one using the form.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+@* ════════════════════════════════════════════════════════════
+   TAB 6 — SUBJECTS
+   ════════════════════════════════════════════════════════════ *@
+<div id="tab-subjects" class="tab-panel" style="display:none;">
+  <div class="g2" style="align-items:start;">
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-ttl"><i class="fas fa-plus-circle" style="color:var(--p);margin-right:6px;"></i><span id="subjectFormTitle">Add Subject</span></span>
+      </div>
+      <form method="post" action="/Masters/SaveSubject">
+        <input type="hidden" name="subjectId" id="subjectId" value="0"/>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Class *</label>
+          <select name="classId" id="subjectClassId" class="fc" required>
+            <option value="">— Select Class —</option>
+            @foreach (var c in classes)
+            {
+              <option value="@c.ClassId">@c.ClassName</option>
+            }
+          </select>
+        </div>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Subject Name *</label>
+          <input type="text" name="subjectName" id="subjectName" class="fc" placeholder="e.g. Mathematics, Science" required/>
+        </div>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Subject Code <span style="font-weight:400;color:var(--mu);">(optional)</span></label>
+          <input type="text" name="subjectCode" id="subjectCode" class="fc" placeholder="e.g. MATH, SCI"/>
+        </div>
+        <input type="hidden" name="maxMarks"  id="subjectMaxMarks"  value="100"/>
+        <input type="hidden" name="passMarks" id="subjectPassMarks" value="35"/>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px;">
+          <input type="checkbox" name="isActive" value="true" id="subjectActive" checked style="accent-color:var(--p);width:15px;height:15px;"/> Active
+        </label>
+        <div style="display:flex;gap:8px;">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+          <button type="button" class="btn btn-outline" onclick="resetSubjectForm()"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="padding:0;">
+      <div class="card-hdr" style="padding:16px 18px;">
+        <span class="card-ttl">Subjects (@subjects.Count total)</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Class</th><th>Subject</th><th>Code</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+          @{ int sub_n = 0; }
+          @foreach (var s in subjects.OrderBy(x => x.ClassName).ThenBy(x => x.SubjectName))
+          {
+            sub_n++;
+            <tr>
+              <td class="text-mu fw7">@sub_n</td>
+              <td><span class="badge b-purple">@s.ClassName</span></td>
+              <td class="fw7">@s.SubjectName</td>
+              <td style="font-size:12px;color:var(--mu);">@(s.SubjectCode ?? "—")</td>
+              <td><span class="badge @(s.IsActive?"b-active":"b-inactive")">@(s.IsActive?"Active":"Inactive")</span></td>
+              <td>
+                <div class="df g8">
+                  <button class="btn btn-outline btn-sm btn-icon"
+                    onclick="editSubject(@s.SubjectId,'@s.SubjectName.Replace("'","\\'")', '@(s.SubjectCode?.Replace("'","\\'") ?? "")',@s.ClassId,@s.MaxMarks,@s.PassMarks,@(s.IsActive?"true":"false"))"
+                    title="Edit"><i class="fas fa-edit"></i></button>
+                  @if (s.UsageCount == 0)
+                  {
+                    <form method="post" action="/Masters/DeleteSubject/@s.SubjectId"
+                          onsubmit="return confirm('Delete subject: @s.SubjectName?')">
+                      <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+                    </form>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+          @if (!subjects.Any())
+          {<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--mu);">No subjects yet. Add a subject above.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<style>
+.tab-btn.active-tab {
+  color: var(--p) !important;
+  border-bottom-color: var(--p) !important;
+  background: none !important;
+}
+</style>
+<script>
+// ── Tab switching ─────────────────────────────────────────────
+function switchTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+  document.getElementById('tab-' + id).style.display = 'block';
+  document.querySelector(`.tab-btn[data-tab="${id}"]`).classList.add('active-tab');
+  localStorage.setItem('masterTab', id);
+}
+
+// Restore last tab or default
+const savedTab = new URLSearchParams(window.location.hash.replace('#','')).get('') ||
+                 localStorage.getItem('masterTab') || '@openTab';
+switchTab(savedTab);
+
+// ── Academic Year ─────────────────────────────────────────────
+function editYear(id, name, isCurrent, isActive) {
+  switchTab('years');
+  document.getElementById('yearId').value = id;
+  document.getElementById('yearName').value = name;
+  document.getElementById('isCurrent').checked = isCurrent === true || isCurrent === 'true';
+  document.getElementById('yearActive').checked = isActive === true || isActive === 'true';
+  document.getElementById('yearFormTitle').textContent = 'Edit Academic Year';
+  document.getElementById('yearFormCard').scrollIntoView({ behavior: 'smooth' });
+}
+function resetYearForm() {
+  document.getElementById('yearId').value = '0';
+  document.getElementById('yearName').value = '';
+  document.getElementById('isCurrent').checked = false;
+  document.getElementById('yearActive').checked = true;
+  document.getElementById('yearFormTitle').textContent = 'Add Academic Year';
+}
+
+// ── Class ─────────────────────────────────────────────────────
+function editClass(id, name, order, isActive) {
+  switchTab('classes');
+  document.getElementById('classId').value = id;
+  document.getElementById('className').value = name;
+  document.getElementById('orderNo').value = order;
+  document.getElementById('classActive').checked = isActive === true || isActive === 'true';
+  document.getElementById('classFormTitle').textContent = 'Edit Std';
+}
+function resetClassForm() {
+  document.getElementById('classId').value = '0';
+  document.getElementById('className').value = '';
+  document.getElementById('orderNo').value = '0';
+  document.getElementById('classActive').checked = true;
+  document.getElementById('classFormTitle').textContent = 'Add Std';
+}
+
+// ── Section ───────────────────────────────────────────────────
+function editSection(id, name, isActive) {
+  switchTab('sections');
+  document.getElementById('sectionId').value = id;
+  document.getElementById('sectionName').value = name;
+  document.getElementById('sectionActive').checked = isActive === true || isActive === 'true';
+  document.getElementById('sectionFormTitle').textContent = 'Edit Medium/Stream';
+}
+function resetSectionForm() {
+  document.getElementById('sectionId').value = '0';
+  document.getElementById('sectionName').value = '';
+  document.getElementById('sectionActive').checked = true;
+  document.getElementById('sectionFormTitle').textContent = 'Add Medium/Stream';
+}
+
+// ── Batch ─────────────────────────────────────────────────────
+function editBatch(id, name, isActive) {
+  switchTab('batches');
+  document.getElementById('batchId').value = id;
+  document.getElementById('batchName').value = name;
+  document.getElementById('batchActive').checked = isActive === true || isActive === 'true';
+  document.getElementById('batchFormTitle').textContent = 'Edit Batch';
+}
+function resetBatchForm() {
+  document.getElementById('batchId').value = '0';
+  document.getElementById('batchName').value = '';
+  document.getElementById('batchActive').checked = true;
+  document.getElementById('batchFormTitle').textContent = 'Add Batch';
+}
+
+
+// ── Subject ───────────────────────────────────────────────────
+function editSubject(id, name, code, classId, maxMarks, passMarks, isActive) {
+  switchTab('subjects');
+  document.getElementById('subjectId').value = id;
+  document.getElementById('subjectName').value = name;
+  document.getElementById('subjectCode').value = code || '';
+  document.getElementById('subjectClassId').value = classId;
+  document.getElementById('subjectMaxMarks').value = maxMarks;
+  document.getElementById('subjectPassMarks').value = passMarks;
+  document.getElementById('subjectActive').checked = isActive === true || isActive === 'true';
+  document.getElementById('subjectFormTitle').textContent = 'Edit Subject';
+}
+function resetSubjectForm() {
+  document.getElementById('subjectId').value = '0';
+  document.getElementById('subjectName').value = '';
+  document.getElementById('subjectCode').value = '';
+  document.getElementById('subjectClassId').value = '';
+  document.getElementById('subjectActive').checked = true;
+  document.getElementById('subjectFormTitle').textContent = 'Add Subject';
+}
+</script>
+}

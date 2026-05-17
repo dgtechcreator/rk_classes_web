@@ -1,0 +1,111 @@
+@model SchoolMS.Domain.DashboardStats
+@{ ViewData["Title"] = "Dashboard"; }
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <h1>📊 Dashboard</h1>
+      <p>Good day, @Context.Session.GetString("FullName") — RK Classes — Academic Year 2025–2026</p>
+    </div>
+    <div class="df g8">
+      <a href="/Student/Create" class="btn btn-primary"><i class="fas fa-user-plus"></i> New Student</a>
+      <a href="/Fees/Collect" class="btn btn-outline"><i class="fas fa-rupee-sign"></i> Collect Fee</a>
+    </div>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi purple">
+    <div class="kpi-ico purple"><i class="fas fa-users"></i></div>
+    <div class="kpi-val">@Model.TotalStudents</div>
+    <div class="kpi-lbl">Total Students</div>
+  </div>
+  <div class="kpi green">
+    <div class="kpi-ico green"><i class="fas fa-check-circle"></i></div>
+    <div class="kpi-val">@Model.PresentToday</div>
+    <div class="kpi-lbl">Present Today</div>
+  </div>
+  <div class="kpi red">
+    <div class="kpi-ico red"><i class="fas fa-times-circle"></i></div>
+    <div class="kpi-val">@Model.AbsentToday</div>
+    <div class="kpi-lbl">Absent Today</div>
+  </div>
+  <div class="kpi amber">
+    <div class="kpi-ico amber"><i class="fas fa-user-plus"></i></div>
+    <div class="kpi-val">@Model.NewToday</div>
+    <div class="kpi-lbl">New Admissions Today</div>
+  </div>
+  <div class="kpi indigo">
+    <div class="kpi-ico indigo"><i class="fas fa-rupee-sign"></i></div>
+    <div class="kpi-val">₹@Model.FeesThisMonth.ToString("N0")</div>
+    <div class="kpi-lbl">Fees This Month</div>
+  </div>
+  <div class="kpi pink">
+    <div class="kpi-ico pink"><i class="fas fa-receipt"></i></div>
+    <div class="kpi-val">₹@Model.ExpensesThisMonth.ToString("N0")</div>
+    <div class="kpi-lbl">Expenses This Month</div>
+  </div>
+  <div class="kpi teal">
+    <div class="kpi-ico teal"><i class="fas fa-chalkboard-teacher"></i></div>
+    <div class="kpi-val">@Model.TotalStaff</div>
+    <div class="kpi-lbl">Staff Members</div>
+  </div>
+  <div class="kpi blue">
+    <div class="kpi-ico blue"><i class="fas fa-school"></i></div>
+    <div class="kpi-val">@(Model.Class1Count + Model.Class2Count + Model.Class3Count)</div>
+    <div class="kpi-lbl">Active Students</div>
+  </div>
+</div>
+
+<div class="g2" style="align-items:start;">
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-ttl"><i class="fas fa-chart-pie" style="color:var(--p);margin-right:7px;"></i>Class-wise Strength</span>
+    </div>
+    @{
+      var rows = new[] { ("Class 1", Model.Class1Count, "#6d28d9"), ("Class 2", Model.Class2Count, "#db2777"), ("Class 3", Model.Class3Count, "#2563eb") };
+      int tot = Math.Max(1, Model.Class1Count + Model.Class2Count + Model.Class3Count);
+    }
+    @foreach (var (cls, cnt, clr) in rows)
+    {
+      int pct = cnt * 100 / tot;
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--bdr);">
+        <div style="width:40px;height:40px;border-radius:10px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:@clr;flex-shrink:0;">@cnt</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:5px;">@cls</div>
+          <div style="height:6px;background:#f3f0ff;border-radius:3px;">
+            <div style="height:6px;border-radius:3px;background:@clr;width:@pct%;"></div>
+          </div>
+        </div>
+        <span style="font-size:12px;color:var(--mu);font-weight:600;">@pct%</span>
+      </div>
+    }
+  </div>
+
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-ttl"><i class="fas fa-bolt" style="color:var(--p);margin-right:7px;"></i>Quick Actions</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;">
+      @{
+        var qas = new[] {
+          ("fas fa-user-graduate","View All Students","/Student/Index"),
+          ("fas fa-calendar-check","Mark Attendance","/Attendance/Index"),
+          ("fas fa-marker","Enter Test Marks","/Marks/Index"),
+          ("fas fa-rupee-sign","Collect Fee","/Fees/Collect"),
+          ("fas fa-receipt","Record Expense","/Expenses/Create")
+        };
+      }
+      @foreach (var (ic, lbl, url) in qas)
+      {
+        <a href="@url" class="btn btn-outline" style="justify-content:flex-start;padding:10px 14px;">
+          <span style="width:28px;height:28px;border-radius:8px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--p);flex-shrink:0;">
+            <i class="@ic"></i>
+          </span>
+          @lbl
+          <i class="fas fa-chevron-right" style="margin-left:auto;font-size:11px;color:var(--mu2);"></i>
+        </a>
+      }
+    </div>
+  </div>
+</div>

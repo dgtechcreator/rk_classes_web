@@ -1,0 +1,69 @@
+@* Fees/Index.cshtml *@
+@model SchoolMS.Web.ViewModels.FeesListVM
+@{ ViewData["Title"] = "Fee Collection"; }
+
+<div class="pg-hdr"><div class="pg-row"><div><h1>💰 Fee Collection</h1><p>@Model.Total payment records</p></div><a href="/Fees/Collect" class="btn btn-primary"><i class="fas fa-plus"></i> Collect Fee</a></div></div>
+
+<form method="get" action="/Fees/Index">
+<div class="filter-bar">
+  <input type="text" name="search" value="@Model.Search" class="fc" placeholder="Search student, receipt no..." style="min-width:200px;"/>
+  <select name="month" class="fs"><option value="">All Months</option>@foreach(var m in new[]{"April","May","June","July","August","September","October","November","December","January","February","March"}){<option value="@m" selected=@(Model.MonthFilter==m?"selected":"")>@m</option>}</select>
+  <select name="feeType" class="fs"><option value="">All Fee Types</option>@foreach(var ft in Model.FeeTypes){<option value="@ft.FeeTypeId" selected=@(Model.FeeTypeFilter==ft.FeeTypeId?"selected":"")>@ft.TypeName</option>}</select>
+  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i></button>
+  <a href="/Fees/Index" class="btn btn-outline btn-sm"><i class="fas fa-times"></i></a>
+</div></form>
+
+@if (Model.Payments.Any())
+{
+  var tot = Model.Payments.Sum(p => p.NetAmount);
+  <div style="display:flex;gap:12px;margin-bottom:16px;">
+    <div class="card" style="flex:1;padding:14px 18px;"><div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Showing Total</div><div style="font-size:22px;font-weight:800;color:var(--ok);">₹@tot.ToString("N0")</div></div>
+    <div class="card" style="flex:1;padding:14px 18px;"><div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Transactions</div><div style="font-size:22px;font-weight:800;color:var(--p);">@Model.Payments.Count</div></div>
+  </div>
+}
+
+<div class="card">
+  <div class="tbl-wrap">
+    @if (!Model.Payments.Any())
+    { <div class="empty"><div class="empty-ico">💰</div><h3>No payment records</h3></div> }
+    else
+    {
+    <table>
+      <thead><tr><th>Receipt No</th><th>Student</th><th>Class</th><th>Fee Type</th><th>Month</th><th>Amount</th><th>Mode</th><th>Date</th><th>Collected By</th><th></th></tr></thead>
+      <tbody>
+      @foreach(var p in Model.Payments)
+      {
+        <tr>
+          <td>
+            <a href="/Fees/Receipt/@p.PaymentId" target="_blank"
+               class="mono text-p" style="font-size:12px;text-decoration:underline;text-underline-offset:2px;">
+              @p.ReceiptNo
+            </a>
+          </td>
+          <td><div class="fw7">@p.StudentName</div><div style="font-size:11px;" class="text-mu">@p.AdmissionNo</div></td>
+          <td style="font-size:13px;">@p.ClassName / @p.SectionName</td>
+          <td><span class="badge b-purple">@p.FeeTypeName</span></td>
+          <td class="text-mu" style="font-size:13px;">@(p.Month??"—")</td>
+          <td>
+            <div style="font-weight:800;color:var(--ok);">₹@p.NetAmount.ToString("N0")</div>
+            @if(p.Discount>0){<div style="font-size:11px;" class="text-mu">Disc: ₹@p.Discount</div>}
+          </td>
+          <td><span class="badge @(p.PaymentMode=="Cash"?"b-cash":"b-online")">@p.PaymentMode</span></td>
+          <td style="font-size:12px;" class="text-mu">@p.PaymentDate.ToString("dd MMM yy")</td>
+          <td style="font-size:12.5px;">@p.CollectorName</td>
+          <td>
+            <a href="/Fees/Receipt/@p.PaymentId" target="_blank"
+               class="btn btn-outline btn-sm" title="Print Receipt"
+               style="gap:5px;">
+              <i class="fas fa-print"></i> Receipt
+            </a>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+    }
+  </div>
+  @if (Model.TotalPages > 1)
+  { <div class="pagi">@for(int i=1;i<=Model.TotalPages;i++){<a href="/Fees/Index?page=@i&search=@Model.Search&month=@Model.MonthFilter&feeType=@Model.FeeTypeFilter" class="pg-btn @(i==Model.Page?"active":"")">@i</a>}</div> }
+</div>

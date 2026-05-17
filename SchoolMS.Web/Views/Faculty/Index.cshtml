@@ -1,0 +1,110 @@
+@model List<SchoolMS.Domain.Faculty>
+@{
+    ViewData["Title"] = "Faculty";
+    var designations = ViewBag.Designations as List<SchoolMS.Domain.Designation> ?? new();
+    int page       = ViewBag.Page       ?? 1;
+    int total      = ViewBag.Total      ?? 0;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    string? search = ViewBag.Search;
+    string? status = ViewBag.Status;
+    int? desigId   = ViewBag.DesignationId;
+}
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div><h1>👩‍🏫 Faculty</h1><p>@total faculty members</p></div>
+    <a href="/Faculty/Create" class="btn btn-primary"><i class="fas fa-user-plus"></i> Add Faculty</a>
+  </div>
+</div>
+
+<form method="get" action="/Faculty/Index">
+<div class="filter-bar">
+  <i class="fas fa-filter" style="color:var(--mu);font-size:13px;"></i>
+  <input type="text" name="search" value="@search" class="fc" placeholder="Search name, employee code, phone..." style="min-width:220px;"/>
+  <select name="designationId" class="fs">
+    <option value="">All Designations</option>
+    @foreach(var d in designations){<option value="@d.DesignationId" selected=@((int?)desigId==d.DesignationId?"selected":"")>@d.DesignationName</option>}
+  </select>
+  <select name="status" class="fs">
+    <option value="">All Status</option>
+    @foreach(var s in new[]{"Active","Inactive","Relieved"}){<option value="@s" selected=@(status==s?"selected":"")>@s</option>}
+  </select>
+  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Search</button>
+  <a href="/Faculty/Index" class="btn btn-outline btn-sm"><i class="fas fa-times"></i></a>
+</div>
+</form>
+
+@* Summary stat cards *@
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
+  <div class="card" style="padding:14px 18px;border-top:3.5px solid var(--p);">
+    <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Total Faculty</div>
+    <div style="font-size:22px;font-weight:800;color:var(--txt);">@total</div>
+  </div>
+  <div class="card" style="padding:14px 18px;border-top:3.5px solid var(--ok);">
+    <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Active</div>
+    <div style="font-size:22px;font-weight:800;color:var(--ok);">@Model.Count(f=>f.Status=="Active")</div>
+  </div>
+  <div class="card" style="padding:14px 18px;border-top:3.5px solid var(--warn);">
+    <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Inactive</div>
+    <div style="font-size:22px;font-weight:800;color:var(--warn);">@Model.Count(f=>f.Status=="Inactive")</div>
+  </div>
+  <div class="card" style="padding:14px 18px;border-top:3.5px solid var(--err);">
+    <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Relieved</div>
+    <div style="font-size:22px;font-weight:800;color:var(--err);">@Model.Count(f=>f.Status=="Relieved")</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="tbl-wrap">
+    @if (!Model.Any())
+    {<div class="empty"><div class="empty-ico">👩‍🏫</div><h3>No faculty found</h3><p>Add your first faculty member.</p></div>}
+    else
+    {
+    <table>
+      <thead>
+        <tr><th>Photo</th><th>Emp. Code</th><th>Name</th><th>Designation</th><th>Specialization</th><th>Phone</th><th>Joining Date</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+      @foreach (var f in Model)
+      {
+        <tr onclick="window.location='/Faculty/Details/@f.FacultyId'" style="cursor:pointer;">
+          <td>
+            @if (!string.IsNullOrEmpty(f.ProfilePicPath))
+            {<img src="@f.ProfilePicPath" class="stu-pic"/>}
+            else
+            {<div class="stu-av" style="background:linear-gradient(135deg,#4338ca,#6d28d9);">@f.FullName[0]</div>}
+          </td>
+          <td><span class="mono text-p" style="font-size:12px;">@f.EmployeeCode</span></td>
+          <td>
+            <div class="fw7">@f.FullName</div>
+            @if (!string.IsNullOrEmpty(f.Qualification))
+            {<div style="font-size:11px;" class="text-mu">@f.Qualification</div>}
+          </td>
+          <td><span class="badge b-purple">@(f.DesignationName ?? "—")</span></td>
+          <td style="font-size:12.5px;color:var(--mu);">@(f.Specialization ?? "—")</td>
+          <td style="font-size:13px;">@(f.Phone ?? "—")</td>
+          <td style="font-size:12.5px;color:var(--mu);">@(f.DateOfJoining?.ToString("dd MMM yyyy") ?? "—")</td>
+          <td>
+            <span class="badge @(f.Status=="Active"?"b-active":f.Status=="Relieved"?"b-absent":"b-inactive")">
+              @f.Status
+            </span>
+          </td>
+          <td onclick="event.stopPropagation()">
+            <a href="/Faculty/Edit/@f.FacultyId" class="btn btn-outline btn-sm btn-icon" title="Edit">
+              <i class="fas fa-edit"></i>
+            </a>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+    }
+  </div>
+  @if (totalPages > 1)
+  {
+    <div class="pagi">
+      @for (int i = 1; i <= totalPages; i++)
+      {<a href="/Faculty/Index?page=@i&search=@search&status=@status&designationId=@desigId" class="pg-btn @(i==page?"active":"")">@i</a>}
+    </div>
+  }
+</div>

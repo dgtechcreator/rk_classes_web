@@ -1,0 +1,187 @@
+@model SchoolMS.Domain.AppUser
+@{
+    ViewData["Title"] = "Set Permissions";
+    var allGroups = Model.Permissions
+        .GroupBy(m => m.GroupName ?? "Other")
+        .OrderBy(g => g.Min(m => m.OrderNo))
+        .ToList();
+}
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <div class="breadcrumb"><a href="/Users/Index">Users</a> / <span>Permissions</span></div>
+      <h1>🔑 Set Permissions</h1>
+      <p>Configuring access for <strong>@Model.FullName</strong> (@Model.Username) — @Model.RoleName</p>
+    </div>
+    <div class="df g8">
+      <button class="btn btn-success btn-sm" onclick="selectAll(true)"><i class="fas fa-check-double"></i> Grant All</button>
+      <button class="btn btn-danger btn-sm"  onclick="selectAll(false)"><i class="fas fa-times"></i> Revoke All</button>
+      <button class="btn btn-primary"         onclick="savePerms()"><i class="fas fa-save"></i> Save Permissions</button>
+    </div>
+  </div>
+</div>
+
+<div id="savedMsg" style="font-size:13px;margin-bottom:12px;"></div>
+
+@* Permission groups *@
+@foreach (var grp in allGroups)
+{
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-hdr">
+      <span class="card-ttl">
+        <i class="fas fa-layer-group" style="color:var(--p);margin-right:7px;"></i>@grp.Key
+      </span>
+      <div class="df g8">
+        <button type="button" class="btn btn-outline btn-sm"
+                onclick="grantGroup('@grp.Key',true)">
+          <i class="fas fa-check"></i> Grant All
+        </button>
+        <button type="button" class="btn btn-danger btn-sm"
+                onclick="grantGroup('@grp.Key',false)">
+          <i class="fas fa-times"></i> Revoke
+        </button>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Module / Feature</th>
+          <th style="width:110px;text-align:center;">
+            <i class="fas fa-eye" style="color:var(--ok);margin-right:5px;"></i>View
+          </th>
+          <th style="width:110px;text-align:center;">
+            <i class="fas fa-edit" style="color:var(--p);margin-right:5px;"></i>Add / Edit
+          </th>
+          <th style="width:130px;text-align:center;">Quick Grant</th>
+        </tr>
+      </thead>
+      <tbody>
+      @foreach (var m in grp.OrderBy(x => x.OrderNo))
+      {
+        <tr id="row-@m.ModuleId">
+          <td>
+            <div style="display:flex;align-items:center;gap:9px;">
+              <span style="width:30px;height:30px;border-radius:8px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--p);flex-shrink:0;">
+                <i class="@(m.Icon??"fas fa-circle")"></i>
+              </span>
+              <div>
+                <div class="fw7">@m.ModuleName</div>
+                <div style="font-size:11px;color:var(--mu);" class="mono">@m.ModuleKey</div>
+              </div>
+            </div>
+          </td>
+          <td style="text-align:center;">
+            <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+              <input type="checkbox" class="perm-view" data-mid="@m.ModuleId"
+                     @(m.CanView?"checked":"")
+                     onchange="syncEdit(this)"
+                     style="accent-color:var(--ok);width:16px;height:16px;"/>
+              <span style="font-size:12px;font-weight:700;color:var(--ok);">View</span>
+            </label>
+          </td>
+          <td style="text-align:center;">
+            <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+              <input type="checkbox" class="perm-edit" data-mid="@m.ModuleId"
+                     @(m.CanEdit?"checked":"")
+                     onchange="syncView(this)"
+                     style="accent-color:var(--p);width:16px;height:16px;"/>
+              <span style="font-size:12px;font-weight:700;color:var(--p);">Edit</span>
+            </label>
+          </td>
+          <td style="text-align:center;">
+            <div class="df g8" style="justify-content:center;">
+              <button type="button" onclick="setRow(@m.ModuleId,true,true)"
+                      class="btn btn-success btn-sm" style="padding:4px 10px;font-size:11px;">
+                <i class="fas fa-unlock"></i> Full
+              </button>
+              <button type="button" onclick="setRow(@m.ModuleId,true,false)"
+                      class="btn btn-info btn-sm" style="padding:4px 10px;font-size:11px;">
+                <i class="fas fa-eye"></i> View
+              </button>
+              <button type="button" onclick="setRow(@m.ModuleId,false,false)"
+                      class="btn btn-danger btn-sm" style="padding:4px 10px;font-size:11px;">
+                <i class="fas fa-lock"></i> None
+              </button>
+            </div>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+  </div>
+}
+
+<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px;">
+  <a href="/Users/Index" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back to Users</a>
+  <button class="btn btn-primary" onclick="savePerms()"><i class="fas fa-save"></i> Save Permissions</button>
+</div>
+
+@section Scripts {
+<script>
+function setRow(mid, view, edit) {
+  const vChk = document.querySelector(`.perm-view[data-mid="${mid}"]`);
+  const eChk = document.querySelector(`.perm-edit[data-mid="${mid}"]`);
+  if (vChk) vChk.checked = view;
+  if (eChk) eChk.checked = edit;
+}
+function syncEdit(viewChk) {
+  // If view is unchecked, also uncheck edit
+  if (!viewChk.checked) {
+    const mid = viewChk.dataset.mid;
+    const eChk = document.querySelector(`.perm-edit[data-mid="${mid}"]`);
+    if (eChk) eChk.checked = false;
+  }
+}
+function syncView(editChk) {
+  // If edit is checked, also check view
+  if (editChk.checked) {
+    const mid = editChk.dataset.mid;
+    const vChk = document.querySelector(`.perm-view[data-mid="${mid}"]`);
+    if (vChk) vChk.checked = true;
+  }
+}
+function selectAll(grant) {
+  document.querySelectorAll('.perm-view,.perm-edit').forEach(c => c.checked = grant);
+}
+function grantGroup(grp, grant) {
+  // Find all rows within that group's card by checking module keys
+  const allView = document.querySelectorAll('.perm-view');
+  const allEdit = document.querySelectorAll('.perm-edit');
+  // We use the table structure - find the card with matching header
+  document.querySelectorAll('.card').forEach(card => {
+    const hdr = card.querySelector('.card-ttl');
+    if (hdr && hdr.textContent.trim().includes(grp)) {
+      card.querySelectorAll('.perm-view,.perm-edit').forEach(c => c.checked = grant);
+    }
+  });
+}
+
+async function savePerms() {
+  const entries = [];
+  document.querySelectorAll('.perm-view').forEach(vChk => {
+    const mid = parseInt(vChk.dataset.mid);
+    const eChk = document.querySelector(`.perm-edit[data-mid="${mid}"]`);
+    entries.push({ moduleId: mid, canView: vChk.checked, canEdit: eChk?.checked ?? false });
+  });
+
+  const btn = event.currentTarget;
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  const res = await fetch('/Users/SavePermissions/@Model.UserId', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entries)
+  });
+  const d = await res.json();
+  const msg = document.getElementById('savedMsg');
+  msg.innerHTML = d.success
+    ? '<div class="alert alert-success"><i class="fas fa-check-circle"></i> ' + d.message + '</div>'
+    : '<div class="alert alert-danger">Error saving permissions</div>';
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-save"></i> Save Permissions';
+  setTimeout(() => msg.innerHTML = '', 4000);
+}
+</script>
+}

@@ -1,0 +1,138 @@
+@model SchoolMS.Domain.FeeStructure
+@{
+    ViewData["Title"] = Model.StructureId == 0 ? "Add Fee Head" : "Edit Fee Head";
+    var years    = ViewBag.Years    as List<SchoolMS.Domain.AcademicYear> ?? new();
+    var classes  = ViewBag.Classes  as List<SchoolMS.Domain.Class>        ?? new();
+    var sections = ViewBag.Sections as List<SchoolMS.Domain.Section>      ?? new();
+    var feeTypes = ViewBag.FeeTypes as List<SchoolMS.Domain.FeeType>      ?? new();
+    var currentYear = years.FirstOrDefault(y => y.IsCurrent);
+    var yearId   = Model.AcademicYearId > 0 ? Model.AcademicYearId : (currentYear?.YearId ?? 0);
+    var yearName = years.FirstOrDefault(y => y.YearId == yearId)?.YearName ?? currentYear?.YearName ?? "";
+}
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <div class="breadcrumb">
+        <a href="/FeeStructure/Index">Fee Structure</a> / <span>@ViewData["Title"]</span>
+      </div>
+      <h1>@ViewData["Title"]</h1>
+    </div>
+  </div>
+</div>
+
+@if (TempData["Error"] != null)
+{
+  <div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> @TempData["Error"]</div>
+}
+
+<form method="post" action="/FeeStructure/Save" style="max-width:680px;">
+  <input type="hidden" name="StructureId"    value="@Model.StructureId"/>
+  <input type="hidden" name="AcademicYearId" value="@yearId"/>
+  <input type="hidden" name="IsMonthly"      value="true"/>
+
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-ttl"><i class="fas fa-cog" style="color:var(--p);margin-right:6px;"></i>Fee Head Details</span>
+    </div>
+
+    @if (Model.StructureId == 0)
+    {
+      <div class="alert alert-info" style="margin-bottom:18px;">
+        <i class="fas fa-info-circle"></i>
+        Once saved, this fee will be <strong>automatically applied</strong> to all existing students
+        matching the selected Year, Class and Medium/Stream.
+      </div>
+    }
+
+    <div class="form-grid">
+
+      <div class="fg full">
+        <label>Academic Year</label>
+        <div class="fc" style="background:#f5f3ff;color:var(--p);font-weight:700;cursor:default;">
+          @yearName @(currentYear?.YearId == yearId ? "(Current)" : "")
+        </div>
+      </div>
+
+      <div class="fg">
+        <label>Medium / Stream *</label>
+        <select name="SectionId" class="fs" required @(Model.StructureId>0?"disabled":"")>
+          <option value="">— Select Medium/Stream —</option>
+          @foreach(var s in sections)
+          {<option value="@s.SectionId" selected=@(Model.SectionId==s.SectionId?"selected":"")>@s.SectionName</option>}
+        </select>
+        @if (Model.StructureId > 0)
+        {<input type="hidden" name="SectionId" value="@Model.SectionId"/>}
+      </div>
+
+      <div class="fg">
+        <label>Class *</label>
+        <select name="ClassId" class="fs" required @(Model.StructureId>0?"disabled":"")>
+          <option value="">— Select Class —</option>
+          @foreach(var c in classes)
+          {<option value="@c.ClassId" selected=@(Model.ClassId==c.ClassId?"selected":"")>@c.ClassName</option>}
+        </select>
+        @if (Model.StructureId > 0)
+        {<input type="hidden" name="ClassId" value="@Model.ClassId"/>}
+      </div>
+
+      <div class="fg">
+        <label>Fee Type *</label>
+        <select name="FeeTypeId" class="fs" required @(Model.StructureId>0?"disabled":"")>
+          <option value="">— Select Fee Type —</option>
+          @foreach(var ft in feeTypes)
+          {<option value="@ft.FeeTypeId" selected=@(Model.FeeTypeId==ft.FeeTypeId?"selected":"")>@ft.TypeName</option>}
+        </select>
+        @if (Model.StructureId > 0)
+        {<input type="hidden" name="FeeTypeId" value="@Model.FeeTypeId"/>}
+      </div>
+
+      <div class="fg">
+        <label>Amount (₹) *</label>
+        <input type="number" id="amtInp" name="Amount"
+               value="@(Model.Amount > 0 ? Model.Amount.ToString("0.00") : "")"
+               class="fc" placeholder="0.00" step="0.01" min="1" required oninput="updatePreview()"/>
+      </div>
+
+      <div class="fg">
+        <label>Due Day of Month</label>
+        <input type="number" name="DueDay" value="@Model.DueDay"
+               class="fc" placeholder="10" min="1" max="28"/>
+        <span style="font-size:11px;color:var(--mu);">Fee due on this day each month (1–28)</span>
+      </div>
+
+      <div class="fg">
+        <label>Remarks</label>
+        <input type="text" name="Remarks" value="@Model.Remarks" class="fc" placeholder="Optional note"/>
+      </div>
+
+    </div>
+
+    <div style="background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:var(--rs);padding:14px 18px;margin-top:18px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--mu);margin-bottom:2px;">Fee amount</div>
+        <div id="previewAmt" style="font-size:22px;font-weight:800;color:var(--p);">₹0.00 / month</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:12px;font-weight:700;color:var(--mu);margin-bottom:2px;">Annual total</div>
+        <div id="previewAnnual" style="font-size:16px;font-weight:800;color:var(--mu);">₹0.00</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:1px solid var(--bdr);">
+      <a href="/FeeStructure/Index" class="btn btn-outline"><i class="fas fa-times"></i> Cancel</a>
+      <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Fee Head</button>
+    </div>
+  </div>
+</form>
+
+@section Scripts {
+<script>
+function updatePreview() {
+    const amt = parseFloat(document.getElementById('amtInp')?.value) || 0;
+    document.getElementById('previewAmt').textContent    = '₹' + amt.toFixed(2) + ' / month';
+    document.getElementById('previewAnnual').textContent = '₹' + (amt * 12).toFixed(2);
+}
+updatePreview();
+</script>
+}

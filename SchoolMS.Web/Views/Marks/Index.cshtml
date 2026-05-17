@@ -1,0 +1,367 @@
+@model List<SchoolMS.Domain.StudentMarkRow>
+@{
+    ViewData["Title"] = "Test Marks Entry";
+    var years    = ViewBag.Years    as List<SchoolMS.Domain.AcademicYear> ?? new();
+    var classes  = ViewBag.Classes  as List<SchoolMS.Domain.Class>        ?? new();
+    var sections = ViewBag.Sections as List<SchoolMS.Domain.Section>      ?? new();
+    var batches  = ViewBag.Batches  as List<SchoolMS.Domain.Batch>        ?? new();
+    var subjects = ViewBag.Subjects as List<SchoolMS.Domain.Subject>      ?? new();
+    var examList = ViewBag.ExamList as List<SchoolMS.Domain.Exam>         ?? new();
+    int? yearId    = ViewBag.YearId;
+    int? classId   = ViewBag.ClassId;
+    int? sectionId = ViewBag.SectionId;
+    int? batchId   = ViewBag.BatchId;
+    int? subjectId = ViewBag.SubjectId;
+    string examName = ViewBag.ExamName ?? "";
+    string testDate = ViewBag.TestDate ?? "";
+    int maxMarks    = ViewBag.MaxMarks ?? 30;
+    bool hasData    = Model != null && Model.Any();
+}
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div><h1>✏️ Test Marks Entry</h1><p>Select filters, enter test name and date, then load</p></div>
+    @if (hasData && !string.IsNullOrWhiteSpace(examName))
+    {
+      <div class="df g8">
+        <a href="/Marks/PrintResult?examName=@Uri.EscapeDataString(examName)&yearId=@yearId&classId=@classId&sectionId=@sectionId&batchId=@batchId&testDate=@Uri.EscapeDataString(testDate)"
+           target="_blank" class="btn btn-outline"><i class="fas fa-print"></i> Print Result</a>
+        <a href="/Marks/DownloadReport?examName=@Uri.EscapeDataString(examName)&yearId=@yearId&classId=@classId&sectionId=@sectionId&batchId=@batchId&testDate=@Uri.EscapeDataString(testDate)"
+           class="btn btn-outline"><i class="fas fa-download"></i> Download CSV</a>
+      </div>
+    }
+  </div>
+</div>
+
+@* ── PAST TESTS quick-load strip ───────────────────────────── *@
+@if (examList.Any())
+{
+  <div style="margin-bottom:16px;">
+    <div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
+      <i class="fas fa-history" style="color:var(--p);margin-right:5px;"></i>Recent Tests — click to reload
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      @foreach (var ex in examList.Take(8))
+      {
+        var td = ex.TestDate?.ToString("yyyy-MM-dd") ?? "";
+        var active = ex.ExamName == examName && td == testDate;
+        <a href="/Marks/Index?yearId=@ex.AcademicYearId&classId=@ex.ClassId&sectionId=@sectionId&batchId=@batchId&examName=@Uri.EscapeDataString(ex.ExamName)&testDate=@td&maxMarks=@maxMarks"
+           style="display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:99px;font-size:12px;font-weight:700;border:1.5px solid @(active?"var(--p)":"var(--bdr)");background:@(active?"#f5f3ff":"var(--sur)");color:@(active?"var(--p)":"var(--mu)");text-decoration:none;transition:all .15s;"
+           onmouseover="this.style.borderColor='var(--p)';this.style.color='var(--p)'"
+           onmouseout="@(active?"":"this.style.borderColor='var(--bdr)';this.style.color='var(--mu)'")">
+          <i class="fas fa-file-alt" style="font-size:11px;"></i>
+          @ex.ExamName
+          @if (ex.TestDate.HasValue){<span style="opacity:.7;">@ex.TestDate.Value.ToString("dd MMM")</span>}
+          @if (ex.EntryCount > 0){<span style="background:@(active?"var(--p)":"#e9e5f8");color:@(active?"#fff":"var(--p)");padding:1px 6px;border-radius:99px;font-size:10px;">@ex.EntryCount</span>}
+        </a>
+      }
+    </div>
+  </div>
+}
+
+@* ── Filter Bar ─────────────────────────────────────────────── *@
+<form method="get" action="/Marks/Index" id="fltForm">
+<div class="filter-bar" style="flex-wrap:wrap;gap:10px;">
+  <i class="fas fa-filter" style="color:var(--mu);font-size:13px;flex-shrink:0;"></i>
+
+  <select name="yearId" class="fs" id="sel_year">
+    <option value="">— Year —</option>
+    @foreach (var y in years)
+    {
+      if (yearId == y.YearId) { <option value="@y.YearId" selected>@y.YearName @(y.IsCurrent ? "✓" : "")</option> }
+      else                    { <option value="@y.YearId">@y.YearName @(y.IsCurrent ? "✓" : "")</option> }
+    }
+  </select>
+
+  <select name="sectionId" class="fs" id="sel_section">
+    <option value="">All Sections</option>
+    @foreach (var s in sections)
+    {
+      if (sectionId == s.SectionId) { <option value="@s.SectionId" selected>@s.SectionName</option> }
+      else                          { <option value="@s.SectionId">@s.SectionName</option> }
+    }
+  </select>
+
+  <select name="classId" class="fs" id="sel_class" onchange="this.form.submit()">
+    <option value="">— Class —</option>
+    @foreach (var c in classes)
+    {
+      if (classId == c.ClassId) { <option value="@c.ClassId" selected>@c.ClassName</option> }
+      else                      { <option value="@c.ClassId">@c.ClassName</option> }
+    }
+  </select>
+
+  <select name="batchId" class="fs" id="sel_batch">
+    <option value="">All Batches</option>
+    @foreach (var b in batches)
+    {
+      if (batchId == b.BatchId) { <option value="@b.BatchId" selected>@b.BatchName</option> }
+      else                      { <option value="@b.BatchId">@b.BatchName</option> }
+    }
+  </select>
+
+  <select name="subjectId" class="fs" id="sel_subject">
+    <option value="">— Subject —</option>
+    @foreach (var s in subjects)
+    {
+      if (subjectId == s.SubjectId) { <option value="@s.SubjectId" selected>@s.SubjectName</option> }
+      else                          { <option value="@s.SubjectId">@s.SubjectName</option> }
+    }
+  </select>
+
+  <input type="text" name="examName" id="inp_exam" value="@examName" class="fc"
+         placeholder="Test name (e.g. Unit Test 1)" style="min-width:165px;"/>
+
+  <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+    <label style="font-size:12px;font-weight:700;color:var(--mu);white-space:nowrap;">Date</label>
+    <input type="date" name="testDate" id="inp_date" value="@testDate" class="fc" style="width:148px;"/>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+    <label style="font-size:12px;font-weight:700;color:var(--mu);white-space:nowrap;">Out of</label>
+    <input type="number" name="maxMarks" id="inp_max" value="@maxMarks" class="fc"
+           style="width:65px;" min="1" max="200"/>
+  </div>
+
+  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Load</button>
+  <a href="/Marks/Index" class="btn btn-outline btn-sm"><i class="fas fa-times"></i></a>
+</div>
+</form>
+
+@* ── States ─────────────────────────────────────────────────── *@
+@if (classId == null)
+{<div class="card"><div class="empty"><div class="empty-ico">✏️</div><h3>Select Filters to Begin</h3><p>Choose Academic Year, Section, Class, Subject and enter a test name, then click Load.</p></div></div>}
+else if (!subjects.Any())
+{<div class="card"><div class="empty"><div class="empty-ico">📚</div><h3>No subjects for this class</h3><p>Add subjects in Masters setup.</p></div></div>}
+else if (subjectId == null || string.IsNullOrWhiteSpace(examName))
+{<div class="card"><div class="empty"><div class="empty-ico">✏️</div><h3>Select Subject &amp; Test Name</h3><p>Pick a subject, enter the test name and date, then click Load.</p></div></div>}
+else if (!hasData)
+{<div class="card"><div class="empty"><div class="empty-ico">👥</div><h3>No students found</h3></div></div>}
+else
+{
+  var entered   = Model!.Count(m => m.MarksObtained.HasValue);
+  var absentCnt = Model!.Count(m => m.IsAbsent || m.Grade == "AB");
+  var subName   = subjects.FirstOrDefault(s => s.SubjectId == subjectId)?.SubjectName ?? "";
+  var yearName  = years.FirstOrDefault(y => y.YearId == yearId)?.YearName ?? "";
+
+  @* Stats *@
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">
+    <div class="card" style="padding:12px 16px;border-top:3.5px solid var(--p);">
+      <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Students</div>
+      <div style="font-size:22px;font-weight:800;color:var(--txt);">@Model!.Count</div>
+    </div>
+    <div class="card" style="padding:12px 16px;border-top:3.5px solid var(--ok);">
+      <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Marks Entered</div>
+      <div style="font-size:22px;font-weight:800;color:var(--ok);">@entered</div>
+    </div>
+    <div class="card" style="padding:12px 16px;border-top:3.5px solid var(--err);">
+      <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Absent</div>
+      <div style="font-size:22px;font-weight:800;color:var(--err);">@absentCnt</div>
+    </div>
+    <div class="card" style="padding:12px 16px;border-top:3.5px solid var(--warn);">
+      <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Class Average</div>
+      <div id="avgDisp" style="font-size:22px;font-weight:800;color:var(--warn);">
+        @(entered > 0 ? Model!.Where(m=>m.MarksObtained.HasValue).Average(m=>(double)m.MarksObtained!.Value).ToString("0.1") : "—")
+      </div>
+    </div>
+    <div class="card" style="padding:12px 16px;border-top:3.5px solid var(--ind);">
+      <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Pass Rate</div>
+      <div id="passRate" style="font-size:22px;font-weight:800;color:var(--ind);">
+        @{ var tot2 = entered + absentCnt; var pass2 = Model!.Count(m=>m.MarksObtained.HasValue && m.MarksObtained.Value*100/maxMarks>=35); }
+        @(tot2 > 0 ? $"{pass2*100/tot2}%" : "—")
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr">
+      <div>
+        <span class="card-ttl"><i class="fas fa-marker" style="color:var(--p);margin-right:6px;"></i>
+          @examName — @subName — Out of @maxMarks
+        </span>
+        @if (!string.IsNullOrWhiteSpace(testDate))
+        {<div style="font-size:12px;color:var(--mu);margin-top:2px;"><i class="fas fa-calendar" style="margin-right:4px;"></i>Test Date: @(DateTime.TryParse(testDate,out var td)?td.ToString("dd MMM yyyy"):testDate) &nbsp;|&nbsp; @yearName</div>}
+      </div>
+      <div class="df g8">
+        <button class="btn btn-outline btn-sm" onclick="clearAll()"><i class="fas fa-eraser"></i> Clear</button>
+        <button class="btn btn-primary" onclick="saveMarks()"><i class="fas fa-save"></i> Save Marks</button>
+      </div>
+    </div>
+
+    <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:44px;">#</th>
+          <th style="width:80px;">Roll No</th>
+          <th>Student Name</th>
+          <th>Class / Section</th>
+          <th>Batch</th>
+          <th style="min-width:220px;">Marks (/ @maxMarks)</th>
+          <th style="width:60px;">Grade</th>
+          <th style="width:65px;">%</th>
+        </tr>
+      </thead>
+      <tbody>
+      @{ int idx = 0; }
+      @foreach (var s in Model!.OrderBy(x=>x.RollNo).ThenBy(x=>x.FullName))
+      {
+        idx++;
+        var isAb  = s.IsAbsent || s.Grade == "AB";
+        var pctV  = (!isAb && s.MarksObtained.HasValue) ? (double)s.MarksObtained.Value*100/maxMarks : 0;
+        var barW  = (!isAb && s.MarksObtained.HasValue) ? (int)pctV : 0;
+        var gc    = s.Grade switch {"A+"=>"g-ap","A"=>"g-a","B+"=>"g-a","B"=>"g-b","C"=>"g-c","D"=>"g-d","F"=>"g-f","AB"=>"g-f",_=>""};
+        <tr id="row-@s.StudentId" style="@(isAb?"background:#fff8f8;":"")">
+          <td class="text-mu fw7" style="text-align:center;">@idx</td>
+          <td><span class="mono" style="font-size:12px;">@(s.RollNo??"—")</span></td>
+          <td>
+            <div class="fw7">@s.FullName</div>
+            <div style="font-size:11px;" class="text-mu">@s.AdmissionNo</div>
+          </td>
+          <td style="font-size:13px;">@s.ClassName / @s.SectionName</td>
+          <td><span class="badge b-purple" style="font-size:11px;">@s.BatchName</span></td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="number" class="fc mk-inp"
+                     style="width:75px;padding:7px 10px;text-align:center;font-weight:700;@(isAb?"opacity:.3;pointer-events:none;background:#fef2f2;":"")"
+                     data-sid="@s.StudentId"
+                     value="@((!isAb && s.MarksObtained.HasValue)?s.MarksObtained.Value.ToString("0"):"")"
+                     min="0" max="@maxMarks" placeholder="—"
+                     oninput="onMark(this,@maxMarks)"
+                     @(isAb?"disabled":"")/>
+              <div style="flex:1;height:6px;background:#f3f0ff;border-radius:3px;min-width:40px;">
+                <div class="mk-bar" style="height:6px;border-radius:3px;background:linear-gradient(90deg,var(--p),var(--pk));width:@barW%;transition:width .2s;"></div>
+              </div>
+              <button type="button" class="ab-btn @(isAb?"ab-active":"")"
+                      data-sid="@s.StudentId" onclick="toggleAbsent(this,@s.StudentId,@maxMarks)"
+                      title="@(isAb?"Mark Present":"Mark Absent")"
+                      style="flex-shrink:0;padding:5px 10px;border-radius:var(--rx);border:1.5px solid @(isAb?"#fca5a5":"var(--bdr)");background:@(isAb?"#fef2f2":"var(--sur2)");color:@(isAb?"#991b1b":"var(--mu)");font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;">
+                @(isAb ? "AB ✕" : "AB")
+              </button>
+            </div>
+          </td>
+          <td><span class="grade @gc mk-grade" id="gr-@s.StudentId">@(isAb?"AB":s.Grade??"—")</span></td>
+          <td><span class="mk-pct" id="pct-@s.StudentId"
+                style="font-size:12.5px;font-weight:800;color:@(isAb?"var(--err)":s.MarksObtained.HasValue?(pctV>=50?"var(--ok)":"var(--err)"):"var(--mu2)");">
+                @(isAb?"AB":s.MarksObtained.HasValue?$"{(int)pctV}%":"—")</span></td>
+        </tr>
+      }
+      </tbody>
+    </table>
+    </div>
+
+    <div style="padding:14px 16px;border-top:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+      <span id="savedMsg" style="font-size:13px;"></span>
+      <button class="btn btn-primary" onclick="saveMarks()"><i class="fas fa-save"></i> Save All Marks</button>
+    </div>
+  </div>
+}
+
+@section Scripts {
+<style>
+.ab-btn.ab-active { background:#fef2f2!important; color:#991b1b!important; border-color:#fca5a5!important; }
+.ab-btn:hover:not(.ab-active) { background:#fef2f2!important; color:#991b1b!important; border-color:#fca5a5!important; }
+</style>
+<script>
+const MAX_MARKS = @maxMarks;
+const absentSet = new Set();
+
+@if (hasData)
+{
+  @foreach(var s in Model!.Where(x => x.IsAbsent || x.Grade == "AB"))
+  {<text>absentSet.add(@s.StudentId);</text>}
+}
+
+function calcGrade(p){if(p>=90)return'A+';if(p>=80)return'A';if(p>=70)return'B+';if(p>=60)return'B';if(p>=50)return'C';if(p>=35)return'D';return'F';}
+function grCls(g){return{'A+':'g-ap','A':'g-a','B+':'g-a','B':'g-b','C':'g-c','D':'g-d','F':'g-f'}[g]||'';}
+
+function toggleAbsent(btn, sid, max) {
+  const isNow = !absentSet.has(sid);
+  const inp  = document.querySelector(`.mk-inp[data-sid="${sid}"]`);
+  const row  = document.getElementById('row-' + sid);
+  const grEl = document.getElementById('gr-'  + sid);
+  const pEl  = document.getElementById('pct-' + sid);
+  const bar  = inp?.parentElement?.querySelector('.mk-bar');
+  if (isNow) {
+    absentSet.add(sid);
+    if (inp) { inp.disabled=true; inp.style.cssText+='opacity:.3;pointer-events:none;background:#fef2f2;'; }
+    if (bar) bar.style.width='0%';
+    if (grEl){ grEl.textContent='AB'; grEl.className='grade g-f'; }
+    if (pEl) { pEl.textContent='AB'; pEl.style.color='var(--err)'; }
+    btn.textContent='AB ✕'; btn.classList.add('ab-active'); btn.title='Mark Present';
+    if (row) row.style.background='#fff8f8';
+  } else {
+    absentSet.delete(sid);
+    if (inp) { inp.disabled=false; inp.style.opacity='1'; inp.style.pointerEvents=''; inp.style.background=''; }
+    const v = inp ? parseFloat(inp.value) : NaN;
+    if (!isNaN(v)) setRow(inp, v, max);
+    else { if(grEl){grEl.textContent='—';grEl.className='grade';} if(pEl){pEl.textContent='—';pEl.style.color='var(--mu2)';} }
+    btn.textContent='AB'; btn.classList.remove('ab-active'); btn.title='Mark Absent';
+    if (row) row.style.background='';
+  }
+  updateStats();
+}
+
+function onMark(inp, max) {
+  if (absentSet.has(parseInt(inp.dataset.sid))) return;
+  let v = parseFloat(inp.value);
+  if (isNaN(v)) { setRow(inp,null,max); return; }
+  if (v>max){ inp.value=max; v=max; } if (v<0){ inp.value=0; v=0; }
+  setRow(inp, v, max);
+}
+function setRow(inp, val, max) {
+  const sid = inp.dataset.sid;
+  const pct = val!==null ? val*100/max : null;
+  const g   = pct!==null ? calcGrade(pct) : '—';
+  const bar = inp.parentElement?.querySelector('.mk-bar');
+  if (bar)  bar.style.width=(pct??0)+'%';
+  const grEl=document.getElementById('gr-'+sid);
+  if (grEl){ grEl.textContent=g; grEl.className='grade '+(pct!==null?grCls(g):''); }
+  const pEl=document.getElementById('pct-'+sid);
+  if (pEl) { pEl.textContent=pct!==null?Math.round(pct)+'%':'—'; pEl.style.color=pct===null?'var(--mu2)':pct>=50?'var(--ok)':'var(--err)'; }
+  updateStats();
+}
+function updateStats() {
+  const vals=[...document.querySelectorAll('.mk-inp')].filter(i=>!absentSet.has(parseInt(i.dataset.sid))).map(i=>parseFloat(i.value)).filter(v=>!isNaN(v));
+  const total=vals.length+absentSet.size;
+  document.getElementById('avgDisp').textContent=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):'—';
+  document.getElementById('passRate').textContent=total?Math.round(vals.filter(v=>v*100/MAX_MARKS>=35).length*100/total)+'%':'—';
+}
+function clearAll(){if(!confirm('Clear all on-screen values?'))return;document.querySelectorAll('.mk-inp').forEach(i=>{if(!absentSet.has(parseInt(i.dataset.sid))){i.value='';setRow(i,null,MAX_MARKS);}});}
+
+async function saveMarks() {
+  const entries=[];
+  absentSet.forEach(sid=>entries.push({studentId:sid,subjectId:@(subjectId??0),marks:0,isAbsent:true}));
+  document.querySelectorAll('.mk-inp').forEach(i=>{
+    const sid=parseInt(i.dataset.sid);
+    if(absentSet.has(sid))return;
+    const v=i.value.trim();
+    if(v!=='')entries.push({studentId:sid,subjectId:@(subjectId??0),marks:parseFloat(v),isAbsent:false});
+  });
+  if(!entries.length){alert('No marks or absent entries to save.');return;}
+  const btn=event.currentTarget; btn.disabled=true; btn.textContent='Saving...';
+  const msg=document.getElementById('savedMsg');
+  try {
+    const res=await fetch('/Marks/Save',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        examName:@Html.Raw($"'{examName.Replace("'","\\'")}'" ),
+        classId:@(classId??0),
+        yearId:@(yearId??0),
+        maxMarks:MAX_MARKS,
+        testDate:@Html.Raw(string.IsNullOrWhiteSpace(testDate) ? "null" : $"\"{testDate}\""),
+        entries
+      })});
+    const d=await res.json();
+    const ac=entries.filter(e=>e.isAbsent).length, mk=entries.filter(e=>!e.isAbsent).length;
+    msg.textContent=d.success?'✅ Saved: '+mk+' marks, '+ac+' absent':'❌ '+d.message;
+    msg.style.color=d.success?'var(--ok)':'var(--err)';
+    setTimeout(()=>msg.textContent='',6000);
+  } catch(err) {
+    msg.textContent='❌ Save failed: '+err.message;
+    msg.style.color='var(--err)';
+    setTimeout(()=>msg.textContent='',6000);
+  } finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-save"></i> Save All Marks'; }
+}
+updateStats();
+</script>
+}

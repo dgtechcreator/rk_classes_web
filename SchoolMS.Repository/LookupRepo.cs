@@ -1,0 +1,40 @@
+using SchoolMS.DB;
+using SchoolMS.Domain;
+using Microsoft.Data.SqlClient;
+using System.Data;
+using G = SchoolMS.DB.CommonConnectivity;
+
+namespace SchoolMS.Repository;
+
+public class LookupRepo(CommonConnectivity db)
+{
+    public List<AcademicYear> GetYears()  => db.Sql("SELECT * FROM AcademicYears WHERE IsActive=1 ORDER BY YearId DESC",
+        r => new AcademicYear { YearId=G.G<int>(r,"YearId"), YearName=G.G<string>(r,"YearName")??"", IsCurrent=G.G<bool>(r,"IsCurrent") });
+    public List<Class> GetClasses() => db.Sql("SELECT * FROM Classes WHERE IsActive=1 ORDER BY OrderNo",
+        r => new Class { ClassId=G.G<int>(r,"ClassId"), ClassName=G.G<string>(r,"ClassName")??"", OrderNo=G.G<int>(r,"OrderNo") });
+    public List<Section> GetSections() => db.Sql("SELECT * FROM Sections WHERE IsActive=1",
+        r => new Section { SectionId=G.G<int>(r,"SectionId"), SectionName=G.G<string>(r,"SectionName")??"" });
+    public List<Batch> GetBatches() => db.Sql("SELECT * FROM Batches WHERE IsActive=1",
+        r => new Batch { BatchId=G.G<int>(r,"BatchId"), BatchName=G.G<string>(r,"BatchName")??"" });
+    public List<FeeType> GetFeeTypes() => db.Sql("SELECT * FROM FeeTypes WHERE IsActive=1",
+        r => new FeeType { FeeTypeId=G.G<int>(r,"FeeTypeId"), TypeName=G.G<string>(r,"TypeName")??"" });
+    public List<ExpenseCat> GetExpCats() => db.Sql("SELECT * FROM ExpenseCategories WHERE IsActive=1",
+        r => new ExpenseCat { CategoryId=G.G<int>(r,"CategoryId"), CategoryName=G.G<string>(r,"CategoryName")??"" });
+    public List<Subject> GetSubjects(int classId) => db.Sql($"SELECT * FROM Subjects WHERE ClassId={classId} AND IsActive=1",
+        r => new Subject { SubjectId=G.G<int>(r,"SubjectId"), SubjectName=G.G<string>(r,"SubjectName")??"", SubjectCode=G.G<string>(r,"SubjectCode"), ClassId=classId, MaxMarks=G.G<int>(r,"MaxMarks"), PassMarks=G.G<int>(r,"PassMarks") });
+    public List<Exam> GetExams() => db.Sql("SELECT e.*,c.ClassName FROM Exams e LEFT JOIN Classes c ON c.ClassId=e.ClassId WHERE e.IsActive=1 ORDER BY e.ExamId",
+        r => new Exam { ExamId=G.G<int>(r,"ExamId"), ExamName=G.G<string>(r,"ExamName")??"", ClassId=G.G<int>(r,"ClassId"), ClassName=G.G<string>(r,"ClassName"), AcademicYearId=G.G<int>(r,"AcademicYearId") });
+    public DashboardStats GetDashStats()
+    {
+        var l = db.Read("sp_GetDashboardStats", new(), r => new DashboardStats {
+            TotalStudents=G.G<int>(r,"TotalStudents"), NewToday=G.G<int>(r,"NewToday"),
+            PresentToday=G.G<int>(r,"PresentToday"), AbsentToday=G.G<int>(r,"AbsentToday"),
+            FeesThisMonth=G.G<decimal>(r,"FeesThisMonth"), ExpensesThisMonth=G.G<decimal>(r,"ExpensesThisMonth"),
+            Class1Count=G.G<int>(r,"Class1Count"), Class2Count=G.G<int>(r,"Class2Count"),
+            Class3Count=G.G<int>(r,"Class3Count"), TotalStaff=G.G<int>(r,"TotalStaff")
+        });
+        return l.FirstOrDefault() ?? new DashboardStats();
+    }
+    public List<Student> GetStudentDropdown() => db.Sql("SELECT StudentId,FullName,AdmissionNo,ClassId FROM Students WHERE Status='Active' ORDER BY FullName",
+        r => new Student { StudentId=G.G<int>(r,"StudentId"), FullName=G.G<string>(r,"FullName")??"", AdmissionNo=G.G<string>(r,"AdmissionNo")??"", ClassId=G.G<int?>(r,"ClassId") });
+}

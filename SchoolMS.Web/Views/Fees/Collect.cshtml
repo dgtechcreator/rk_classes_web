@@ -1,0 +1,126 @@
+@model SchoolMS.Web.ViewModels.FeeCollectVM
+@{ ViewData["Title"] = "Collect Fee"; }
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div><div class="breadcrumb"><a href="/Fees/Index">Fees</a> / <span>Collect Fee</span></div><h1>Collect Fee Payment</h1></div>
+  </div>
+</div>
+
+<form method="post" action="/Fees/SavePayment" style="max-width:700px;">
+  <div class="card">
+    <div class="card-hdr"><span class="card-ttl"><i class="fas fa-rupee-sign" style="color:var(--p);margin-right:6px;"></i>Payment Details</span></div>
+    <div class="form-grid">
+      <div class="fg" style="grid-column:1/-1;">
+        <label>Student *</label>
+        <select name="StudentId" class="fs" required>
+          <option value="">— Select Student —</option>
+          @foreach(var s in Model.Students){<option value="@s.StudentId">@s.FullName (@s.AdmissionNo) — @s.ClassName</option>}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Batch *</label>
+        <select name="BatchId" id="cBatch" class="fs" onchange="fetchFeeAmount()" required>
+          <option value="">— Select Batch —</option>
+          @foreach(var b in Model.Batches){<option value="@b.BatchId">@b.BatchName</option>}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Class *</label>
+        <select name="ClassId" id="cClass" class="fs" onchange="fetchFeeAmount()" required>
+          <option value="">— Select Class —</option>
+          @foreach(var c in Model.Classes){<option value="@c.ClassId">@c.ClassName</option>}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Medium / Stream *</label>
+        <select name="SectionId" id="cSection" class="fs" onchange="fetchFeeAmount()" required>
+          <option value="">— Select Medium/Stream —</option>
+          @foreach(var s in Model.Sections){<option value="@s.SectionId">@s.SectionName</option>}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Fee Type</label>
+        <select name="FeeTypeId" class="fs">
+          <option value="0">— Optional —</option>
+          @foreach(var ft in Model.FeeTypes){<option value="@ft.FeeTypeId">@ft.TypeName</option>}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Month</label>
+        <select name="Month" class="fs">
+          <option value="">— Select Month —</option>
+          @foreach(var m in new[]{"April","May","June","July","August","September","October","November","December","January","February","March"}){<option value="@m">@m</option>}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Amount (₹) *</label>
+        <input type="number" name="Amount" id="amt" class="fc" placeholder="0.00" step="0.01" min="0" required oninput="calcNet()"/>
+      </div>
+      <div class="fg">
+        <label>Discount (₹)</label>
+        <input type="number" name="Discount" id="disc" class="fc" placeholder="0.00" step="0.01" min="0" value="0" oninput="calcNet()"/>
+      </div>
+      <div class="fg">
+        <label>Late Fine (₹)</label>
+        <input type="number" name="LateFine" id="fine" class="fc" placeholder="0.00" step="0.01" min="0" value="0" oninput="calcNet()"/>
+      </div>
+      <div class="fg">
+        <label>Payment Mode *</label>
+        <select name="PaymentMode" class="fs">
+          @foreach(var m in new[]{"Cash","Online Transfer","Cheque","Demand Draft"}){<option value="@m">@m</option>}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Transaction Ref</label>
+        <input type="text" name="TransactionRef" class="fc" placeholder="UTR / Cheque No."/>
+      </div>
+      <div class="fg">
+        <label>Academic Year</label>
+        <select name="AcademicYearId" class="fs">
+          @foreach(var y in Model.Years){<option value="@y.YearId" selected=@(y.IsCurrent?"selected":"")>@y.YearName</option>}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Remarks</label>
+        <input type="text" name="Remarks" class="fc" placeholder="Optional remarks"/>
+      </div>
+    </div>
+
+    <div class="net-box">
+      <span class="net-lbl"><i class="fas fa-rupee-sign"></i> Net Amount Payable</span>
+      <span class="net-val" id="netAmt">₹0.00</span>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:1px solid var(--bdr);">
+      <a href="/Fees/Index" class="btn btn-outline"><i class="fas fa-times"></i> Cancel</a>
+      <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Record Payment</button>
+    </div>
+  </div>
+</form>
+
+@section Scripts {
+<script>
+function calcNet() {
+  const a = parseFloat(document.getElementById('amt')?.value)  || 0;
+  const d = parseFloat(document.getElementById('disc')?.value) || 0;
+  const f = parseFloat(document.getElementById('fine')?.value) || 0;
+  document.getElementById('netAmt').textContent = '₹' + (a - d + f).toFixed(2);
+}
+
+async function fetchFeeAmount() {
+  const batchId   = document.getElementById('cBatch')?.value;
+  const classId   = document.getElementById('cClass')?.value;
+  const sectionId = document.getElementById('cSection')?.value;
+  if (!batchId || !classId || !sectionId) return;
+  try {
+    const res  = await fetch(`/Fees/GetFeeAmount?batchId=${batchId}&classId=${classId}&sectionId=${sectionId}`);
+    const data = await res.json();
+    if (data.found) {
+      document.getElementById('amt').value = data.amount.toFixed(2);
+      calcNet();
+    }
+  } catch {}
+}
+</script>
+}
