@@ -63,7 +63,7 @@
   <i class="fas fa-filter" style="color:var(--mu);font-size:13px;flex-shrink:0;"></i>
 
   @* 1. Academic Year *@
-  <select name="yearId" class="fs" onchange="this.form.submit()">
+  <select name="yearId" class="fs">
     <option value="">— Year —</option>
     @foreach (var y in years)
     {
@@ -82,8 +82,8 @@
     }
   </select>
 
-  @* 3. Class / Std — triggers exam list reload *@
-  <select name="classId" class="fs" id="sel_class" onchange="clearExamAndSubmit()">
+  @* 3. Class / Std *@
+  <select name="classId" class="fs" id="sel_class" onchange="clearExam()">
     <option value="">— Std —</option>
     @foreach (var c in classes)
     {
@@ -492,10 +492,9 @@ else
 @section Scripts {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-function clearExamAndSubmit() {
+function clearExam() {
   document.getElementById('inp_examName').value = '';
   document.getElementById('inp_testDate').value = '';
-  document.getElementById('rptForm').submit();
 }
 
 function readTable() {
