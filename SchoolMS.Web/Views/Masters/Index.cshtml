@@ -19,6 +19,9 @@
       <h1>🗂️ Masters</h1>
       <p>Manage Academic Years, Classes, Sections, Batches and Fee Types</p>
     </div>
+    <button class="btn btn-outline btn-sm" id="openAppBtn" onclick="openInApp()" style="display:none;gap:6px;" title="Open in fullscreen">
+      <i class="fas fa-expand"></i> <span id="appBtnText">Open in App</span>
+    </button>
   </div>
 </div>
 
@@ -27,8 +30,14 @@
 @if (TempData["Error"] != null)
 {<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> @TempData["Error"]</div>}
 
-@* ── Tab bar ──────────────────────────────────────────────── *@
+@* ── Responsive Layout ────────────────────────────────────── *@
 <style>
+.pg-hdr .pg-row { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; }
+.pg-hdr h1 { font-size:clamp(20px, 5vw, 28px); }
+.pg-hdr p { font-size:clamp(12px, 3vw, 14px); }
+#openAppBtn { white-space:nowrap; font-size:13px; }
+
+@* ── Tab bar ──────────────────────────────────────────────── *@
 #tabBar { display:flex; gap:0; border-bottom:2px solid var(--bdr); margin-bottom:22px; overflow-x:auto; flex-wrap:nowrap; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
 #tabBar::-webkit-scrollbar { display:none; }
 .tab-btn { padding:10px 16px; border:none; border-bottom:2.5px solid transparent; margin-bottom:-2px; background:none; cursor:pointer; font-family:inherit; font-size:13px; font-weight:700; color:var(--mu); transition:all .15s; display:flex; align-items:center; gap:6px; white-space:nowrap; flex-shrink:0; }
@@ -39,6 +48,17 @@
   .tab-btn { padding:8px 10px; font-size:11.5px; gap:4px; }
   .tab-cnt { font-size:10px; padding:1px 5px; }
   .tab-btn .tab-ico { font-size:14px; }
+  #tabBar { margin-bottom:16px; }
+}
+
+@* Mobile-first responsive tables *@
+@@media (max-width:640px) {
+  .tbl-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  table { font-size:12px; }
+  table td, table th { padding:6px 8px; }
+  .btn-sm { padding:6px 8px; font-size:11px; }
+  .badge { font-size:10px; padding:2px 4px; }
+  .card { padding:12px; }
 }
 </style>
 <div id="tabBar">
@@ -573,6 +593,24 @@
 
 @section Scripts {
 <script>
+// ── Open in App / Fullscreen ──────────────────────────────────
+function openInApp() {
+  const elem = document.documentElement;
+  if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+    if (elem.requestFullscreen) elem.requestFullscreen();
+    else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+    else if (elem.mozRequestFullScreen) elem.mozRequestFullScreen();
+    else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+  }
+}
+
+// Show Open in App button on mobile
+if (navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches) {
+  document.getElementById('openAppBtn').style.display = 'none';
+} else if (window.innerWidth <= 1024) {
+  document.getElementById('openAppBtn').style.display = 'flex';
+}
+
 // ── Tab switching ─────────────────────────────────────────────
 function switchTab(id) {
   document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
