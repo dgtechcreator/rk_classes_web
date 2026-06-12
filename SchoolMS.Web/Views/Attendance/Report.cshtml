@@ -1,13 +1,57 @@
 @model List<SchoolMS.Domain.AttendanceReport>
+@using SchoolMS.Services;
+@inject AttendanceService attSvc;
 @{
     ViewData["Title"] = "Attendance Report";
     var cls       = ViewBag.Classes as List<SchoolMS.Domain.Class> ?? new();
+    var secs      = ViewBag.Sections as List<SchoolMS.Domain.Section> ?? new();
+    var btchs     = ViewBag.Batches as List<SchoolMS.Domain.Batch> ?? new();
     int curMonth  = ViewBag.Month  ?? DateTime.Today.Month;
     int curYear   = ViewBag.Year   ?? DateTime.Today.Year;
     int? curClass = ViewBag.ClassId;
+    int? curSec   = ViewBag.SectionId;
+    int? curBtch  = ViewBag.BatchId;
     var monthName = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(curMonth);
     var hasData   = Model.Any();
 }
+
+<style>
+/* Mobile Responsive - Attendance Report Filters */
+@@media (max-width: 768px) {
+  .report-filter-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+    align-items: flex-end !important;
+  }
+  .report-filter-row > * {
+    min-width: unset !important;
+  }
+  .report-filter-row .btn {
+    grid-column: span 2;
+    width: 100%;
+  }
+}
+
+@@media (max-width: 480px) {
+  .report-filter-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .report-filter-row > * {
+    width: 100%;
+  }
+  .report-filter-row .fs,
+  .report-filter-row .fc {
+    width: 100% !important;
+  }
+  .report-filter-row .btn {
+    grid-column: span 1;
+    width: 100%;
+  }
+}
+</style>
 
 <div class="pg-hdr">
   <div class="pg-row">
@@ -16,7 +60,7 @@
       <p>Monthly summary — @monthName @curYear</p>
     </div>
     <div class="df g8">
-      <a href="/Attendance/Index" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back to Marking</a>
+      <a href="/Attendance/Index" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back to Attendance</a>
       @if (hasData)
       {
         <button onclick="exportExcel()" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</button>
@@ -28,14 +72,30 @@
 </div>
 
 <form method="get" action="/Attendance/Report">
-<div class="filter-bar">
+<div class="filter-bar report-filter-row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
   <i class="fas fa-filter" style="color:var(--mu);font-size:13px;"></i>
   <select name="classId" class="fs">
-    <option value="">All Classes</option>
+    <option value="">All Std</option>
     @foreach (var c in cls)
     {
       if (curClass == c.ClassId) { <option value="@c.ClassId" selected>@c.ClassName</option> }
       else                       { <option value="@c.ClassId">@c.ClassName</option> }
+    }
+  </select>
+  <select name="sectionId" class="fs">
+    <option value="">All Stream</option>
+    @foreach (var s in secs)
+    {
+      if (curSec == s.SectionId) { <option value="@s.SectionId" selected>@s.SectionName</option> }
+      else                       { <option value="@s.SectionId">@s.SectionName</option> }
+    }
+  </select>
+  <select name="batchId" class="fs">
+    <option value="">All Batches</option>
+    @foreach (var b in btchs)
+    {
+      if (curBtch == b.BatchId) { <option value="@b.BatchId" selected>@b.BatchName</option> }
+      else                       { <option value="@b.BatchId">@b.BatchName</option> }
     }
   </select>
   <select name="month" class="fs">
@@ -78,19 +138,30 @@
   </div>
 }
 
-<div class="card" style="padding:0;">
+<div style="margin-bottom: 20px;">
+  <button onclick="toggleSection('summaryView')" style="background:#2563eb;color:#fff;border:none;padding:10px 16px;border-radius:6px;cursor:pointer;font-weight:600;margin-bottom:12px;">
+    📊 Summary View
+  </button>
+  <button onclick="toggleSection('dateView')" style="background:#1976d2;color:#fff;border:none;padding:10px 16px;border-radius:6px;cursor:pointer;font-weight:600;margin-bottom:12px;margin-left:8px;">
+    📅 Date-Wise View
+  </button>
+</div>
+
+<div id="summaryView" class="card" style="padding:0;">
   <div class="tbl-wrap">
     <table id="reportTable">
       <thead>
         <tr>
           <th>#</th>
           <th>Student</th>
-          <th>Class</th>
+          <th>Std</th>
           <th style="text-align:center;">Total Days</th>
           <th style="text-align:center;">Present</th>
           <th style="text-align:center;">Absent</th>
           <th style="text-align:center;">Late</th>
           <th style="min-width:160px;">Attendance %</th>
+          <th>Added By</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -120,6 +191,34 @@
               <span style="font-size:13px;font-weight:800;color:@clr;min-width:42px;">@r.AttendancePct%</span>
             </div>
           </td>
+          <td style="font-size:13px;">@(r.CreatedByName ?? "—")</td>
+          <td onclick="event.stopPropagation()" style="white-space:nowrap;">
+            @{
+              var phones = ViewBag.StudentPhones as Dictionary<int, (string, string)>;
+              var fatherPhone = phones != null && phones.ContainsKey(r.StudentId) ? phones[r.StudentId].Item1 : "";
+              var motherPhone = phones != null && phones.ContainsKey(r.StudentId) ? phones[r.StudentId].Item2 : "";
+            }
+            <button class="btn btn-outline btn-sm btn-icon" title="Call" onclick="toggleDropdown(event, 'call-att-@r.StudentId')">
+              <i class="fas fa-phone"></i>
+            </button>
+            <div id="call-att-@r.StudentId" class="contact-dropdown" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:100;min-width:160px;">
+              @if (!string.IsNullOrEmpty(fatherPhone))
+              {
+                <a href="tel:@fatherPhone" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
+                  📞 Father: @fatherPhone
+                </a>
+              }
+              @if (!string.IsNullOrEmpty(motherPhone))
+              {
+                <a href="tel:@motherPhone" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
+                  📞 Mother: @motherPhone
+                </a>
+              }
+            </div>
+            <button class="btn btn-outline btn-sm btn-icon" title="WhatsApp - Absence Notification" onclick="sendAbsenceMessageBuiltIn(@r.StudentId, '@fatherPhone', '@motherPhone')" style="color:#25D366;">
+              <i class="fab fa-whatsapp"></i>
+            </button>
+          </td>
         </tr>
       }
       </tbody>
@@ -130,6 +229,155 @@
     }
   </div>
 </div>
+
+<!-- Date-Wise View -->
+<div id="dateView" style="display:none;">
+  <form method="get" action="/Attendance/Report" id="dateWiseForm">
+    <div class="card" style="padding: 16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:flex-end;">
+        <input type="hidden" name="month" value="@curMonth"/>
+        <input type="hidden" name="year" value="@curYear"/>
+        <input type="hidden" name="classId" value="@(curClass?.ToString() ?? "")"/>
+        <input type="hidden" name="sectionId" value="@(curSec?.ToString() ?? "")"/>
+        <input type="hidden" name="batchId" value="@(curBtch?.ToString() ?? "")"/>
+
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;">Select Date</label>
+          <input type="date" id="selectedDate" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;"
+                 value="@DateTime.Today.ToString("yyyy-MM-dd")"/>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;">Std</label>
+          <select id="dwClassId" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;">
+            <option value="">All Std</option>
+            @foreach (var c in cls)
+            {<option value="@c.ClassId">@c.ClassName</option>}
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;">Medium/Stream</label>
+          <select id="dwSectionId" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;">
+            <option value="">All Medium</option>
+            @foreach (var s in secs)
+            {<option value="@s.SectionId">@s.SectionName</option>}
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;">Batch</label>
+          <select id="dwBatchId" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;">
+            <option value="">All Batches</option>
+            @foreach (var b in btchs)
+            {<option value="@b.BatchId">@b.BatchName</option>}
+          </select>
+        </div>
+        <div>
+          <button type="button" onclick="loadDateWise()" class="btn btn-primary" style="padding:8px 20px;white-space:nowrap;">
+            <i class="fas fa-search"></i> Filter
+          </button>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div class="card" style="padding:0;margin-top:12px;">
+    <div class="tbl-wrap">
+      <table id="dateWiseTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Student</th>
+            <th>Std</th>
+            <th>Medium/Stream</th>
+            <th>Batch</th>
+            <th style="text-align:center;">Status</th>
+            <th>Subject</th>
+            <th>Teacher</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="dateWiseTbody">
+        </tbody>
+      </table>
+      <div id="dateWiseEmpty" class="empty" style="display:none;">
+        <div class="empty-ico">📅</div>
+        <h3>No attendance records</h3>
+        <p>Select a date to view attendance.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function loadDateWise() {
+  var selectedDate = document.getElementById('selectedDate').value;
+  var classId = document.getElementById('dwClassId').value;
+  var sectionId = document.getElementById('dwSectionId').value;
+  var batchId = document.getElementById('dwBatchId').value;
+
+  if (!selectedDate) {
+    alert('Please select a date');
+    return;
+  }
+
+  // Call server to get attendance for this date
+  fetch('/Attendance/GetDateWiseAttendance?date=' + selectedDate + '&classId=' + (classId || '') + '&sectionId=' + (sectionId || '') + '&batchId=' + (batchId || ''))
+    .then(response => response.json())
+    .then(data => {
+      var tbody = document.getElementById('dateWiseTbody');
+      var empty = document.getElementById('dateWiseEmpty');
+      tbody.innerHTML = '';
+
+      if (data.length === 0) {
+        empty.style.display = 'block';
+        return;
+      }
+
+      empty.style.display = 'none';
+      data.forEach((item, idx) => {
+        var statusBadge = 'b-present';
+        if (item.status === 'Absent') statusBadge = 'b-absent';
+        else if (item.status === 'Late') statusBadge = 'b-late';
+
+        var row = `<tr>
+          <td>${idx + 1}</td>
+          <td><strong>${item.studentName}</strong><br/><span style="font-size:11px;color:#888;">${item.admissionNo}</span></td>
+          <td>${item.className}</td>
+          <td><span class="badge b-purple">${item.sectionName || '—'}</span></td>
+          <td>${item.batchName}</td>
+          <td style="text-align:center;"><span class="badge ${statusBadge}">${item.status}</span></td>
+          <td>${item.subject || '—'}</td>
+          <td>${item.teacher || '—'}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn btn-outline btn-sm btn-icon" title="Call" onclick="toggleDropdownDateWise(event, 'call-dw-${idx}', '${item.studentId || ''}')" style="padding:4px 8px;">
+              <i class="fas fa-phone"></i>
+            </button>
+            <div id="call-dw-${idx}" class="contact-dropdown" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:100;min-width:160px;"></div>
+            <button class="btn btn-outline btn-sm btn-icon" title="WhatsApp" onclick="sendAbsenceMessageDW(event, '${item.studentId || ''}')" style="color:#25D366;padding:4px 8px;">
+              <i class="fab fa-whatsapp"></i>
+            </button>
+          </td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+    })
+    .catch(err => {
+      console.error('Error:', err);
+      var tbody = document.getElementById('dateWiseTbody');
+      var empty = document.getElementById('dateWiseEmpty');
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      empty.innerHTML = '<div class="empty-ico">⚠️</div><h3>Error loading data</h3><p>Check the browser console for details.</p>';
+    });
+}
+
+// Load on page load
+document.addEventListener('DOMContentLoaded', function() {
+  var dateView = document.getElementById('dateView');
+  if (dateView && dateView.style.display !== 'none') {
+    loadDateWise();
+  }
+});
+</script>
 
 <style>
 @@media print {
@@ -145,6 +393,314 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
+// Toggle between Summary and Date-Wise views
+function toggleSection(section) {
+  var summary = document.getElementById('summaryView');
+  var dateWise = document.getElementById('dateView');
+  if (section === 'summaryView') {
+    summary.style.display = 'block';
+    dateWise.style.display = 'none';
+  } else {
+    summary.style.display = 'none';
+    dateWise.style.display = 'block';
+  }
+}
+
+// Load student contact info for attendance report
+function toggleDropdown(e, id) {
+  e.preventDefault();
+  e.stopPropagation();
+  var dropdown = document.getElementById(id);
+  var studentId = dropdown.getAttribute('data-student-id');
+
+  // Close all other dropdowns
+  document.querySelectorAll('.contact-dropdown').forEach(el => {
+    if (el.id !== id) el.style.display = 'none';
+  });
+
+  if (dropdown.style.display === 'block') {
+    dropdown.style.display = 'none';
+    return;
+  }
+
+  // Load contact info
+  fetch('/Attendance/GetStudentContact?studentId=' + studentId)
+    .then(response => response.json())
+    .then(data => {
+      dropdown.innerHTML = '';
+      if (data.fatherPhone) {
+        dropdown.innerHTML += `<a href="tel:${data.fatherPhone}" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#333;font-size:13px;font-weight:600;">📞 Father: ${data.fatherPhone}</a>`;
+      }
+      if (data.studentPhone) {
+        dropdown.innerHTML += `<a href="tel:${data.studentPhone}" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#333;font-size:13px;font-weight:600;">📞 Student: ${data.studentPhone}</a>`;
+      }
+      dropdown.style.display = 'block';
+    })
+    .catch(err => console.error('Error:', err));
+}
+
+// Send absence notification message (with pre-loaded phone numbers)
+function sendAbsenceMessageBuiltIn(studentId, fatherPhone, motherPhone) {
+  console.log('Opening popup for student:', studentId, 'Father:', fatherPhone, 'Mother:', motherPhone);
+  showParentSelectionPopup(studentId, fatherPhone, motherPhone);
+}
+
+// Legacy function for backward compatibility
+function sendAbsenceMessage(studentId) {
+  fetch('/Attendance/GetStudentContact?studentId=' + studentId)
+    .then(response => response.json())
+    .then(data => {
+      showParentSelectionPopup(studentId, data.fatherPhone, data.motherPhone);
+    })
+    .catch(err => {
+      console.error('Error:', err);
+      alert('Error loading contact information');
+    });
+}
+
+
+// Toggle dropdown for date-wise view
+function toggleDropdownDateWise(e, id, studentId) {
+  e.preventDefault();
+  e.stopPropagation();
+  var dropdown = document.getElementById(id);
+
+  // Close all other dropdowns
+  document.querySelectorAll('.contact-dropdown').forEach(el => {
+    if (el.id !== id) el.style.display = 'none';
+  });
+
+  if (dropdown.style.display === 'block') {
+    dropdown.style.display = 'none';
+    return;
+  }
+
+  // Load contact info
+  fetch('/Attendance/GetStudentContact?studentId=' + studentId)
+    .then(response => response.json())
+    .then(data => {
+      dropdown.innerHTML = '';
+      if (data.fatherPhone) {
+        dropdown.innerHTML += `<a href="tel:${data.fatherPhone}" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#333;font-size:13px;font-weight:600;">📞 Father: ${data.fatherPhone}</a>`;
+      }
+      if (data.studentPhone) {
+        dropdown.innerHTML += `<a href="tel:${data.studentPhone}" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#333;font-size:13px;font-weight:600;">📞 Student: ${data.studentPhone}</a>`;
+      }
+      dropdown.style.display = 'block';
+    })
+    .catch(err => console.error('Error:', err));
+}
+
+// Send absence message - show popup to select parents
+function sendAbsenceMessageDW(e, studentId) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  fetch('/Attendance/GetStudentContact?studentId=' + studentId)
+    .then(response => response.json())
+    .then(data => {
+      showParentSelectionPopup(studentId, data.fatherPhone, data.motherPhone || data.studentPhone);
+    })
+    .catch(err => {
+      console.error('Error:', err);
+      alert('Error loading contact information');
+    });
+}
+
+// Show popup to select which parents to send message to
+function showParentSelectionPopup(studentId, fatherPhone, motherPhone) {
+  var modal = document.createElement('div');
+  modal.id = 'parentSelectModal-' + studentId;
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+
+  var absenceMsg = `*Dear Parent,*
+
+This is to inform you that your ward was absent from today's classes. Kindly inform us of the reason for the absence.
+
+*Regards,*
+*R K CLASSES*
+*Kapil Sir*
+*M. Sc., B. Ed*
+*9870375795*
+*8108499214*
+
+......….................................
+
+*प्रिय अभिभावक,*
+
+यह सूचित किया जाता है कि आपका वार्ड आज की कक्षाओं में अनुपस्थित था। कृपया अनुपस्थिति का कारण हमें बताने की कृपा करें।
+
+*सादर,*
+*R K CLASSES*
+*Kapil Sir*
+*M. Sc., B. Ed*
+*9870375795*
+*8108499214*`;
+
+  var msgDisplay = absenceMsg.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+
+  var modalDiv = document.createElement('div');
+  modalDiv.style.cssText = 'background:#fff;padding:24px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.2);max-width:480px;width:90%;max-height:80vh;overflow-y:auto;';
+
+  var msgDiv = document.createElement('div');
+  msgDiv.style.cssText = 'font-size:13px;line-height:1.8;color:#333;margin-bottom:20px;white-space:pre-wrap;font-family:Arial,sans-serif;';
+  msgDiv.innerHTML = msgDisplay;
+
+  var buttonsDiv = document.createElement('div');
+  buttonsDiv.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;';
+
+  var fatherBtn = document.createElement('button');
+  fatherBtn.textContent = '👨 Send to Father';
+  fatherBtn.style.cssText = 'background:#25D366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;';
+  fatherBtn.onclick = function() { sendToFather(studentId, fatherPhone); };
+
+  var motherBtn = document.createElement('button');
+  motherBtn.textContent = '👩 Send to Mother';
+  motherBtn.style.cssText = 'background:#25D366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;';
+  motherBtn.onclick = function() { sendToMother(studentId, motherPhone); };
+
+  buttonsDiv.appendChild(fatherBtn);
+  buttonsDiv.appendChild(motherBtn);
+
+  var closeBtn = document.createElement('button');
+  closeBtn.textContent = 'Close';
+  closeBtn.style.cssText = 'width:100%;background:#f0f0f0;color:#333;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600;';
+  closeBtn.onclick = function() { modal.remove(); };
+
+  modalDiv.appendChild(msgDiv);
+  modalDiv.appendChild(buttonsDiv);
+  modalDiv.appendChild(closeBtn);
+  modal.appendChild(modalDiv);
+  document.body.appendChild(modal);
+}
+
+// Send message to Father
+function sendToFather(studentId, fatherPhone) {
+  console.log('sendToFather called with studentId:', studentId);
+
+  var absenceMsg = `*Dear Parent,*
+
+This is to inform you that your ward was absent from today's classes. Kindly inform us of the reason for the absence.
+
+*Regards,*
+*R K CLASSES*
+*Kapil Sir*
+*M. Sc., B. Ed*
+*9870375795*
+*8108499214*
+
+......….................................
+
+*प्रिय अभिभावक,*
+
+यह सूचित किया जाता है कि आपका वार्ड आज की कक्षाओं में अनुपस्थित था। कृपया अनुपस्थिति का कारण हमें बताने की कृपा करें।
+
+*सादर,*
+*R K CLASSES*
+*Kapil Sir*
+*M. Sc., B. Ed*
+*9870375795*
+*8108499214*`;
+
+  // Fetch fresh data from API
+  var url = '/Attendance/GetStudentContact?studentId=' + studentId;
+  console.log('Fetching from:', url);
+
+  fetch(url)
+    .then(response => {
+      console.log('Response received:', response);
+      return response.json();
+    })
+    .then(data => {
+      console.log('Data received:', data);
+      if (data.fatherPhone && data.fatherPhone.trim() !== '') {
+        var fatherNum = data.fatherPhone.replace(/[^0-9]/g, '');
+        console.log('Father number:', fatherNum);
+        if (fatherNum.length > 0) {
+          var waUrl = 'https://wa.me/' + fatherNum + '?text=' + encodeURIComponent(absenceMsg);
+          console.log('Opening WhatsApp URL:', waUrl);
+          window.open(waUrl, '_blank');
+          var modal = document.getElementById('parentSelectModal-' + studentId);
+          if (modal) modal.remove();
+        } else {
+          alert('Invalid father phone number');
+        }
+      } else {
+        alert('Father phone not found in system');
+      }
+    })
+    .catch(err => {
+      console.error('Fetch error:', err);
+      alert('Error: ' + err.message);
+    });
+}
+
+// Send message to Mother
+function sendToMother(studentId, motherPhone) {
+  console.log('sendToMother called with studentId:', studentId);
+
+  var absenceMsg = `*Dear Parent,*
+
+This is to inform you that your child was absent from class today. Kindly let us know the reason for the absence.
+*Regards,*
+*R K CLASSES*
+*Kapil Sir*
+*M. Sc., B. Ed*
+*9870375795*
+*8108499214*
+
+......….................................
+
+*प्रिय अभिभावक,*
+
+यह सूचित किया जाता है कि आपका बच्चा आज की कक्षाओं में अनुपस्थित था। कृपया अनुपस्थिति का कारण हमें बताने की कृपा करें।
+
+*सादर,*
+*R K CLASSES*
+*Kapil Sir*
+*M. Sc., B. Ed*
+*9870375795*
+*8108499214*`;
+
+  var url = '/Attendance/GetStudentContact?studentId=' + studentId;
+  console.log('Fetching from:', url);
+
+  fetch(url)
+    .then(response => {
+      console.log('Response received:', response);
+      return response.json();
+    })
+    .then(data => {
+      console.log('Data received:', data);
+      if (data.motherPhone && data.motherPhone.trim() !== '') {
+        var motherNum = data.motherPhone.replace(/[^0-9]/g, '');
+        console.log('Mother number:', motherNum);
+        if (motherNum.length > 0) {
+          var waUrl = 'https://wa.me/' + motherNum + '?text=' + encodeURIComponent(absenceMsg);
+          console.log('Opening WhatsApp URL:', waUrl);
+          window.open(waUrl, '_blank');
+          var modal = document.getElementById('parentSelectModal-' + studentId);
+          if (modal) modal.remove();
+        } else {
+          alert('Invalid mother phone number');
+        }
+      } else {
+        alert('Mother phone not found in system');
+      }
+    })
+    .catch(err => {
+      console.error('Fetch error:', err);
+      alert('Error: ' + err.message);
+    });
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', () => {
+  document.querySelectorAll('.contact-dropdown').forEach(el => {
+    el.style.display = 'none';
+  });
+});
+
 // safe text helper — avoids ?. and ?? for broad browser support
 function txt(el) { return el ? el.innerText.trim() : ''; }
 
@@ -203,7 +759,7 @@ function exportPDF() {
     doc.setFontSize(9); doc.setFont('helvetica', 'normal');
 
     var clsSel = document.querySelector('select[name="classId"]');
-    var clsName = clsSel ? clsSel.options[clsSel.selectedIndex].text : 'All Classes';
+    var clsName = clsSel ? clsSel.options[clsSel.selectedIndex].text : 'All Std';
     doc.text('@monthName @(curYear)  |  ' + clsName, pageW / 2, 44, { align: 'center' });
 
     // body with colour coding on Att % column

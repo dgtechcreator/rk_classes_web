@@ -30,6 +30,13 @@ public class Faculty
     public string    Status{get;set;}="Active";
     public string?   Remarks{get;set;}
     public DateTime  CreatedAt{get;set;}
+    public int?      CreatedBy{get;set;}
+    public string?   CreatedByName{get;set;}
+
+    /// <summary>Returns "Firstname ma'am" for Female, "Firstname sir" for Male/other.</summary>
+    public string DisplayName =>
+        string.IsNullOrWhiteSpace(FullName) ? FullName
+        : FullName.Trim() + (Gender == "Female" ? " MA'AM" : " SIR");
 }
 
 public class FacultySubject

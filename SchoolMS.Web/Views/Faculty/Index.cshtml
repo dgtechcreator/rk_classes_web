@@ -25,9 +25,10 @@
     <option value="">All Designations</option>
     @foreach(var d in designations){<option value="@d.DesignationId" selected=@((int?)desigId==d.DesignationId?"selected":"")>@d.DesignationName</option>}
   </select>
+  @{ var facSt = status ?? "Active"; }
   <select name="status" class="fs">
-    <option value="">All Status</option>
-    @foreach(var s in new[]{"Active","Inactive","Relieved"}){<option value="@s" selected=@(status==s?"selected":"")>@s</option>}
+    @if(facSt=="Inactive"){ <option value="Active">Active</option><option value="Inactive" selected>Inactive</option> }
+    else {                  <option value="Active" selected>Active</option><option value="Inactive">Inactive</option> }
   </select>
   <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Search</button>
   <a href="/Faculty/Index" class="btn btn-outline btn-sm"><i class="fas fa-times"></i></a>
@@ -35,7 +36,7 @@
 </form>
 
 @* Summary stat cards *@
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;">
   <div class="card" style="padding:14px 18px;border-top:3.5px solid var(--p);">
     <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Total Faculty</div>
     <div style="font-size:22px;font-weight:800;color:var(--txt);">@total</div>
@@ -48,10 +49,6 @@
     <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Inactive</div>
     <div style="font-size:22px;font-weight:800;color:var(--warn);">@Model.Count(f=>f.Status=="Inactive")</div>
   </div>
-  <div class="card" style="padding:14px 18px;border-top:3.5px solid var(--err);">
-    <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Relieved</div>
-    <div style="font-size:22px;font-weight:800;color:var(--err);">@Model.Count(f=>f.Status=="Relieved")</div>
-  </div>
 </div>
 
 <div class="card">
@@ -62,7 +59,7 @@
     {
     <table>
       <thead>
-        <tr><th>Photo</th><th>Emp. Code</th><th>Name</th><th>Designation</th><th>Specialization</th><th>Phone</th><th>Joining Date</th><th>Status</th><th></th></tr>
+        <tr><th>Photo</th><th>Emp. Code</th><th>Name</th><th>Designation</th><th>Specialization</th><th>Phone</th><th>Joining Date</th><th>Status</th><th>Added By</th><th></th></tr>
       </thead>
       <tbody>
       @foreach (var f in Model)
@@ -76,7 +73,8 @@
           </td>
           <td><span class="mono text-p" style="font-size:12px;">@f.EmployeeCode</span></td>
           <td>
-            <div class="fw7">@f.FullName</div>
+            @{ var fdn = f.FullName.Trim() + (f.Gender == "Female" ? " MA'AM" : " SIR"); }
+            <div class="fw7">@fdn</div>
             @if (!string.IsNullOrEmpty(f.Qualification))
             {<div style="font-size:11px;" class="text-mu">@f.Qualification</div>}
           </td>
@@ -85,14 +83,17 @@
           <td style="font-size:13px;">@(f.Phone ?? "—")</td>
           <td style="font-size:12.5px;color:var(--mu);">@(f.DateOfJoining?.ToString("dd MMM yyyy") ?? "—")</td>
           <td>
-            <span class="badge @(f.Status=="Active"?"b-active":f.Status=="Relieved"?"b-absent":"b-inactive")">
-              @f.Status
-            </span>
+            <span class="badge @(f.Status=="Active"?"b-active":"b-inactive")">@f.Status</span>
           </td>
-          <td onclick="event.stopPropagation()">
+          <td style="font-size:12.5px;">@(f.CreatedByName ?? "—")</td>
+          <td onclick="event.stopPropagation()" style="white-space:nowrap;">
             <a href="/Faculty/Edit/@f.FacultyId" class="btn btn-outline btn-sm btn-icon" title="Edit">
               <i class="fas fa-edit"></i>
             </a>
+            <form method="post" action="/Faculty/Delete/@f.FacultyId" style="display:inline;" onsubmit="return confirm('Mark @f.FullName as Inactive?')">
+              @Html.AntiForgeryToken()
+              <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+            </form>
           </td>
         </tr>
       }

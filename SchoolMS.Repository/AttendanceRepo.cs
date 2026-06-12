@@ -16,11 +16,17 @@ public class AttendanceRepo(CommonConnectivity db)
             ClassName=G.G<string>(r,"ClassName"), SectionName=G.G<string>(r,"SectionName"),
             BatchName=G.G<string>(r,"BatchName"), ProfilePicPath=G.G<string>(r,"ProfilePicPath"),
             AttendanceStatus=G.G<string>(r,"AttendanceStatus")??"Present",
-            AttendanceId=G.G<int?>(r,"AttendanceId"), Remarks=G.G<string>(r,"Remarks")
+            AttendanceId=G.G<int?>(r,"AttendanceId"), Remarks=G.G<string>(r,"Remarks"),
+            Subject=G.G<string>(r,"Subject"), SirName=G.G<string>(r,"SirName"),
+            StartTime=G.G<TimeSpan?>(r,"StartTime"), EndTime=G.G<TimeSpan?>(r,"EndTime")
         });
-    public void Save(int sid, DateTime date, string status, int? cls, int? sec, int? bat, string? remarks, int by)
-        => db.Exec("sp_SaveAttendance", new() { { "@StudentId",sid }, { "@AttendanceDate",date.Date }, { "@Status",status },
-            { "@ClassId",cls }, { "@SectionId",sec }, { "@BatchId",bat }, { "@Remarks",remarks }, { "@MarkedBy",by } });
+    public void Save(int sid, DateTime date, string status, int? cls, int? sec, int? bat,
+        string? remarks, int by, string? subject, string? sirName, TimeSpan? startTime, TimeSpan? endTime)
+        => db.Exec("sp_SaveAttendance", new() {
+            { "@StudentId",sid }, { "@AttendanceDate",date.Date }, { "@Status",status },
+            { "@ClassId",cls }, { "@SectionId",sec }, { "@BatchId",bat }, { "@Remarks",remarks }, { "@MarkedBy",by },
+            { "@Subject",subject }, { "@SirName",sirName }, { "@StartTime",startTime }, { "@EndTime",endTime }
+        });
     public (List<AttendanceRecord> students, List<DateAttendanceEntry> att) GetDateGrid(
         int? cls, int? sec, int? bat, DateTime from, DateTime to)
     {
@@ -57,6 +63,63 @@ public class AttendanceRepo(CommonConnectivity db)
         return (students, att);
     }
 
+    // Per-date records for a student — subject + teacher info
+    public List<StudentAttendanceDetail> GetStudentAttendanceDetail(int studentId)
+    {
+        const string sql = @"
+            SELECT a.AttendanceDate, a.Status,
+                   ISNULL(a.Subject,'') AS Subject,
+                   ISNULL(a.SirName,'') AS SirName,
+                   ISNULL(a.Remarks,'') AS Remarks
+            FROM   Attendance a
+            WHERE  a.StudentId = @StudentId
+            ORDER  BY a.AttendanceDate DESC";
+        var list = new List<StudentAttendanceDetail>();
+        using var c   = db.Open();
+        using var cmd = new SqlCommand(sql, c);
+        cmd.Parameters.AddWithValue("@StudentId", studentId);
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+            list.Add(new StudentAttendanceDetail {
+                AttendanceDate = G.G<DateTime>(r,"AttendanceDate"),
+                Status         = G.G<string>(r,"Status")??"Present",
+                Subject        = G.G<string>(r,"Subject"),
+                SirName        = G.G<string>(r,"SirName"),
+                Remarks        = G.G<string>(r,"Remarks")
+            });
+        return list;
+    }
+
+    public AttendanceReport GetStudentAttendanceSummary(int studentId)
+    {
+        const string sql = @"
+            SELECT
+                SUM(CASE WHEN a.Status='Present' THEN 1 ELSE 0 END) AS PresentDays,
+                SUM(CASE WHEN a.Status='Absent'  THEN 1 ELSE 0 END) AS AbsentDays,
+                SUM(CASE WHEN a.Status='Late'    THEN 1 ELSE 0 END) AS LateDays,
+                COUNT(*)                                              AS TotalDays,
+                CASE WHEN COUNT(*) > 0
+                     THEN CAST(SUM(CASE WHEN a.Status='Present' THEN 1 ELSE 0 END)
+                               * 100.0 / COUNT(*) AS decimal(5,1))
+                     ELSE 0 END AS AttendancePct
+            FROM Attendance a
+            WHERE a.StudentId = @StudentId";
+        using var c   = db.Open();
+        using var cmd = new SqlCommand(sql, c);
+        cmd.Parameters.AddWithValue("@StudentId", studentId);
+        using var r = cmd.ExecuteReader();
+        if (r.Read())
+            return new AttendanceReport {
+                StudentId     = studentId,
+                PresentDays   = G.G<int>(r,"PresentDays"),
+                AbsentDays    = G.G<int>(r,"AbsentDays"),
+                LateDays      = G.G<int>(r,"LateDays"),
+                TotalDays     = G.G<int>(r,"TotalDays"),
+                AttendancePct = G.G<decimal>(r,"AttendancePct")
+            };
+        return new AttendanceReport { StudentId = studentId };
+    }
+
     public List<AttendanceReport> GetReport(int? cls, int? month, int? year)
         => db.Read("sp_GetAttendanceReport", new() { {"@ClassId",cls}, {"@Month",month}, {"@Year",year} },
         r => new AttendanceReport {
@@ -68,6 +131,7 @@ public class AttendanceRepo(CommonConnectivity db)
             AbsentDays   = G.G<int>(r,"AbsentDays"),
             LateDays     = G.G<int>(r,"LateDays"),
             TotalDays    = G.G<int>(r,"TotalDays"),
-            AttendancePct= G.G<decimal>(r,"AttendancePct")
+            AttendancePct= G.G<decimal>(r,"AttendancePct"),
+            CreatedByName= G.G<string>(r,"CreatedByName")
         });
 }

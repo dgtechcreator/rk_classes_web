@@ -42,6 +42,9 @@ public class FacultyRepo(CommonConnectivity db)
                 SectionName      = G.G<string>(r,"SectionName")
             });
 
+    public void Delete(int id)  => db.Exec("sp_DeleteFaculty",  new() { { "@FacultyId", id } });
+    public void Restore(int id) => db.Exec("sp_RestoreFaculty", new() { { "@FacultyId", id } });
+
     public int Save(Faculty f, string? pic, int by)
         => db.ExecOut("sp_SaveFaculty", new() {
             {"@FacultyId",f.FacultyId}, {"@EmployeeCode",f.EmployeeCode==""?null:f.EmployeeCode},
@@ -91,6 +94,8 @@ public class FacultyRepo(CommonConnectivity db)
         AadharNo        = G.G<string>(r,"AadharNo"),
         Status          = G.G<string>(r,"Status")??"Active",
         Remarks         = G.G<string>(r,"Remarks"),
-        CreatedAt       = G.G<DateTime>(r,"CreatedAt")
+        CreatedAt       = G.G<DateTime>(r,"CreatedAt"),
+        CreatedBy       = G.G<int?>(r,"CreatedBy"),
+        CreatedByName   = G.G<string>(r,"CreatedByName")
     };
 }

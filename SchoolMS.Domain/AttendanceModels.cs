@@ -10,9 +10,13 @@ public class AttendanceRecord
     public string? SectionName{get;set;}
     public string? BatchName{get;set;}
     public string? ProfilePicPath{get;set;}
-    public string  AttendanceStatus{get;set;}="Present";
-    public int?    AttendanceId{get;set;}
-    public string? Remarks{get;set;}
+    public string   AttendanceStatus{get;set;}="Present";
+    public int?     AttendanceId{get;set;}
+    public string?  Remarks{get;set;}
+    public string?  Subject{get;set;}
+    public string?  SirName{get;set;}
+    public TimeSpan? StartTime{get;set;}
+    public TimeSpan? EndTime{get;set;}
 }
 
 public class AttendanceReport
@@ -26,6 +30,17 @@ public class AttendanceReport
     public int     LateDays{get;set;}
     public int     TotalDays{get;set;}
     public decimal AttendancePct{get;set;}
+    public int?    CreatedBy{get;set;}
+    public string? CreatedByName{get;set;}
+}
+
+public class StudentAttendanceDetail
+{
+    public DateTime AttendanceDate { get; set; }
+    public string   Status         { get; set; } = "Present";
+    public string?  Subject        { get; set; }
+    public string?  SirName        { get; set; }
+    public string?  Remarks        { get; set; }
 }
 
 public class DateAttendanceEntry
