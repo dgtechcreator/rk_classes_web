@@ -163,13 +163,14 @@ body { padding-bottom: 80px; }
 
 <!-- Fees Popup -->
 <div id="feesPopupOverlay" onclick="closeFeesPopup()"
-     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;"></div>
+     style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:1000;"></div>
 
 <div id="feesPopup"
      style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-            background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.2);
-            z-index:1001;width:92%;max-width:900px;max-height:85vh;overflow:hidden;
-            flex-direction:column;">
+            background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);
+            z-index:1001;width:90%;max-width:920px;max-height:80vh;overflow-y:auto;
+            flex-direction:column;justify-content:flex-start;align-items:stretch;
+            margin:0;padding:0;">
 
     <!-- Popup Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;
@@ -265,9 +266,11 @@ body { padding-bottom: 80px; }
         'Total: ₹' + total.toLocaleString('en-IN');
 
       let html = `
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <div style="overflow-x:auto;width:100%;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:850px;">
           <thead>
             <tr style="background:#f8f9fa;border-bottom:2px solid #dee2e6;">
+
               <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">#</th>
               <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Receipt No</th>
               <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Student</th>
@@ -313,7 +316,7 @@ body { padding-bottom: 80px; }
           </tr>`;
       });
 
-      html += '</tbody></table>';
+      html += '</tbody></table></div>';
       document.getElementById('feesPopupBody').innerHTML = html;
     }
 
