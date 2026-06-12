@@ -294,7 +294,7 @@
             // Calculate payable fees
             var payableFees = stuFee - totalDiscount;
 
-            <tr onclick="openStudentFees(@s.StudentId)">
+            <tr data-student-id="@s.StudentId">
               <td class="sid clickable-cell" style="width:40px;">@sr</td>
               <td class="clickable-cell">
                 <div style="font-weight:700;">@s.FullName</div>
@@ -556,10 +556,19 @@ document.addEventListener('click', () => {
   });
 });
 
-// Open student fees/payment page
-function openStudentFees(studentId) {
-  window.location.href = '/Fees/Pay/' + studentId;
-}
+// Open student fees/payment page using event delegation
+document.addEventListener('click', function(e) {
+  var cell = e.target.closest('.clickable-cell');
+  if (!cell) return;
+
+  var row = cell.closest('tr[data-student-id]');
+  if (!row) return;
+
+  var studentId = row.getAttribute('data-student-id');
+  if (studentId) {
+    window.location.href = '/Fees/Pay/' + studentId;
+  }
+});
 
 init();
 </script>
