@@ -4,8 +4,9 @@
     var classes      = ViewBag.Classes  as List<SchoolMS.Domain.Class>        ?? new();
     var sections     = ViewBag.Sections as List<SchoolMS.Domain.Section>      ?? new();
     var batches      = ViewBag.Batches  as List<SchoolMS.Domain.Batch>        ?? new();
-    var subjects     = ViewBag.Subjects as List<SchoolMS.Domain.Subject>      ?? new();
-    var feeTypes     = ViewBag.FeeTypes as List<SchoolMS.Domain.FeeType>      ?? new();
+    var subjects     = ViewBag.Subjects          as List<SchoolMS.Domain.Subject>     ?? new();
+    var feeTypes     = ViewBag.FeeTypes          as List<SchoolMS.Domain.FeeType>     ?? new();
+    var expCats      = ViewBag.ExpenseCategories as List<SchoolMS.Domain.ExpenseCat>  ?? new();
     var feeList      = ViewBag.FeeList  as List<SchoolMS.Domain.FeeStructure> ?? new();
     int currentYearId   = (int)(ViewBag.CurrentYearId ?? 0);
     string currentYearName = (string)(ViewBag.CurrentYearName ?? "");
@@ -27,23 +28,37 @@
 {<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> @TempData["Error"]</div>}
 
 @* ── Tab bar ──────────────────────────────────────────────── *@
-<div style="display:flex;gap:4px;border-bottom:2px solid var(--bdr);margin-bottom:22px;" id="tabBar">
+<style>
+#tabBar { display:flex; gap:0; border-bottom:2px solid var(--bdr); margin-bottom:22px; overflow-x:auto; flex-wrap:nowrap; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+#tabBar::-webkit-scrollbar { display:none; }
+.tab-btn { padding:10px 16px; border:none; border-bottom:2.5px solid transparent; margin-bottom:-2px; background:none; cursor:pointer; font-family:inherit; font-size:13px; font-weight:700; color:var(--mu); transition:all .15s; display:flex; align-items:center; gap:6px; white-space:nowrap; flex-shrink:0; }
+.tab-btn:hover { color:var(--p); background:#fff5f5; }
+.tab-btn.active-tab { color:var(--p) !important; border-bottom-color:var(--p) !important; background:#fff5f5 !important; }
+.tab-cnt { background:#f5f3ff; color:var(--p); font-size:10.5px; font-weight:800; padding:1px 6px; border-radius:99px; border:1px solid #c4b5fd; }
+@@media (max-width:768px) {
+  .tab-btn { padding:8px 10px; font-size:11.5px; gap:4px; }
+  .tab-cnt { font-size:10px; padding:1px 5px; }
+  .tab-btn .tab-ico { font-size:14px; }
+}
+</style>
+<div id="tabBar">
   @{
     var tabs = new[] {
-      ("years",    "🎓", "Academic Years",  years.Count(y=>y.IsActive)),
-      ("classes",  "🏫", "Std",            classes.Count(c=>c.IsActive)),
-      ("sections", "📚", "Medium/Stream",  sections.Count(s=>s.IsActive)),
-      ("batches",  "⏰", "Batches",        batches.Count(b=>b.IsActive)),
-      ("feesetup", "💰", "Fee Setup",      feeList.Count),
-      ("subjects", "📖", "Subjects",       subjects.Count(s=>s.IsActive))
+      ("years",    "🎓", "Years",       years.Count(y=>y.IsActive)),
+      ("classes",  "🏫", "Std",         classes.Count(c=>c.IsActive)),
+      ("sections", "📚", "Medium",      sections.Count(s=>s.IsActive)),
+      ("batches",  "⏰", "Batches",     batches.Count(b=>b.IsActive)),
+      ("feesetup", "💰", "Fee Setup",   feeList.Count),
+      ("subjects", "📖", "Subjects",    subjects.Count(s=>s.IsActive)),
+      ("expcats",  "🏷️", "Exp. Category",  expCats.Count(e=>e.IsActive))
     };
   }
   @foreach (var (id, ico, lbl, cnt) in tabs)
   {
-    <button class="tab-btn" data-tab="@id" onclick="switchTab('@id')"
-      style="padding:10px 20px;border:none;background:none;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--mu);border-bottom:2.5px solid transparent;margin-bottom:-2px;transition:all .15s;display:flex;align-items:center;gap:7px;">
-      <span>@ico</span> @lbl
-      <span style="background:#f5f3ff;color:var(--p);font-size:11px;font-weight:800;padding:2px 7px;border-radius:99px;border:1px solid #c4b5fd;">@cnt</span>
+    <button class="tab-btn" data-tab="@id" onclick="switchTab('@id')">
+      <span class="tab-ico">@ico</span>
+      <span>@lbl</span>
+      <span class="tab-cnt">@cnt</span>
     </button>
   }
 </div>
@@ -109,13 +124,12 @@
                   <button class="btn btn-outline btn-sm btn-icon"
                     onclick="editYear(@y.YearId,'@y.YearName',@(y.IsCurrent?"true":"false"),@(y.IsActive?"true":"false"))"
                     title="Edit"><i class="fas fa-edit"></i></button>
-                  @if (y.StudentCount == 0)
-                  {
-                    <form method="post" action="/Masters/DeleteYear/@y.YearId"
-                          onsubmit="return confirm('Delete @y.YearName?')">
-                      <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
-                    </form>
-                  }
+                  <form method="post" action="/Masters/DeleteYear/@y.YearId"
+                        onsubmit="return confirm('Delete academic year &quot;@y.YearName&quot;?')">
+                    <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
                 </div>
               </td>
             </tr>
@@ -178,13 +192,10 @@
                   <button class="btn btn-outline btn-sm btn-icon"
                     onclick="editClass(@c.ClassId,'@c.ClassName',@c.OrderNo,@(c.IsActive?"true":"false"))"
                     title="Edit"><i class="fas fa-edit"></i></button>
-                  @if (c.StudentCount == 0)
-                  {
-                    <form method="post" action="/Masters/DeleteClass/@c.ClassId"
-                          onsubmit="return confirm('Delete @c.ClassName?')">
-                      <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
-                    </form>
-                  }
+                  <form method="post" action="/Masters/DeleteClass/@c.ClassId"
+                        onsubmit="return confirm('Delete &quot;@c.ClassName&quot;?')">
+                    <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+                  </form>
                 </div>
               </td>
             </tr>
@@ -245,13 +256,10 @@
                   <button class="btn btn-outline btn-sm btn-icon"
                     onclick="editSection(@s.SectionId,'@s.SectionName',@(s.IsActive?"true":"false"))"
                     title="Edit"><i class="fas fa-edit"></i></button>
-                  @if (s.StudentCount == 0)
-                  {
-                    <form method="post" action="/Masters/DeleteSection/@s.SectionId"
-                          onsubmit="return confirm('Delete @s.SectionName?')">
-                      <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
-                    </form>
-                  }
+                  <form method="post" action="/Masters/DeleteSection/@s.SectionId"
+                        onsubmit="return confirm('Delete &quot;@s.SectionName&quot;?')">
+                    <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+                  </form>
                 </div>
               </td>
             </tr>
@@ -312,13 +320,10 @@
                   <button class="btn btn-outline btn-sm btn-icon"
                     onclick="editBatch(@b.BatchId,'@b.BatchName',@(b.IsActive?"true":"false"))"
                     title="Edit"><i class="fas fa-edit"></i></button>
-                  @if (b.StudentCount == 0)
-                  {
-                    <form method="post" action="/Masters/DeleteBatch/@b.BatchId"
-                          onsubmit="return confirm('Delete @b.BatchName?')">
-                      <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
-                    </form>
-                  }
+                  <form method="post" action="/Masters/DeleteBatch/@b.BatchId"
+                        onsubmit="return confirm('Delete &quot;@b.BatchName&quot;?')">
+                    <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+                  </form>
                 </div>
               </td>
             </tr>
@@ -344,9 +349,10 @@
         <span class="card-ttl"><i class="fas fa-plus-circle" style="color:var(--p);margin-right:6px;"></i>Add Fee Head</span>
       </div>
       <form method="post" action="/FeeStructure/Save">
-        <input type="hidden" name="StructureId"    value="0"/>
-        <input type="hidden" name="IsMonthly" value="true"/>
-        <input type="hidden" name="DueDay"    value="10"/>
+        <input type="hidden" name="StructureId" value="0"/>
+        <input type="hidden" name="IsMonthly"   value="true"/>
+        <input type="hidden" name="DueDay"      value="10"/>
+        <input type="hidden" name="returnTo"    value="masters"/>
 
         <div class="fg" style="margin-bottom:14px;">
           <label>Academic Year *</label>
@@ -364,9 +370,9 @@
           </select>
         </div>
         <div class="fg" style="margin-bottom:14px;">
-          <label>Class *</label>
+          <label>Std *</label>
           <select name="ClassId" class="fs" required>
-            <option value="">— Select Class —</option>
+            <option value="">— Select Std —</option>
             @foreach(var c in classes){<option value="@c.ClassId">@c.ClassName</option>}
           </select>
         </div>
@@ -394,20 +400,21 @@
     @* ── List ─────────────────────────────────────────────── *@
     <div class="card" style="padding:0;">
       <div class="card-hdr" style="padding:16px 18px;display:flex;align-items:center;justify-content:space-between;">
-        <span class="card-ttl">Fee Heads — @currentYearName (@feeList.Count entries)</span>
+        <span class="card-ttl">Fee Heads — All Years (@feeList.Count entries)</span>
         <a href="/FeeStructure/Index" class="btn btn-outline btn-sm"><i class="fas fa-external-link-alt"></i> Full View</a>
       </div>
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th>Class</th><th>Medium/Stream</th><th>Fee Type</th><th>Amount (₹)</th><th></th></tr></thead>
+          <thead><tr><th>Std</th><th>Medium/Stream</th><th>Fee Type</th><th>Amount (₹)</th><th>Year</th><th></th></tr></thead>
           <tbody>
-          @foreach (var fs in feeList.OrderBy(x => x.ClassName).ThenBy(x => x.SectionName).ThenBy(x => x.FeeTypeName))
+          @foreach (var fs in feeList.OrderBy(x => x.YearName).ThenBy(x => x.ClassName).ThenBy(x => x.SectionName).ThenBy(x => x.FeeTypeName))
           {
             <tr>
               <td class="fw7">@fs.ClassName</td>
               <td><span class="badge b-purple">@fs.SectionName</span></td>
               <td style="font-size:12.5px;">@fs.FeeTypeName</td>
               <td><strong style="color:var(--p);">₹@fs.Amount.ToString("N0")</strong></td>
+              <td style="font-size:11.5px;color:var(--mu);">@fs.YearName</td>
               <td>
                 <div class="df g8">
                   <a href="/FeeStructure/Edit/@fs.StructureId" class="btn btn-outline btn-sm btn-icon" title="Edit"><i class="fas fa-edit"></i></a>
@@ -437,18 +444,8 @@
       <div class="card-hdr">
         <span class="card-ttl"><i class="fas fa-plus-circle" style="color:var(--p);margin-right:6px;"></i><span id="subjectFormTitle">Add Subject</span></span>
       </div>
-      <form method="post" action="/Masters/SaveSubject">
+      <form method="post" action="/Masters/SaveSubject" onsubmit="return checkDuplicateSubject(this)">
         <input type="hidden" name="subjectId" id="subjectId" value="0"/>
-        <div class="fg" style="margin-bottom:14px;">
-          <label>Class *</label>
-          <select name="classId" id="subjectClassId" class="fc" required>
-            <option value="">— Select Class —</option>
-            @foreach (var c in classes)
-            {
-              <option value="@c.ClassId">@c.ClassName</option>
-            }
-          </select>
-        </div>
         <div class="fg" style="margin-bottom:14px;">
           <label>Subject Name *</label>
           <input type="text" name="subjectName" id="subjectName" class="fc" placeholder="e.g. Mathematics, Science" required/>
@@ -475,7 +472,7 @@
       </div>
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th>#</th><th>Class</th><th>Subject</th><th>Code</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>#</th><th>Subject Name</th><th>Code</th><th>Status</th><th></th></tr></thead>
           <tbody>
           @{ int sub_n = 0; }
           @foreach (var s in subjects.OrderBy(x => x.ClassName).ThenBy(x => x.SubjectName))
@@ -483,7 +480,6 @@
             sub_n++;
             <tr>
               <td class="text-mu fw7">@sub_n</td>
-              <td><span class="badge b-purple">@s.ClassName</span></td>
               <td class="fw7">@s.SubjectName</td>
               <td style="font-size:12px;color:var(--mu);">@(s.SubjectCode ?? "—")</td>
               <td><span class="badge @(s.IsActive?"b-active":"b-inactive")">@(s.IsActive?"Active":"Inactive")</span></td>
@@ -492,19 +488,82 @@
                   <button class="btn btn-outline btn-sm btn-icon"
                     onclick="editSubject(@s.SubjectId,'@s.SubjectName.Replace("'","\\'")', '@(s.SubjectCode?.Replace("'","\\'") ?? "")',@s.ClassId,@s.MaxMarks,@s.PassMarks,@(s.IsActive?"true":"false"))"
                     title="Edit"><i class="fas fa-edit"></i></button>
-                  @if (s.UsageCount == 0)
-                  {
-                    <form method="post" action="/Masters/DeleteSubject/@s.SubjectId"
-                          onsubmit="return confirm('Delete subject: @s.SubjectName?')">
-                      <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
-                    </form>
-                  }
+                  <form method="post" action="/Masters/DeleteSubject/@s.SubjectId"
+                        onsubmit="return confirm('Delete subject: &quot;@s.SubjectName&quot;?')">
+                    <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+                  </form>
                 </div>
               </td>
             </tr>
           }
           @if (!subjects.Any())
-          {<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--mu);">No subjects yet. Add a subject above.</td></tr>}
+          {<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--mu);">No subjects yet. Add a subject above.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+@* ════════════════════════════════════════════════════════════
+   TAB 7 — EXPENSE CATEGORIES
+   ════════════════════════════════════════════════════════════ *@
+<div id="tab-expcats" class="tab-panel" style="display:none;">
+  <div class="g2" style="align-items:start;">
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-ttl"><i class="fas fa-plus-circle" style="color:var(--p);margin-right:6px;"></i><span id="expCatFormTitle">Add Expense Category</span></span>
+      </div>
+      <form method="post" action="/Masters/SaveExpenseCat">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="categoryId" id="expCatId" value="0"/>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Category Name * <span style="font-weight:400;color:var(--mu);">(e.g. Electricity, Rent, Salaries)</span></label>
+          <input type="text" name="categoryName" id="expCatName" class="fc" placeholder="e.g. Electricity" required/>
+        </div>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px;">
+          <input type="checkbox" name="isActive" value="true" id="expCatActive" checked style="accent-color:var(--p);width:15px;height:15px;"/> Active
+        </label>
+        <div style="display:flex;gap:8px;">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+          <button type="button" class="btn btn-outline" onclick="resetExpCatForm()"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="padding:0;">
+      <div class="card-hdr" style="padding:16px 18px;">
+        <span class="card-ttl">Expense Categories (@expCats.Count total)</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Category Name</th><th>Status</th><th>Used In</th><th></th></tr></thead>
+          <tbody>
+          @{ int ec_n = 0; }
+          @foreach (var ec in expCats.OrderBy(x => x.CategoryName))
+          {
+            ec_n++;
+            <tr>
+              <td class="text-mu fw7">@ec_n</td>
+              <td class="fw7">@ec.CategoryName</td>
+              <td><span class="badge @(ec.IsActive?"b-active":"b-inactive")">@(ec.IsActive?"Active":"Inactive")</span></td>
+              <td><span class="badge b-blue">@ec.UsageCount expenses</span></td>
+              <td>
+                <div class="df g8">
+                  <button class="btn btn-outline btn-sm btn-icon"
+                    onclick="editExpCat(@ec.CategoryId,'@ec.CategoryName.Replace("'","\\'")','@ec.IsActive')"
+                    title="Edit"><i class="fas fa-edit"></i></button>
+                  <form method="post" action="/Masters/DeleteExpenseCat/@ec.CategoryId"
+                        onsubmit="return confirm('Delete category: &quot;@ec.CategoryName&quot;?')">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          }
+          @if (!expCats.Any())
+          {<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--mu);">No expense categories yet. Add one using the form.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -513,20 +572,16 @@
 </div>
 
 @section Scripts {
-<style>
-.tab-btn.active-tab {
-  color: var(--p) !important;
-  border-bottom-color: var(--p) !important;
-  background: none !important;
-}
-</style>
 <script>
 // ── Tab switching ─────────────────────────────────────────────
 function switchTab(id) {
   document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
   document.getElementById('tab-' + id).style.display = 'block';
-  document.querySelector(`.tab-btn[data-tab="${id}"]`).classList.add('active-tab');
+  var activeBtn = document.querySelector(`.tab-btn[data-tab="${id}"]`);
+  activeBtn.classList.add('active-tab');
+  // Scroll active tab into view in the tab bar
+  activeBtn.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
   localStorage.setItem('masterTab', id);
 }
 
@@ -607,7 +662,6 @@ function editSubject(id, name, code, classId, maxMarks, passMarks, isActive) {
   document.getElementById('subjectId').value = id;
   document.getElementById('subjectName').value = name;
   document.getElementById('subjectCode').value = code || '';
-  document.getElementById('subjectClassId').value = classId;
   document.getElementById('subjectMaxMarks').value = maxMarks;
   document.getElementById('subjectPassMarks').value = passMarks;
   document.getElementById('subjectActive').checked = isActive === true || isActive === 'true';
@@ -617,9 +671,41 @@ function resetSubjectForm() {
   document.getElementById('subjectId').value = '0';
   document.getElementById('subjectName').value = '';
   document.getElementById('subjectCode').value = '';
-  document.getElementById('subjectClassId').value = '';
   document.getElementById('subjectActive').checked = true;
   document.getElementById('subjectFormTitle').textContent = 'Add Subject';
+}
+// ── Expense Category ──────────────────────────────────────────
+function editExpCat(id, name, isActive) {
+  switchTab('expcats');
+  document.getElementById('expCatId').value = id;
+  document.getElementById('expCatName').value = name;
+  document.getElementById('expCatActive').checked = isActive === true || isActive === 'True' || isActive === 'true';
+  document.getElementById('expCatFormTitle').textContent = 'Edit Expense Category';
+  document.getElementById('expCatId').closest('.card').scrollIntoView({ behavior: 'smooth' });
+}
+function resetExpCatForm() {
+  document.getElementById('expCatId').value = '0';
+  document.getElementById('expCatName').value = '';
+  document.getElementById('expCatActive').checked = true;
+  document.getElementById('expCatFormTitle').textContent = 'Add Expense Category';
+}
+
+function checkDuplicateSubject(form) {
+  const editingId = parseInt(document.getElementById('subjectId').value) || 0;
+  const newName   = document.getElementById('subjectName').value.trim().toLowerCase();
+  const rows      = document.querySelectorAll('#tab-subjects table tbody tr td.fw7');
+  for (const cell of rows) {
+    const existingName = cell.textContent.trim().toLowerCase();
+    if (existingName === newName) {
+      // Allow saving the same subject when editing itself
+      const rowId = cell.closest('tr')?.querySelector('button[onclick]')?.getAttribute('onclick')?.match(/\d+/)?.[0];
+      if (parseInt(rowId) !== editingId) {
+        alert('Subject "' + document.getElementById('subjectName').value.trim() + '" already exists!');
+        return false;
+      }
+    }
+  }
+  return true;
 }
 </script>
 }
