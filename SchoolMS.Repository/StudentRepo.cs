@@ -60,6 +60,8 @@ public class StudentRepo(CommonConnectivity db)
         MotherOccupation=G.G<string>(r,"MotherOccupation"), GuardianName=G.G<string>(r,"GuardianName"),
         GuardianOccupation=G.G<string>(r,"GuardianOccupation"), GuardianPhone=G.G<string>(r,"GuardianPhone"),
         City=G.G<string>(r,"City"), State=G.G<string>(r,"State"), District=G.G<string>(r,"District"),
-        Pincode=G.G<string>(r,"Pincode"), PermanentAddress=G.G<string>(r,"PermanentAddress")
+        Pincode=G.G<string>(r,"Pincode"), PermanentAddress=G.G<string>(r,"PermanentAddress"),
+        CreatedBy=G.G<int?>(r,"CreatedBy"), CreatedByName=G.G<string>(r,"CreatedByName"),
+        DeletedBy=G.G<int?>(r,"DeletedBy"), DeletedByName=G.G<string>(r,"DeletedByName")
     };
 }

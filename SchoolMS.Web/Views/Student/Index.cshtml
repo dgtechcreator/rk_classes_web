@@ -83,7 +83,7 @@
     {
     <table>
       <thead>
-        <tr><th>Photo</th><th>Admission No</th><th>Student Name</th><th>Std</th><th>Admission Date</th><th>Medium/Stream</th><th>Batch</th><th>Father</th><th>Father Contact</th><th>Mother Contact</th><th>Status</th><th></th></tr>
+        <tr><th>Photo</th><th>Admission No</th><th>Student Name</th><th>Std</th><th>Admission Date</th><th>Medium/Stream</th><th>Batch</th><th>Father</th><th>Father Contact</th><th>Mother Contact</th><th>Status</th><th>Added By</th><th></th></tr>
       </thead>
       <tbody>
       @foreach (var s in Model.Students)
@@ -103,6 +103,7 @@
           <td style="font-size:12.5px;" class="text-mu">@s.FatherPhone</td>
           <td style="font-size:12.5px;" class="text-mu">@s.MotherPhone</td>
           <td><span class="badge @(s.Status=="Active"?"b-active":"b-inactive")">@s.Status</span></td>
+          <td style="font-size:12.5px;">@(s.CreatedByName ?? "—")</td>
           <td onclick="event.stopPropagation()" style="white-space:nowrap;position:relative;">
             <!-- Call Button -->
             <div style="display:inline-block;position:relative;">
