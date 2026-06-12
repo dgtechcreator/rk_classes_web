@@ -357,6 +357,24 @@
 
 @section Scripts {
 <script>
+// Global functions for fee buttons
+window.toggleDropdownFees = function(e, id) {
+  e.preventDefault();
+  e.stopPropagation();
+  const dropdown = document.getElementById(id);
+
+  document.querySelectorAll('.contact-dropdown').forEach(el => {
+    if (el.id !== id) el.style.display = 'none';
+  });
+
+  dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+};
+
+window.sendFeeReminder = function(studentId, fatherPhone, motherPhone) {
+  console.log('Fee reminder for student:', studentId);
+  showFeeReminderPopup(studentId, fatherPhone, motherPhone);
+};
+
 let allRows = [];
 let currentPage = 1;
 let pageSize = 50;
@@ -412,23 +430,6 @@ function renderPage() {
 }
 
 // Toggle call dropdown
-function toggleDropdownFees(e, id) {
-  e.preventDefault();
-  e.stopPropagation();
-  const dropdown = document.getElementById(id);
-
-  document.querySelectorAll('.contact-dropdown').forEach(el => {
-    if (el.id !== id) el.style.display = 'none';
-  });
-
-  dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
-}
-
-// Send fee reminder
-function sendFeeReminder(studentId, fatherPhone, motherPhone) {
-  console.log('Fee reminder for student:', studentId);
-  showFeeReminderPopup(studentId, fatherPhone, motherPhone);
-}
 
 // Show fee reminder popup
 function showFeeReminderPopup(studentId, fatherPhone, motherPhone) {
