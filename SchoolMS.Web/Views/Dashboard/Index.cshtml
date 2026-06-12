@@ -1,6 +1,39 @@
 @model SchoolMS.Domain.DashboardStats
 @{ ViewData["Title"] = "Dashboard"; }
 
+<style>
+body { padding-bottom: 80px; }
+.contact-footer {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #f3f4f6;
+  border-top: 1px solid #e5e7eb;
+  padding: 9px 20px;
+  box-shadow: none;
+  z-index: 50;
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+}
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #555;
+}
+.contact-item i {
+  color: #2563eb;
+  font-size: 14px;
+}
+.contact-divider {
+  color: #ddd;
+  font-weight: 300;
+}
+</style>
+
 <div class="pg-hdr">
   <div class="pg-row">
     <div>
@@ -35,11 +68,11 @@
     <div class="kpi-val">@Model.NewToday</div>
     <div class="kpi-lbl">New Admissions Today</div>
   </div>
-  <div class="kpi indigo">
-    <div class="kpi-ico indigo"><i class="fas fa-rupee-sign"></i></div>
-    <div class="kpi-val">₹@Model.FeesThisMonth.ToString("N0")</div>
-    <div class="kpi-lbl">Fees This Month</div>
-  </div>
+    <a href="/Fees/Index?search=true" class="kpi indigo" style="cursor:pointer;text-decoration:none;color:inherit;">
+        <div class="kpi-ico indigo"><i class="fas fa-rupee-sign"></i></div>
+        <div class="kpi-val">₹@Model.FeesThisMonth.ToString("N0")</div>
+        <div class="kpi-lbl">Fees This Month <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
+    </a>
   <div class="kpi pink">
     <div class="kpi-ico pink"><i class="fas fa-receipt"></i></div>
     <div class="kpi-val">₹@Model.ExpensesThisMonth.ToString("N0")</div>
@@ -50,35 +83,38 @@
     <div class="kpi-val">@Model.TotalStaff</div>
     <div class="kpi-lbl">Staff Members</div>
   </div>
-  <div class="kpi blue">
-    <div class="kpi-ico blue"><i class="fas fa-school"></i></div>
-    <div class="kpi-val">@(Model.Class1Count + Model.Class2Count + Model.Class3Count)</div>
-    <div class="kpi-lbl">Active Students</div>
-  </div>
 </div>
 
 <div class="g2" style="align-items:start;">
   <div class="card">
     <div class="card-hdr">
-      <span class="card-ttl"><i class="fas fa-chart-pie" style="color:var(--p);margin-right:7px;"></i>Class-wise Strength</span>
+      <span class="card-ttl"><i class="fas fa-chart-pie" style="color:var(--p);margin-right:7px;"></i>Std-wise Strength</span>
     </div>
     @{
-      var rows = new[] { ("Class 1", Model.Class1Count, "#6d28d9"), ("Class 2", Model.Class2Count, "#db2777"), ("Class 3", Model.Class3Count, "#2563eb") };
-      int tot = Math.Max(1, Model.Class1Count + Model.Class2Count + Model.Class3Count);
+      var colors = new[] { "#6d28d9", "#db2777", "#2563eb", "#059669", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899" };
+      int tot = Math.Max(1, Model.AllClasses.Sum(c => c.StudentCount));
     }
-    @foreach (var (cls, cnt, clr) in rows)
+    @if (!Model.AllClasses.Any())
     {
-      int pct = cnt * 100 / tot;
-      <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--bdr);">
-        <div style="width:40px;height:40px;border-radius:10px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:@clr;flex-shrink:0;">@cnt</div>
-        <div style="flex:1;">
-          <div style="font-size:13px;font-weight:700;margin-bottom:5px;">@cls</div>
-          <div style="height:6px;background:#f3f0ff;border-radius:3px;">
-            <div style="height:6px;border-radius:3px;background:@clr;width:@pct%;"></div>
+      <div style="text-align:center;padding:32px;color:var(--mu);">No standards added yet</div>
+    }
+    else
+    {
+      @foreach (var (cls, idx) in Model.AllClasses.Select((c, i) => (c, i)))
+      {
+        int pct = tot > 0 ? cls.StudentCount * 100 / tot : 0;
+        string clr = colors[idx % colors.Length];
+        <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--bdr);">
+          <div style="width:40px;height:40px;border-radius:10px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:@clr;flex-shrink:0;">@cls.StudentCount</div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:700;margin-bottom:5px;">@cls.ClassName @(cls.IsActive?"":"(Inactive)")</div>
+            <div style="height:6px;background:#f3f0ff;border-radius:3px;">
+              <div style="height:6px;border-radius:3px;background:@clr;width:@pct%;"></div>
+            </div>
           </div>
+          <span style="font-size:12px;color:var(--mu);font-weight:600;">@pct%</span>
         </div>
-        <span style="font-size:12px;color:var(--mu);font-weight:600;">@pct%</span>
-      </div>
+      }
     }
   </div>
 
@@ -108,4 +144,166 @@
       }
     </div>
   </div>
+
 </div>
+
+<!-- Fixed Contact Footer -->
+<div class="contact-footer" style="flex-wrap:nowrap;overflow-x:auto;">
+  <div class="contact-item" style="white-space:nowrap;">
+    <i class="fas fa-phone"></i>
+    <span><strong>Phone:</strong> 9870375795 / 8108499214</span>
+  </div>
+  <div class="contact-divider">|</div>
+  <div class="contact-item" style="white-space:nowrap;">
+    <i class="fas fa-envelope"></i>
+    <span><strong>Email:</strong> rkclasseskapilsir2002@gmail.com</span>
+  </div>
+</div>
+
+
+<!-- Fees Popup -->
+<div id="feesPopupOverlay" onclick="closeFeesPopup()"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;"></div>
+
+<div id="feesPopup"
+     style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+            background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.2);
+            z-index:1001;width:92%;max-width:900px;max-height:85vh;overflow:hidden;
+            display:none;flex-direction:column;">
+
+    <!-- Popup Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;
+              padding:16px 20px;border-bottom:1px solid #e5e7eb;background:#f8fafc;">
+        <div>
+            <div style="font-size:16px;font-weight:800;color:#111;">
+                <i class="fas fa-rupee-sign" style="color:#6d28d9;margin-right:8px;"></i>
+                Fees This Month
+            </div>
+            <div style="font-size:12px;color:#888;margin-top:2px;" id="feesPopupSubtitle">Loading...</div>
+        </div>
+        <button onclick="closeFeesPopup()"
+                style="background:#fee2e2;color:#b91c1c;border:none;border-radius:8px;
+                   padding:8px 14px;cursor:pointer;font-weight:700;font-size:13px;">
+            <i class="fas fa-times"></i> Close
+        </button>
+    </div>
+
+    <!-- Popup Body -->
+    <div id="feesPopupBody" style="overflow-y:auto;padding:16px 20px;flex:1;">
+        <div style="text-align:center;padding:40px;color:#888;">
+            <i class="fas fa-spinner fa-spin" style="font-size:24px;"></i>
+            <div style="margin-top:10px;">Loading fees...</div>
+        </div>
+    </div>
+
+    <!-- Popup Footer -->
+    <div style="padding:12px 20px;border-top:1px solid #e5e7eb;background:#f8fafc;
+              display:flex;justify-content:space-between;align-items:center;">
+        <div id="feesPopupTotal" style="font-size:15px;font-weight:800;color:#15803d;"></div>
+        <a href="/Fees/Summary" target="_blank"
+           style="background:#6d28d9;color:#fff;border:none;border-radius:6px;
+              padding:8px 18px;font-size:13px;font-weight:700;text-decoration:none;">
+            <i class="fas fa-external-link-alt"></i> Full Summary
+        </a>
+    </div>
+</div>
+
+<script>
+    function openFeesPopup() {
+      document.getElementById('feesPopupOverlay').style.display = 'block';
+      const popup = document.getElementById('feesPopup');
+      popup.style.display = 'flex';
+
+      // Current month name
+      const months = ['January','February','March','April','May','June',
+                      'July','August','September','October','November','December'];
+      const now = new Date();
+      const monthName = months[now.getMonth()];
+      document.getElementById('feesPopupSubtitle').textContent = monthName + ' ' + now.getFullYear();
+
+      // Fetch this month's fees
+      fetch('/Fees/SummaryJson?month=' + monthName)
+        .then(r => r.json())
+        .then(data => renderFeesPopup(data))
+        .catch(() => {
+          document.getElementById('feesPopupBody').innerHTML =
+            '<div style="text-align:center;padding:40px;color:#dc2626;">Failed to load. <a href="/Fees/Summary">Open Full Page</a></div>';
+        });
+    }
+
+    function closeFeesPopup() {
+      document.getElementById('feesPopupOverlay').style.display = 'none';
+      document.getElementById('feesPopup').style.display = 'none';
+    }
+
+    function renderFeesPopup(payments) {
+      if (!payments || payments.length === 0) {
+        document.getElementById('feesPopupBody').innerHTML =
+          '<div style="text-align:center;padding:40px;color:#888;">No payments this month.</div>';
+        document.getElementById('feesPopupTotal').textContent = '';
+        return;
+      }
+
+      const total = payments.reduce((s, p) => s + p.netAmount, 0);
+      document.getElementById('feesPopupTotal').textContent =
+        'Total: ₹' + total.toLocaleString('en-IN');
+
+      let html = `
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="background:#f8f9fa;border-bottom:2px solid #dee2e6;">
+              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">#</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Receipt No</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Student</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Std / Medium</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Batch</th>
+              <th style="padding:8px 10px;text-align:right;color:#555;font-weight:700;">Paid</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Mode</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Date</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Added By</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+      payments.forEach((p, i) => {
+        html += `
+          <tr style="border-bottom:1px solid #f0f0f0;">
+            <td style="padding:8px 10px;color:#888;">${i+1}</td>
+            <td style="padding:8px 10px;">
+              <a href="/Fees/Receipt/${p.paymentId}" target="_blank"
+                 style="color:#2563eb;font-weight:600;text-decoration:underline;font-size:12px;">
+                ${p.receiptNo}
+              </a>
+            </td>
+            <td style="padding:8px 10px;">
+              <div style="font-weight:700;">${p.studentName ?? '—'}</div>
+              <div style="font-size:11px;color:#888;">${p.admissionNo ?? ''}</div>
+            </td>
+            <td style="padding:8px 10px;font-size:12px;">${p.className ?? '—'} / ${p.sectionName ?? '—'}</td>
+            <td style="padding:8px 10px;font-size:12px;">${p.batchName ?? '—'}</td>
+            <td style="padding:8px 10px;text-align:right;font-weight:800;color:#15803d;">
+              ₹${p.netAmount.toLocaleString('en-IN')}
+              ${p.discount > 0 ? '<div style="font-size:11px;color:#dc2626;">Disc: ₹'+p.discount+'</div>' : ''}
+            </td>
+            <td style="padding:8px 10px;">
+              <span style="background:${p.paymentMode==='Cash'?'#dcfce7':'#dbeafe'};
+                           color:${p.paymentMode==='Cash'?'#15803d':'#1d4ed8'};
+                           padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">
+                ${p.paymentMode}
+              </span>
+            </td>
+            <td style="padding:8px 10px;font-size:12px;color:#888;">${p.paymentDate}</td>
+            <td style="padding:8px 10px;font-size:12px;">${p.collectorName ?? '—'}</td>
+          </tr>`;
+      });
+
+      html += '</tbody></table>';
+      document.getElementById('feesPopupBody').innerHTML = html;
+    }
+
+    // ESC key se close
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeFeesPopup();
+    });
+</script>
+
