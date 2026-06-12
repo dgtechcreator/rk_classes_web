@@ -88,6 +88,9 @@
 .fp-table tbody tr:hover { background: #f9fafb; }
 .fp-table tbody td { padding: 10px 14px; color: #333; }
 .fp-table tbody td.sid { color: #555; font-weight: 600; }
+.fp-table .clickable-cell { cursor: pointer; user-select: none; transition: background-color .15s; }
+.fp-table tbody tr:hover .clickable-cell { background-color: #e3f2fd; }
+.fp-table .clickable-cell:hover { background-color: #bbdefb !important; }
 
 /* ── Pay button ── */
 .btn-pay {
@@ -291,26 +294,26 @@
             // Calculate payable fees
             var payableFees = stuFee - totalDiscount;
 
-            <tr>
-              <td class="sid" style="width:40px;">@sr</td>
-              <td>
+            <tr onclick="openStudentFees(@s.StudentId)">
+              <td class="sid clickable-cell" style="width:40px;">@sr</td>
+              <td class="clickable-cell">
                 <div style="font-weight:700;">@s.FullName</div>
                 <div style="font-size:11px;color:#888;">@s.AdmissionNo</div>
               </td>
-              <td style="font-size:13px;">@(s.ClassName ?? "—") @(s.SectionName != null ? "/ "+s.SectionName : "")</td>
-              <td style="font-size:12px;">@(s.BatchName ?? "—")</td>
+              <td class="clickable-cell" style="font-size:13px;">@(s.ClassName ?? "—") @(s.SectionName != null ? "/ "+s.SectionName : "")</td>
+              <td class="clickable-cell" style="font-size:12px;">@(s.BatchName ?? "—")</td>
               <td style="font-size:13px;">@(s.FatherPhone ?? "—")</td>
               <td style="font-size:13px;">@(s.MotherPhone ?? "—")</td>
               @if (hasFeeStructure)
               {
-                <td style="text-align:right;font-weight:700;color:#15803d;">₹@stuFee.ToString("N0")</td>
+                <td class="clickable-cell" style="text-align:right;font-weight:700;color:#15803d;">₹@stuFee.ToString("N0")</td>
               }
-              <td style="text-align:right;font-weight:700;color:#B8860B;">₹@totalDiscount.ToString("N0")</td>
-              <td style="text-align:right;font-weight:700;color:#059669;">₹@payableFees.ToString("N0")</td>
-              <td style="text-align:right;font-weight:700;color:#1976D2;">₹@totalCollected.ToString("N0")</td>
-              <td style="text-align:right;font-weight:700;color:#DC2626;">₹@balance.ToString("N0")</td>
+              <td class="clickable-cell" style="text-align:right;font-weight:700;color:#B8860B;">₹@totalDiscount.ToString("N0")</td>
+              <td class="clickable-cell" style="text-align:right;font-weight:700;color:#059669;">₹@payableFees.ToString("N0")</td>
+              <td class="clickable-cell" style="text-align:right;font-weight:700;color:#1976D2;">₹@totalCollected.ToString("N0")</td>
+              <td class="clickable-cell" style="text-align:right;font-weight:700;color:#DC2626;">₹@balance.ToString("N0")</td>
               <td style="font-size:13px;color:#666;white-space:nowrap;">@dueeDateStr</td>
-              <td style="font-size:13px;">@addedBy</td>
+              <td class="clickable-cell" style="font-size:13px;">@addedBy</td>
               <td onclick="event.stopPropagation()" style="white-space:nowrap;">
                 <button class="btn btn-outline btn-sm btn-icon" title="Call" onclick="toggleDropdownFees(event, 'call-fees-@s.StudentId')">
                   <i class="fas fa-phone"></i>
@@ -552,6 +555,11 @@ document.addEventListener('click', () => {
     el.style.display = 'none';
   });
 });
+
+// Open student fees/payment page
+function openStudentFees(studentId) {
+  window.location.href = '/Fees/Pay/' + studentId;
+}
 
 init();
 </script>
