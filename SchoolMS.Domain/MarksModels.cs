@@ -22,6 +22,27 @@ public class TestMark
     public string?  SectionName{get;set;}
     public string?  BatchName{get;set;}
     public string?  YearName{get;set;}
+    public int?     EnteredBy{get;set;}
+    public string?  EnteredByName{get;set;}
+}
+
+public class TopStudent
+{
+    public int     StudentId     { get; set; }
+    public string  FullName      { get; set; } = "";
+    public string  AdmissionNo   { get; set; } = "";
+    public string? RollNo        { get; set; }
+    public string? ClassName     { get; set; }
+    public string? SectionName   { get; set; }
+    public string? BatchName     { get; set; }
+    public string? YearName      { get; set; }
+    public string? ExamName      { get; set; }
+    public string? SubjectName   { get; set; }
+    public string? SubjectCode   { get; set; }
+    public decimal TotalObtained { get; set; }
+    public decimal TotalMax      { get; set; }
+    public decimal Percentage    { get; set; }
+    public int     Rank          { get; set; }
 }
 
 public class StudentMarkRow
