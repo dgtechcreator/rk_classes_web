@@ -161,86 +161,72 @@ body { padding-bottom: 80px; }
 </div>
 
 
-<!-- Fees Popup -->
-<div id="feesPopupOverlay" onclick="closeFeesPopup()"
-     style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:1000;"></div>
+<!-- Fees Popup - NAYA STRUCTURE -->
+<div id="feesModal" onclick="handleModalClick(event)"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,0.45);z-index:9999;
+            justify-content:center;align-items:center;">
 
-<div id="feesPopup"
-     style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-            background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);
-            z-index:1001;width:90%;max-width:920px;max-height:80vh;overflow-y:auto;
-            flex-direction:column;justify-content:flex-start;align-items:stretch;
-            margin:0;padding:0;">
+    <div style="background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);
+              width:90%;max-width:920px;height:80vh;display:flex;flex-direction:column;
+              position:relative;">
 
-    <!-- Popup Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;
-              padding:16px 20px;border-bottom:1px solid #e5e7eb;background:#f8fafc;">
-        <div>
-            <div style="font-size:16px;font-weight:800;color:#111;">
-                <i class="fas fa-rupee-sign" style="color:#6d28d9;margin-right:8px;"></i>
-                Fees This Month
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:16px 20px;border-bottom:1px solid #e5e7eb;background:#f8fafc;
+                border-radius:12px 12px 0 0;flex-shrink:0;">
+            <div>
+                <div style="font-size:16px;font-weight:800;color:#111;">
+                    <i class="fas fa-rupee-sign" style="color:#6d28d9;margin-right:8px;"></i>
+                    Fees This Month
+                </div>
+                <div style="font-size:12px;color:#888;margin-top:2px;" id="feesPopupSubtitle">Loading...</div>
             </div>
-            <div style="font-size:12px;color:#888;margin-top:2px;" id="feesPopupSubtitle">Loading...</div>
+            <button onclick="closeFeesPopup()"
+                    style="background:#fee2e2;color:#b91c1c;border:none;border-radius:8px;
+                     padding:8px 14px;cursor:pointer;font-weight:700;font-size:13px;">
+                <i class="fas fa-times"></i> Close
+            </button>
         </div>
-        <button onclick="closeFeesPopup()"
-                style="background:#fee2e2;color:#b91c1c;border:none;border-radius:8px;
-                   padding:8px 14px;cursor:pointer;font-weight:700;font-size:13px;">
-            <i class="fas fa-times"></i> Close
-        </button>
-    </div>
 
-    <!-- Popup Body -->
-    <div id="feesPopupBody" style="overflow-y:auto;padding:16px 20px;flex:1;">
-        <div style="text-align:center;padding:40px;color:#888;">
-            <i class="fas fa-spinner fa-spin" style="font-size:24px;"></i>
-            <div style="margin-top:10px;">Loading fees...</div>
+        <!-- Body -->
+        <div id="feesPopupBody" style="overflow-y:auto;padding:16px 20px;flex:1;min-height:0;">
+            <div style="text-align:center;padding:40px;color:#888;">
+                <i class="fas fa-spinner fa-spin" style="font-size:24px;"></i>
+                <div style="margin-top:10px;">Loading fees...</div>
+            </div>
         </div>
-    </div>
 
-    <!-- Popup Footer -->
-    <div style="padding:12px 20px;border-top:1px solid #e5e7eb;background:#f8fafc;
-              display:flex;justify-content:space-between;align-items:center;">
-        <div id="feesPopupTotal" style="font-size:15px;font-weight:800;color:#15803d;"></div>
-        <a href="/Fees/Summary" target="_blank"
-           style="background:#6d28d9;color:#fff;border:none;border-radius:6px;
-              padding:8px 18px;font-size:13px;font-weight:700;text-decoration:none;">
-            <i class="fas fa-external-link-alt"></i> Full Summary
-        </a>
+        <!-- Footer -->
+        <div style="padding:12px 20px;border-top:1px solid #e5e7eb;background:#f8fafc;
+                display:flex;justify-content:space-between;align-items:center;
+                border-radius:0 0 12px 12px;flex-shrink:0;">
+            <div id="feesPopupTotal" style="font-size:15px;font-weight:800;color:#15803d;"></div>
+            <a href="/Fees/Summary" target="_blank"
+               style="background:#6d28d9;color:#fff;border:none;border-radius:6px;
+                padding:8px 18px;font-size:13px;font-weight:700;text-decoration:none;">
+                <i class="fas fa-external-link-alt"></i> Full Summary
+            </a>
+        </div>
+
     </div>
 </div>
-
 <script>
     function openFeesPopup() {
-      document.getElementById('feesPopupOverlay').style.display = 'block';
-      const popup = document.getElementById('feesPopup');
-      popup.style.display = 'flex';
+      const modal = document.getElementById('feesModal');
+      modal.style.display = 'flex';
 
-      // Current month name
       const months = ['January','February','March','April','May','June',
                       'July','August','September','October','November','December'];
       const now = new Date();
       const monthName = months[now.getMonth()];
       document.getElementById('feesPopupSubtitle').textContent = monthName + ' ' + now.getFullYear();
 
-      // Fetch this month's fees
-      fetch('/Fees/SummaryJson?month=' + encodeURIComponent(monthName))
+      // Fetch this month's fees using month number for accurate date filtering
+      fetch('/Fees/SummaryJson?monthNum=' + (now.getMonth() + 1))
         .then(r => r.json())
         .then(data => {
-          if (data && data.length > 0) {
-            renderFeesPopup(data);
-          } else {
-            // Show recent payments if no payments in current month
-            fetch('/Fees/SummaryJson')
-              .then(r => r.json())
-              .then(allData => {
-                if (allData && allData.length > 0) {
-                  document.getElementById('feesPopupSubtitle').textContent = 'Recent Payments';
-                  renderFeesPopup(allData.slice(0, 20));
-                } else {
-                  renderFeesPopup([]);
-                }
-              });
-          }
+          renderFeesPopup(data);
         })
         .catch(() => {
           document.getElementById('feesPopupBody').innerHTML =
@@ -248,9 +234,12 @@ body { padding-bottom: 80px; }
         });
     }
 
+    function handleModalClick(e) {
+      if (e.target === document.getElementById('feesModal')) closeFeesPopup();
+    }
+
     function closeFeesPopup() {
-      document.getElementById('feesPopupOverlay').style.display = 'none';
-      document.getElementById('feesPopup').style.display = 'none';
+      document.getElementById('feesModal').style.display = 'none';
     }
 
     function renderFeesPopup(payments) {
@@ -265,62 +254,58 @@ body { padding-bottom: 80px; }
       document.getElementById('feesPopupTotal').textContent =
         'Total: ₹' + total.toLocaleString('en-IN');
 
-      let html = `
-        <div style="overflow-x:auto;width:100%;">
-        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:850px;">
+      let html = `<div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:750px;">
           <thead>
             <tr style="background:#f8f9fa;border-bottom:2px solid #dee2e6;">
-
-              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">#</th>
-              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Receipt No</th>
-              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Student</th>
-              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Std / Medium</th>
-              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Batch</th>
-              <th style="padding:8px 10px;text-align:right;color:#555;font-weight:700;">Paid</th>
-              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Mode</th>
-              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Date</th>
-              <th style="padding:8px 10px;text-align:left;color:#555;font-weight:700;">Added By</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;">#</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;">Receipt No</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;">Student</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;">Std / Medium</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;">Batch</th>
+              <th style="padding:8px 10px;text-align:right;color:#555;">Paid</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;">Mode</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;">Date</th>
+              <th style="padding:8px 10px;text-align:left;color:#555;">Added By</th>
             </tr>
           </thead>
           <tbody>`;
 
       payments.forEach((p, i) => {
-        html += `
-          <tr style="border-bottom:1px solid #f0f0f0;">
-            <td style="padding:8px 10px;color:#888;">${i+1}</td>
-            <td style="padding:8px 10px;">
-              <a href="/Fees/Receipt/${p.paymentId}" target="_blank"
-                 style="color:#2563eb;font-weight:600;text-decoration:underline;font-size:12px;">
-                ${p.receiptNo}
-              </a>
-            </td>
-            <td style="padding:8px 10px;">
-              <div style="font-weight:700;">${p.studentName ?? '—'}</div>
-              <div style="font-size:11px;color:#888;">${p.admissionNo ?? ''}</div>
-            </td>
-            <td style="padding:8px 10px;font-size:12px;">${p.className ?? '—'} / ${p.sectionName ?? '—'}</td>
-            <td style="padding:8px 10px;font-size:12px;">${p.batchName ?? '—'}</td>
-            <td style="padding:8px 10px;text-align:right;font-weight:800;color:#15803d;">
-              ₹${p.netAmount.toLocaleString('en-IN')}
-              ${p.discount > 0 ? '<div style="font-size:11px;color:#dc2626;">Disc: ₹'+p.discount+'</div>' : ''}
-            </td>
-            <td style="padding:8px 10px;">
-              <span style="background:${p.paymentMode==='Cash'?'#dcfce7':'#dbeafe'};
-                           color:${p.paymentMode==='Cash'?'#15803d':'#1d4ed8'};
-                           padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">
-                ${p.paymentMode}
-              </span>
-            </td>
-            <td style="padding:8px 10px;font-size:12px;color:#888;">${p.paymentDate}</td>
-            <td style="padding:8px 10px;font-size:12px;">${p.collectorName ?? '—'}</td>
-          </tr>`;
+        html += `<tr style="border-bottom:1px solid #f0f0f0;">
+          <td style="padding:8px 10px;color:#888;">${i+1}</td>
+          <td style="padding:8px 10px;">
+            <a href="/Fees/Receipt/${p.paymentId}" target="_blank"
+               style="color:#2563eb;font-weight:600;font-size:12px;">
+              ${p.receiptNo}
+            </a>
+          </td>
+          <td style="padding:8px 10px;">
+            <div style="font-weight:700;">${p.studentName ?? '—'}</div>
+            <div style="font-size:11px;color:#888;">${p.admissionNo ?? ''}</div>
+          </td>
+          <td style="padding:8px 10px;font-size:12px;">${p.className ?? '—'} / ${p.sectionName ?? '—'}</td>
+          <td style="padding:8px 10px;font-size:12px;">${p.batchName ?? '—'}</td>
+          <td style="padding:8px 10px;text-align:right;font-weight:800;color:#15803d;">
+            ₹${p.netAmount.toLocaleString('en-IN')}
+            ${p.discount > 0 ? '<div style="font-size:11px;color:#dc2626;">Disc: ₹'+p.discount+'</div>' : ''}
+          </td>
+          <td style="padding:8px 10px;">
+            <span style="background:${p.paymentMode==='Cash'?'#dcfce7':'#dbeafe'};
+                         color:${p.paymentMode==='Cash'?'#15803d':'#1d4ed8'};
+                         padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">
+              ${p.paymentMode}
+            </span>
+          </td>
+          <td style="padding:8px 10px;font-size:12px;color:#888;">${p.paymentDate}</td>
+          <td style="padding:8px 10px;font-size:12px;">${p.collectorName ?? '—'}</td>
+        </tr>`;
       });
 
       html += '</tbody></table></div>';
       document.getElementById('feesPopupBody').innerHTML = html;
     }
 
-    // ESC key se close
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') closeFeesPopup();
     });

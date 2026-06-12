@@ -184,9 +184,17 @@ public class FeesController(FeesService svc, LookupService lookup,
 
     // ── Summary JSON for Dashboard popup ─────────────────────────
     [HttpGet]
-    public IActionResult SummaryJson(string? month=null)
+    public IActionResult SummaryJson(int? monthNum=null)
     {
-        var (data, _) = svc.GetAll(1, 100, null, month, null);
+        var (data, _) = svc.GetAll(1, 100, null, null, null);
+
+        // Filter by month from PaymentDate if monthNum provided
+        if (monthNum.HasValue && monthNum.Value > 0 && monthNum.Value <= 12)
+        {
+            data = data.Where(p => p.PaymentDate.Month == monthNum.Value &&
+                                   p.PaymentDate.Year == DateTime.Today.Year).ToList();
+        }
+
         var result = data.Select(p => new {
             paymentId = p.PaymentId,
             receiptNo = p.ReceiptNo,
