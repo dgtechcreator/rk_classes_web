@@ -317,22 +317,24 @@
                 </button>
                 @{
                   var phones = studentPhones.ContainsKey(s.StudentId) ? studentPhones[s.StudentId] : ("", "");
+                  var fatherPhone = phones.Item1;
+                  var motherPhone = phones.Item2;
                 }
                 <div id="call-fees-@s.StudentId" class="contact-dropdown" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:100;min-width:160px;">
-                  @if (!string.IsNullOrEmpty(phones.father))
+                  @if (!string.IsNullOrEmpty(fatherPhone))
                   {
-                    <a href="tel:@phones.father" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
-                      📞 Father: @phones.father
+                    <a href="tel:@fatherPhone" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
+                      📞 Father: @fatherPhone
                     </a>
                   }
-                  @if (!string.IsNullOrEmpty(phones.mother))
+                  @if (!string.IsNullOrEmpty(motherPhone))
                   {
-                    <a href="tel:@phones.mother" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
-                      📞 Mother: @phones.mother
+                    <a href="tel:@motherPhone" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
+                      📞 Mother: @motherPhone
                     </a>
                   }
                 </div>
-                <button class="btn btn-outline btn-sm btn-icon" title="WhatsApp - Fee Reminder" onclick="sendFeeReminder(@s.StudentId, '@phones.father', '@phones.mother')" style="color:#25D366;">
+                <button class="btn btn-outline btn-sm btn-icon" title="WhatsApp - Fee Reminder" onclick="sendFeeReminder(@s.StudentId, '@fatherPhone', '@motherPhone')" style="color:#25D366;">
                   <i class="fab fa-whatsapp"></i>
                 </button>
                 <a href="/Fees/Pay/@s.StudentId" class="btn-pay" style="padding:6px 12px;font-size:12px;">💳 Pay</a>
