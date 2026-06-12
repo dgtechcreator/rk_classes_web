@@ -169,7 +169,7 @@ body { padding-bottom: 80px; }
      style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
             background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.2);
             z-index:1001;width:92%;max-width:900px;max-height:85vh;overflow:hidden;
-            display:none;flex-direction:column;">
+            flex-direction:column;">
 
     <!-- Popup Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;
@@ -222,9 +222,25 @@ body { padding-bottom: 80px; }
       document.getElementById('feesPopupSubtitle').textContent = monthName + ' ' + now.getFullYear();
 
       // Fetch this month's fees
-      fetch('/Fees/SummaryJson?month=' + monthName)
+      fetch('/Fees/SummaryJson?month=' + encodeURIComponent(monthName))
         .then(r => r.json())
-        .then(data => renderFeesPopup(data))
+        .then(data => {
+          if (data && data.length > 0) {
+            renderFeesPopup(data);
+          } else {
+            // Show recent payments if no payments in current month
+            fetch('/Fees/SummaryJson')
+              .then(r => r.json())
+              .then(allData => {
+                if (allData && allData.length > 0) {
+                  document.getElementById('feesPopupSubtitle').textContent = 'Recent Payments';
+                  renderFeesPopup(allData.slice(0, 20));
+                } else {
+                  renderFeesPopup([]);
+                }
+              });
+          }
+        })
         .catch(() => {
           document.getElementById('feesPopupBody').innerHTML =
             '<div style="text-align:center;padding:40px;color:#dc2626;">Failed to load. <a href="/Fees/Summary">Open Full Page</a></div>';
