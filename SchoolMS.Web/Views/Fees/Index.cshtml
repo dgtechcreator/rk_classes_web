@@ -1,69 +1,556 @@
-@* Fees/Index.cshtml *@
-@model SchoolMS.Web.ViewModels.FeesListVM
-@{ ViewData["Title"] = "Fee Collection"; }
-
-<div class="pg-hdr"><div class="pg-row"><div><h1>💰 Fee Collection</h1><p>@Model.Total payment records</p></div><a href="/Fees/Collect" class="btn btn-primary"><i class="fas fa-plus"></i> Collect Fee</a></div></div>
-
-<form method="get" action="/Fees/Index">
-<div class="filter-bar">
-  <input type="text" name="search" value="@Model.Search" class="fc" placeholder="Search student, receipt no..." style="min-width:200px;"/>
-  <select name="month" class="fs"><option value="">All Months</option>@foreach(var m in new[]{"April","May","June","July","August","September","October","November","December","January","February","March"}){<option value="@m" selected=@(Model.MonthFilter==m?"selected":"")>@m</option>}</select>
-  <select name="feeType" class="fs"><option value="">All Fee Types</option>@foreach(var ft in Model.FeeTypes){<option value="@ft.FeeTypeId" selected=@(Model.FeeTypeFilter==ft.FeeTypeId?"selected":"")>@ft.TypeName</option>}</select>
-  <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i></button>
-  <a href="/Fees/Index" class="btn btn-outline btn-sm"><i class="fas fa-times"></i></a>
-</div></form>
-
-@if (Model.Payments.Any())
-{
-  var tot = Model.Payments.Sum(p => p.NetAmount);
-  <div style="display:flex;gap:12px;margin-bottom:16px;">
-    <div class="card" style="flex:1;padding:14px 18px;"><div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Showing Total</div><div style="font-size:22px;font-weight:800;color:var(--ok);">₹@tot.ToString("N0")</div></div>
-    <div class="card" style="flex:1;padding:14px 18px;"><div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Transactions</div><div style="font-size:22px;font-weight:800;color:var(--p);">@Model.Payments.Count</div></div>
-  </div>
+@model SchoolMS.Web.ViewModels.FeesStudentListVM
+@using SchoolMS.Services;
+@inject FeesService feesService;
+@inject FeeStructureService feeStructureSvc;
+@{
+    ViewData["Title"] = "Fees Payment";
+    var studentPhones = ViewBag.StudentPhones as Dictionary<int, (string father, string mother)> ?? new();
 }
 
-<div class="card">
-  <div class="tbl-wrap">
-    @if (!Model.Payments.Any())
-    { <div class="empty"><div class="empty-ico">💰</div><h3>No payment records</h3></div> }
+<style>
+.fp-wrap { font-family: 'Segoe UI', Arial, sans-serif; color: #222; }
+
+/* ── Header ── */
+.fp-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 22px;
+}
+.fp-title { font-size: 22px; font-weight: 800; color: #111; }
+.btn-summary {
+  background: #28a745; color: #fff; border: none; border-radius: 6px;
+  padding: 9px 20px; font-size: 14px; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; gap: 7px; text-decoration: none;
+}
+.btn-summary:hover { background: #218838; color: #fff; }
+
+/* ── Panel ── */
+.fp-panel {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 20px 24px; margin-bottom: 20px;
+}
+.fp-panel-title {
+  font-size: 16px; font-weight: 800; color: #111;
+  margin-bottom: 18px; padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* ── Search row ── */
+.fp-search-row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 16px; align-items: end;
+}
+.fp-field label {
+  display: block; font-size: 12.5px; color: #666; margin-bottom: 5px; font-weight: 600;
+}
+.fp-select {
+  width: 100%; padding: 9px 12px; border: 1px solid #ccc; border-radius: 6px;
+  font-size: 14px; background: #fff; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  padding-right: 30px; cursor: pointer;
+}
+.fp-select:focus { outline: none; border-color: #2563eb; }
+.btn-search {
+  background: #2563eb; color: #fff; border: none; border-radius: 6px;
+  padding: 9px 28px; font-size: 14px; font-weight: 700; cursor: pointer;
+  white-space: nowrap;
+}
+.btn-search:hover { background: #1d4ed8; }
+
+/* ── DataTable toolbar ── */
+.dt-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; flex-wrap: wrap; gap: 10px;
+}
+.dt-show { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: #444; }
+.dt-show select {
+  border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; font-size: 13px;
+}
+.dt-search { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: #444; }
+.dt-search input {
+  border: 1px solid #ccc; border-radius: 4px; padding: 5px 10px; font-size: 13px; width: 200px;
+}
+
+/* ── Table ── */
+.fp-table-wrap { overflow-x: auto; }
+.fp-table {
+  width: 100%; border-collapse: collapse; font-size: 13.5px;
+}
+.fp-table thead tr {
+  background: #f8f9fa; border-bottom: 2px solid #dee2e6;
+}
+.fp-table thead th {
+  padding: 11px 14px; text-align: left; font-weight: 700; color: #555;
+  white-space: nowrap; user-select: none;
+}
+.fp-table thead th .sort-ico { color: #aaa; font-size: 10px; margin-left: 4px; }
+.fp-table tbody tr { border-bottom: 1px solid #f0f0f0; }
+.fp-table tbody tr:hover { background: #f9fafb; }
+.fp-table tbody td { padding: 10px 14px; color: #333; }
+.fp-table tbody td.sid { color: #555; font-weight: 600; }
+
+/* ── Pay button ── */
+.btn-pay {
+  background: #28a745; color: #fff; border: none; border-radius: 5px;
+  padding: 6px 18px; font-size: 13px; font-weight: 700; cursor: pointer;
+  text-decoration: none; display: inline-block;
+}
+.btn-pay:hover { background: #218838; color: #fff; }
+
+/* ── Pagination ── */
+.dt-pagination {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 4px; margin-top: 16px;
+}
+.pg-arrow, .pg-num {
+  border: 1px solid #dee2e6; background: #fff; padding: 5px 12px;
+  border-radius: 4px; font-size: 13px; cursor: pointer; color: #333;
+}
+.pg-num.active { background: #2563eb; color: #fff; border-color: #2563eb; font-weight: 700; }
+.pg-arrow { color: #666; }
+
+/* Empty state */
+.fp-empty {
+  text-align: center; padding: 50px 20px; color: #999;
+}
+.fp-empty .ico { font-size: 40px; margin-bottom: 12px; }
+.fp-empty p { font-size: 14px; }
+
+@@media (max-width: 700px) {
+  .fp-search-row { grid-template-columns: 1fr 1fr; }
+  .fp-search-row .btn-search { grid-column: 1 / -1; }
+}
+</style>
+
+<div class="fp-wrap">
+
+  @if (TempData["Success"] != null)
+  {<div class="alert alert-success" style="margin-bottom:16px;"><i class="fas fa-check-circle"></i> @TempData["Success"]</div>}
+
+  <!-- Header -->
+  <div class="fp-header">
+    <div class="fp-title">Fees Payment</div>
+    <a href="/Fees/Summary" class="btn-summary"><i class="fas fa-plus"></i> Summary</a>
+  </div>
+
+  <!-- Search Student -->
+  <div class="fp-panel">
+    <div class="fp-panel-title">Search Student</div>
+    <form method="get" action="/Fees/Index">
+      <input type="hidden" name="search" value="true"/>
+      <div class="fp-search-row">
+        <div class="fp-field">
+          <label>Academic Year</label>
+          <select name="yearId" class="fp-select">
+            <option value="">All Years</option>
+            @foreach(var y in Model.Years)
+            {<option value="@y.YearId" selected=@(Model.YearFilter==y.YearId?"selected":"")>@y.YearName @(y.IsCurrent?"(Current)":"")</option>}
+          </select>
+        </div>
+        <div class="fp-field">
+          <label>Medium/Stream</label>
+          <select name="sectionId" class="fp-select">
+            <option value="">All Medium/Stream</option>
+            @foreach(var s in Model.Sections)
+            {<option value="@s.SectionId" selected=@(Model.SectionFilter==s.SectionId?"selected":"")>@s.SectionName</option>}
+          </select>
+        </div>
+        <div class="fp-field">
+          <label>Std</label>
+          <select name="classId" class="fp-select">
+            <option value="">All Std</option>
+            @foreach(var c in Model.Classes)
+            {<option value="@c.ClassId" selected=@(Model.ClassFilter==c.ClassId?"selected":"")>@c.ClassName</option>}
+          </select>
+        </div>
+        <div class="fp-field">
+          <label>&nbsp;</label>
+          <button type="submit" class="btn-search">Search</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Student List -->
+  <div class="fp-panel">
+    <div class="fp-panel-title">Student List</div>
+
+    @if (!Model.Searched)
+    {
+      <div class="fp-empty">
+        <div class="ico">🔍</div>
+        <p>Select filters above and click <strong>Search</strong> to find students.</p>
+      </div>
+    }
+    else if (!Model.Students.Any())
+    {
+      <div class="fp-empty">
+        <div class="ico">👤</div>
+        <p>No students found for the selected filters.</p>
+      </div>
+    }
     else
     {
-    <table>
-      <thead><tr><th>Receipt No</th><th>Student</th><th>Class</th><th>Fee Type</th><th>Month</th><th>Amount</th><th>Mode</th><th>Date</th><th>Collected By</th><th></th></tr></thead>
-      <tbody>
-      @foreach(var p in Model.Payments)
+      decimal classFeeTotal = Model.FeeStructures.Sum(f => f.Amount);
+      bool hasFeeStructure  = classFeeTotal > 0;
+      <!-- Toolbar -->
+      <div class="dt-toolbar">
+        <div class="dt-show">
+          Show
+          <select id="pageSize" onchange="changePageSize(this.value)">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+          </select>
+          entries
+        </div>
+        <div class="dt-search">
+          Search: <input type="text" id="dtSearch" placeholder="" oninput="filterTable(this.value)"/>
+        </div>
+      </div>
+
+      @if (hasFeeStructure)
       {
-        <tr>
-          <td>
-            <a href="/Fees/Receipt/@p.PaymentId" target="_blank"
-               class="mono text-p" style="font-size:12px;text-decoration:underline;text-underline-offset:2px;">
-              @p.ReceiptNo
-            </a>
-          </td>
-          <td><div class="fw7">@p.StudentName</div><div style="font-size:11px;" class="text-mu">@p.AdmissionNo</div></td>
-          <td style="font-size:13px;">@p.ClassName / @p.SectionName</td>
-          <td><span class="badge b-purple">@p.FeeTypeName</span></td>
-          <td class="text-mu" style="font-size:13px;">@(p.Month??"—")</td>
-          <td>
-            <div style="font-weight:800;color:var(--ok);">₹@p.NetAmount.ToString("N0")</div>
-            @if(p.Discount>0){<div style="font-size:11px;" class="text-mu">Disc: ₹@p.Discount</div>}
-          </td>
-          <td><span class="badge @(p.PaymentMode=="Cash"?"b-cash":"b-online")">@p.PaymentMode</span></td>
-          <td style="font-size:12px;" class="text-mu">@p.PaymentDate.ToString("dd MMM yy")</td>
-          <td style="font-size:12.5px;">@p.CollectorName</td>
-          <td>
-            <a href="/Fees/Receipt/@p.PaymentId" target="_blank"
-               class="btn btn-outline btn-sm" title="Print Receipt"
-               style="gap:5px;">
-              <i class="fas fa-print"></i> Receipt
-            </a>
-          </td>
-        </tr>
+        <div style="display:flex;flex-wrap:nowrap;gap:10px;margin-bottom:14px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;">
+          @foreach (var fs in Model.FeeStructures)
+          {
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:8px 16px;min-width:140px;flex-shrink:0;">
+              <div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;">@fs.FeeTypeName</div>
+              <div style="font-size:18px;font-weight:800;color:#15803d;">₹@fs.Amount.ToString("N0")</div>
+              <div style="font-size:11px;color:#666;">Due: @fs.DueDay<sup>th</sup> of month</div>
+            </div>
+          }
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:8px 16px;min-width:140px;flex-shrink:0;">
+            <div style="font-size:11px;font-weight:700;color:#2563eb;text-transform:uppercase;">Total Fee</div>
+            <div style="font-size:18px;font-weight:800;color:#1d4ed8;">₹@classFeeTotal.ToString("N0")</div>
+            <div style="font-size:11px;color:#666;">@Model.FeeStructures.Count fee head(s)</div>
+          </div>
+        </div>
       }
-      </tbody>
-    </table>
+
+      <!-- Table -->
+      <div class="fp-table-wrap">
+        <table class="fp-table" id="studentTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Student Name</th>
+              <th>Std / Medium</th>
+              <th>Batch</th>
+              <th>Father Contact</th>
+              <th>Mother Contact</th>
+              @if (hasFeeStructure){ <th style="text-align:right;">Total Fee</th> }
+              <th style="text-align:right;">Discount</th>
+              <th style="text-align:right;">Payable Fees</th>
+              <th style="text-align:right;">Collected</th>
+              <th style="text-align:right;">Balance</th>
+              <th>Due Date</th>
+              <th>Added By</th>
+              <th style="width:100px;"></th>
+            </tr>
+          </thead>
+          <tbody id="studentTbody">
+          @{ int sr = 0; }
+          @foreach(var s in Model.Students)
+          {
+            sr++;
+            // Get fee for this student's specific section (may differ if multiple sections shown)
+            var stuFee = Model.FeeStructures
+                .Where(f => f.SectionId == (s.SectionId ?? 0) || !s.SectionId.HasValue)
+                .Sum(f => f.Amount);
+            if (stuFee == 0) stuFee = classFeeTotal; // fallback to class total
+
+            // Get student payment history
+            var history = feesService.GetStudentHistory(s.StudentId);
+            var totalDiscount = history.Sum(h => h.Discount);
+            var totalCollected = history.Sum(h => h.NetAmount);
+            var feeAfterDiscount = stuFee - totalDiscount;
+            var balance = Math.Max(0, feeAfterDiscount - totalCollected);
+            var lastPayment = history.OrderByDescending(h => h.PaymentDate).FirstOrDefault();
+            var addedBy = lastPayment?.CollectorName ?? "—";
+
+            // Calculate Due Date from last payment using FeeStructure
+            string dueeDateStr = "Nil";
+            if (lastPayment != null)
+            {
+              try {
+                var structures = feeStructureSvc.GetAllForStudent(s.StudentId);
+                var firstDue = structures.FirstOrDefault(x => x.DueDay > 0);
+                if (firstDue != null)
+                {
+                  DateTime calculatedDueDate = new DateTime(lastPayment.PaymentDate.Year, lastPayment.PaymentDate.Month, 1)
+                                                .AddDays(firstDue.DueDay - 1);
+                  dueeDateStr = calculatedDueDate.ToString("dd-MM-yyyy");
+                }
+              } catch {
+                dueeDateStr = "Nil";
+              }
+            }
+
+            // Calculate payable fees
+            var payableFees = stuFee - totalDiscount;
+
+            <tr>
+              <td class="sid" style="width:40px;">@sr</td>
+              <td>
+                <div style="font-weight:700;">@s.FullName</div>
+                <div style="font-size:11px;color:#888;">@s.AdmissionNo</div>
+              </td>
+              <td style="font-size:13px;">@(s.ClassName ?? "—") @(s.SectionName != null ? "/ "+s.SectionName : "")</td>
+              <td style="font-size:12px;">@(s.BatchName ?? "—")</td>
+              <td style="font-size:13px;">@(s.FatherPhone ?? "—")</td>
+              <td style="font-size:13px;">@(s.MotherPhone ?? "—")</td>
+              @if (hasFeeStructure)
+              {
+                <td style="text-align:right;font-weight:700;color:#15803d;">₹@stuFee.ToString("N0")</td>
+              }
+              <td style="text-align:right;font-weight:700;color:#B8860B;">₹@totalDiscount.ToString("N0")</td>
+              <td style="text-align:right;font-weight:700;color:#059669;">₹@payableFees.ToString("N0")</td>
+              <td style="text-align:right;font-weight:700;color:#1976D2;">₹@totalCollected.ToString("N0")</td>
+              <td style="text-align:right;font-weight:700;color:#DC2626;">₹@balance.ToString("N0")</td>
+              <td style="font-size:13px;color:#666;white-space:nowrap;">@dueeDateStr</td>
+              <td style="font-size:13px;">@addedBy</td>
+              <td onclick="event.stopPropagation()" style="white-space:nowrap;">
+                <button class="btn btn-outline btn-sm btn-icon" title="Call" onclick="toggleDropdownFees(event, 'call-fees-@s.StudentId')">
+                  <i class="fas fa-phone"></i>
+                </button>
+                @{
+                  var phones = studentPhones.ContainsKey(s.StudentId) ? studentPhones[s.StudentId] : ("", "");
+                }
+                <div id="call-fees-@s.StudentId" class="contact-dropdown" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:100;min-width:160px;">
+                  @if (!string.IsNullOrEmpty(phones.father))
+                  {
+                    <a href="tel:@phones.father" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
+                      📞 Father: @phones.father
+                    </a>
+                  }
+                  @if (!string.IsNullOrEmpty(phones.mother))
+                  {
+                    <a href="tel:@phones.mother" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
+                      📞 Mother: @phones.mother
+                    </a>
+                  }
+                </div>
+                <button class="btn btn-outline btn-sm btn-icon" title="WhatsApp - Fee Reminder" onclick="sendFeeReminder(@s.StudentId, '@phones.father', '@phones.mother')" style="color:#25D366;">
+                  <i class="fab fa-whatsapp"></i>
+                </button>
+                <a href="/Fees/Pay/@s.StudentId" class="btn-pay" style="padding:6px 12px;font-size:12px;">💳 Pay</a>
+              </td>
+            </tr>
+          }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="dt-pagination" id="pagination"></div>
     }
   </div>
-  @if (Model.TotalPages > 1)
-  { <div class="pagi">@for(int i=1;i<=Model.TotalPages;i++){<a href="/Fees/Index?page=@i&search=@Model.Search&month=@Model.MonthFilter&feeType=@Model.FeeTypeFilter" class="pg-btn @(i==Model.Page?"active":"")">@i</a>}</div> }
+
 </div>
+
+@section Scripts {
+<script>
+let allRows = [];
+let currentPage = 1;
+let pageSize = 50;
+
+function init() {
+  allRows = Array.from(document.querySelectorAll('#studentTbody tr'));
+  renderPage();
+}
+
+function filterTable(q) {
+  q = q.toLowerCase();
+  allRows.forEach(r => {
+    r._visible = !q || r.textContent.toLowerCase().includes(q);
+  });
+  currentPage = 1;
+  renderPage();
+}
+
+function changePageSize(val) {
+  pageSize = parseInt(val);
+  currentPage = 1;
+  renderPage();
+}
+
+function renderPage() {
+  const visible = allRows.filter(r => r._visible !== false);
+  const total   = visible.length;
+  const pages   = Math.max(1, Math.ceil(total / pageSize));
+  if (currentPage > pages) currentPage = pages;
+
+  allRows.forEach(r => r.style.display = 'none');
+  const start = (currentPage - 1) * pageSize;
+  visible.slice(start, start + pageSize).forEach(r => r.style.display = '');
+
+  // Pagination
+  const pg = document.getElementById('pagination');
+  pg.innerHTML = '';
+  const prev = document.createElement('button');
+  prev.className = 'pg-arrow'; prev.textContent = '◄';
+  prev.onclick = () => { if(currentPage>1){currentPage--;renderPage();} };
+  pg.appendChild(prev);
+  for (let i = 1; i <= pages; i++) {
+    const b = document.createElement('button');
+    b.className = 'pg-num' + (i===currentPage?' active':'');
+    b.textContent = i;
+    b.onclick = (x=>()=>{currentPage=x;renderPage();})(i);
+    pg.appendChild(b);
+  }
+  const next = document.createElement('button');
+  next.className = 'pg-arrow'; next.textContent = '►';
+  next.onclick = () => { if(currentPage<pages){currentPage++;renderPage();} };
+  pg.appendChild(next);
+}
+
+// Toggle call dropdown
+function toggleDropdownFees(e, id) {
+  e.preventDefault();
+  e.stopPropagation();
+  const dropdown = document.getElementById(id);
+
+  document.querySelectorAll('.contact-dropdown').forEach(el => {
+    if (el.id !== id) el.style.display = 'none';
+  });
+
+  dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+}
+
+// Send fee reminder
+function sendFeeReminder(studentId, fatherPhone, motherPhone) {
+  console.log('Fee reminder for student:', studentId);
+  showFeeReminderPopup(studentId, fatherPhone, motherPhone);
+}
+
+// Show fee reminder popup
+function showFeeReminderPopup(studentId, fatherPhone, motherPhone) {
+  var modal = document.createElement('div');
+  modal.id = 'feeReminderModal-' + studentId;
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+
+  var feeMsg = `*Subject: Classes Fee Payment Reminder*
+
+*Dear Parents,*
+
+We hope you are doing well.
+
+This is a gentle reminder that the due date for your child's classes fees is the *10th july 2026*. Kindly make the payment on time to avoid any late charges.
+
+Thank you for your cooperation.
+
+*Best regards,*
+*Kapil Sir*
+*RK CLASSES*
+*📞 9870375795 / 8108499214*
+-----------------------------------
+
+*प्रिय अभिभावक,*
+
+आशा है कि आप एवं आपका परिवार स्वस्थ एवं सुखी होंगे।
+
+यह आपको विनम्रतापूर्वक स्मरण कराने हेतु सूचित किया जाता है कि आपके बच्चे की क्लासेस की फीस जमा करने की *अंतिम तिथि 10 जुलाई 2026 है।*
+
+कृपया विलंब शुल्क से बचने तथा शैक्षणिक गतिविधियों के सुचारु संचालन हेतु निर्धारित तिथि तक फीस का भुगतान सुनिश्चित करें।
+
+आपके सहयोग एवं विश्वास के लिए धन्यवाद।
+
+*सादर,*
+*कपिल सर*
+*आर के क्लासेस*
+*📞 9870375795 / 8108499214*
+
+  var msgDisplay = feeMsg.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+
+  var modalDiv = document.createElement('div');
+  modalDiv.style.cssText = 'background:#fff;padding:24px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.2);max-width:480px;width:90%;max-height:80vh;overflow-y:auto;';
+
+  var msgDiv = document.createElement('div');
+  msgDiv.style.cssText = 'font-size:12px;line-height:1.6;color:#333;margin-bottom:20px;white-space:pre-wrap;font-family:Arial,sans-serif;';
+  msgDiv.innerHTML = msgDisplay;
+
+  var buttonsDiv = document.createElement('div');
+  buttonsDiv.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;';
+
+  var fatherBtn = document.createElement('button');
+  fatherBtn.textContent = '👨 Father';
+  fatherBtn.style.cssText = 'background:#25D366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;';
+  fatherBtn.onclick = function() { sendToFeeParent(studentId, fatherPhone); };
+
+  var motherBtn = document.createElement('button');
+  motherBtn.textContent = '👩 Mother';
+  motherBtn.style.cssText = 'background:#25D366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;';
+  motherBtn.onclick = function() { sendToFeeParent(studentId, motherPhone); };
+
+  buttonsDiv.appendChild(fatherBtn);
+  buttonsDiv.appendChild(motherBtn);
+
+  var closeBtn = document.createElement('button');
+  closeBtn.textContent = 'Close';
+  closeBtn.style.cssText = 'width:100%;background:#f0f0f0;color:#333;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600;';
+  closeBtn.onclick = function() { modal.remove(); };
+
+  modalDiv.appendChild(msgDiv);
+  modalDiv.appendChild(buttonsDiv);
+  modalDiv.appendChild(closeBtn);
+  modal.appendChild(modalDiv);
+  document.body.appendChild(modal);
+}
+
+// Send to individual parent
+function sendToFeeParent(studentId, parentPhone) {
+  var feeMsg = `*Subject: Classes Fee Payment Reminder*
+
+*Dear Parents,*
+
+We hope you are doing well.
+
+This is a gentle reminder that the due date for your child's class fees is the 10th of every month. Kindly make the payment on time to avoid any late charges.
+
+For any questions or further information, please feel free to contact us at 9870375795 / 8108499214.
+
+Thank you for your cooperation.
+
+Best regards,
+
+Kapil Yadav
+R K CLASSES
+
+-----------------------------------
+
+*विषय: क्लासेस फीस भुगतान अनुस्मारक*
+
+*प्रिय अभिभावक,*
+
+आशा है आप सकुशल होंगे। यह एक विनम्र सूचना है कि आपके बच्चे की क्लासेस की फीस की अंतिम तारीख 10 तारीख है। कृपया किसी भी विलंब शुल्क से बचने के लिए समय पर भुगतान करें।
+
+किसी भी प्रश्न या जानकारी के लिए हमसे 9870375795 /8108499214 पर संपर्क करने में संकोच न करें।
+
+आपके सहयोग के लिए धन्यवाद।
+
+सादर,
+कपिल यादव
+आर के क्लासेस`;
+
+  if (parentPhone && parentPhone.trim() !== '') {
+    var parentNum = parentPhone.replace(/[^0-9]/g, '');
+    if (parentNum.length > 0) {
+      window.open('https://wa.me/' + parentNum + '?text=' + encodeURIComponent(feeMsg), '_blank');
+      var modal = document.getElementById('feeReminderModal-' + studentId);
+      if (modal) modal.remove();
+    }
+  }
+}
+
+// Close dropdowns on outside click
+document.addEventListener('click', () => {
+  document.querySelectorAll('.contact-dropdown').forEach(el => {
+    el.style.display = 'none';
+  });
+});
+
+init();
+</script>
+}
