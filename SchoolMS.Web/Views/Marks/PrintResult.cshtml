@@ -73,7 +73,7 @@ tbody tr:last-child td{border-bottom:none;}
     <div class="meta-item"><label>Exam / Test</label><div>@examName</div></div>
     @if (first != null)
     {
-      <div class="meta-item"><label>Class</label><div>@first.ClassName</div></div>
+      <div class="meta-item"><label>Std</label><div>@first.ClassName</div></div>
     }
     <div class="meta-item"><label>Date</label><div>@DateTime.Today.ToString("dd MMM yyyy")</div></div>
     <div class="meta-item"><label>Total Students</label><div>@Model.Select(m=>m.StudentId).Distinct().Count()</div></div>
@@ -92,7 +92,7 @@ tbody tr:last-child td{border-bottom:none;}
         .ToList();
 
     @* ── Class Summary Table ──────────────────────────────────── *@
-    <div class="section-hdr">📊 Class Summary</div>
+    <div class="section-hdr">📊 Std Summary</div>
     <table>
       <thead>
         <tr>
@@ -139,7 +139,7 @@ tbody tr:last-child td{border-bottom:none;}
         var passCount = byStudent.Count(sg => sg.All(m=>m.MarksObtained.HasValue && m.MarksObtained.Value*100/m.MaxMarks>=35));
       }
       <tr class="summary-row">
-        <td colspan="3" style="color:#5b21b6;">📊 Class Statistics</td>
+        <td colspan="3" style="color:#5b21b6;">📊 Std Statistics</td>
         @foreach (var _ in Model.Select(m=>m.SubjectName).Distinct()) {<td>—</td>}
         <td colspan="3" style="color:#5b21b6;">Average: @avgPct.ToString("0.1")%</td>
         <td colspan="2" style="color:#059669;">Pass: @passCount / @byStudent.Count</td>

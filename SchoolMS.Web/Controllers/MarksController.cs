@@ -6,7 +6,7 @@ using SchoolMS.Web.Filters;
 namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
-public class MarksController(MarksService svc, LookupService lookup) : Controller
+public class MarksController(MarksService svc, LookupService lookup, MastersService mastersSvc) : Controller
 {
     public IActionResult Index(int? yearId, int? classId, int? sectionId, int? batchId,
         int? subjectId, string? examName, DateTime? testDate, int maxMarks = 30)
@@ -18,7 +18,7 @@ public class MarksController(MarksService svc, LookupService lookup) : Controlle
         var classes  = lookup.GetClasses();
         var sections = lookup.GetSections();
         var batches  = lookup.GetBatches();
-        var subjects = classId.HasValue ? lookup.GetSubjects(classId.Value) : new List<Subject>();
+        var subjects = mastersSvc.GetSubjects();
         var examList = svc.GetExamList(yearId, classId);
 
         if (subjectId == null && subjects.Count == 1) subjectId = subjects[0].SubjectId;
@@ -66,41 +66,179 @@ public class MarksController(MarksService svc, LookupService lookup) : Controlle
     }
 
     public IActionResult Report(int? yearId, int? classId, int? sectionId, int? batchId,
-        int? studentId, string? examName, DateTime? testDate)
+        int? subjectId, int? studentId, string? examName, DateTime? testDate)
     {
         yearId ??= lookup.GetCurrentYearId();
         var years    = lookup.GetYears();
         var classes  = lookup.GetClasses();
         var sections = lookup.GetSections();
         var batches  = lookup.GetBatches();
+        var subjects = mastersSvc.GetSubjects();
         var examList = svc.GetExamList(yearId, classId);
         var students = classId.HasValue ? svc.GetStudentsForEntry(classId, sectionId, batchId, yearId) : new List<StudentMarkRow>();
 
+        // Auto-load best exam when class is selected but no exam specified
+        // Prefer exam that actually has mark entries (EntryCount > 0); fallback to first
+        if (classId.HasValue && string.IsNullOrWhiteSpace(examName) && examList.Any())
+        {
+            var best = examList.FirstOrDefault(e => e.EntryCount > 0) ?? examList.First();
+            examName = best.ExamName;
+            testDate ??= best.TestDate;
+        }
+
         var data = new List<TestMark>();
         if (classId.HasValue && !string.IsNullOrWhiteSpace(examName))
-            data = svc.GetTestResult(examName, yearId.Value, classId, sectionId, batchId, studentId, testDate);
+        {
+            data = DedupeMarks(svc.GetTestResult(examName, yearId ?? 0, classId, sectionId, batchId, studentId, null));
+            // Filter by subject if selected
+            if (subjectId.HasValue)
+                data = data.Where(m => m.SubjectId == subjectId.Value).ToList();
+        }
+
+        // All entries view: every TestMark row for this class/section/year
+        var allMarks = classId.HasValue
+            ? svc.GetAllMarksForClass(classId, sectionId, batchId, yearId)
+            : new List<TestMark>();
 
         ViewBag.Years     = years;
         ViewBag.Classes   = classes;
         ViewBag.Sections  = sections;
         ViewBag.Batches   = batches;
+        ViewBag.Subjects  = subjects;
         ViewBag.ExamList  = examList;
         ViewBag.Students  = students;
+        ViewBag.AllMarks  = allMarks;
         ViewBag.YearId    = yearId;
         ViewBag.ClassId   = classId;
         ViewBag.SectionId = sectionId;
         ViewBag.BatchId   = batchId;
+        ViewBag.SubjectId = subjectId;
         ViewBag.StudentId = studentId;
         ViewBag.ExamName  = examName ?? "";
         ViewBag.TestDate  = testDate?.ToString("yyyy-MM-dd") ?? "";
         return View(data);
     }
 
+    public IActionResult TopStudents(int? yearId, int? classId, int? sectionId)
+    {
+        yearId ??= lookup.GetCurrentYearId();
+        var years    = lookup.GetYears();
+        var classes  = lookup.GetClasses();
+        var sections = lookup.GetSections();
+
+        // Fetch raw per-student per-exam aggregates
+        var raw = svc.GetStudentRankings(yearId, classId, sectionId);
+
+        // ── 1. Overall Top 5 (all exams combined) ──────────────────────
+        var overallTop5 = raw
+            .GroupBy(x => x.StudentId)
+            .Select(g => new TopStudent {
+                StudentId     = g.Key,
+                FullName      = g.First().FullName,
+                AdmissionNo   = g.First().AdmissionNo,
+                RollNo        = g.First().RollNo,
+                ClassName     = g.First().ClassName,
+                SectionName   = g.First().SectionName,
+                BatchName     = g.First().BatchName,
+                YearName      = g.First().YearName,
+                TotalObtained = g.Sum(x => x.TotalObtained),
+                TotalMax      = g.Sum(x => x.TotalMax),
+                Percentage    = g.Sum(x => x.TotalMax) > 0
+                    ? Math.Round(g.Sum(x => x.TotalObtained) * 100m / g.Sum(x => x.TotalMax), 2)
+                    : 0
+            })
+            .OrderByDescending(x => x.Percentage)
+            .ThenByDescending(x => x.TotalObtained)
+            .Take(5)
+            .Select((x, i) => { x.Rank = i + 1; return x; })
+            .ToList();
+
+        // ── 2. Class-wise Top 5 ─────────────────────────────────────────
+        var classwiseTop5 = raw
+            .GroupBy(x => (x.StudentId, x.ClassName))
+            .Select(g => new TopStudent {
+                StudentId     = g.Key.StudentId,
+                FullName      = g.First().FullName,
+                AdmissionNo   = g.First().AdmissionNo,
+                RollNo        = g.First().RollNo,
+                ClassName     = g.Key.ClassName,
+                SectionName   = g.First().SectionName,
+                BatchName     = g.First().BatchName,
+                YearName      = g.First().YearName,
+                TotalObtained = g.Sum(x => x.TotalObtained),
+                TotalMax      = g.Sum(x => x.TotalMax),
+                Percentage    = g.Sum(x => x.TotalMax) > 0
+                    ? Math.Round(g.Sum(x => x.TotalObtained) * 100m / g.Sum(x => x.TotalMax), 2)
+                    : 0
+            })
+            .GroupBy(x => x.ClassName ?? "")
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(x => x.Percentage)
+                      .ThenByDescending(x => x.TotalObtained)
+                      .Take(5)
+                      .Select((x, i) => { x.Rank = i + 1; return x; })
+                      .ToList()
+            );
+
+        // ── 3. Test-wise Top 5 (per exam, top 5 students) ──────────────
+        var testwiseTop5 = raw
+            .GroupBy(x => x.ExamName ?? "")
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(x => x.Percentage)
+                      .ThenByDescending(x => x.TotalObtained)
+                      .Take(5)
+                      .Select((x, i) => { x.Rank = i + 1; return x; })
+                      .ToList()
+            );
+
+        // ── 4. Subject-wise Top 5 (per subject, top 5 students) ────────
+        var subjectRaw     = svc.GetSubjectWiseRankings(yearId, classId, sectionId);
+        var subjectwiseTop5 = subjectRaw
+            .GroupBy(x => x.SubjectName ?? "")
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(x => x.Percentage)
+                      .ThenByDescending(x => x.TotalObtained)
+                      .Take(5)
+                      .Select((x, i) => { x.Rank = i + 1; return x; })
+                      .ToList()
+            );
+
+        // ── Test-wise: also attach subject breakdown per student ────────
+        // For each exam, which subjects and marks each top student has
+        var allMarksRaw = classId.HasValue || sectionId.HasValue
+            ? svc.GetAllMarksForClass(classId, sectionId, null, yearId)
+            : new List<TestMark>();
+        // Dictionary: examName -> studentId -> list of subject marks
+        var examSubjectMap = allMarksRaw
+            .Where(m => m.MarksObtained.HasValue)
+            .GroupBy(m => m.ExamName ?? "")
+            .ToDictionary(
+                g => g.Key,
+                g => g.GroupBy(m => m.StudentId)
+                      .ToDictionary(sg => sg.Key, sg => sg.ToList())
+            );
+
+        ViewBag.Years            = years;
+        ViewBag.Classes          = classes;
+        ViewBag.Sections         = sections;
+        ViewBag.YearId           = yearId;
+        ViewBag.ClassId          = classId;
+        ViewBag.SectionId        = sectionId;
+        ViewBag.OverallTop5      = overallTop5;
+        ViewBag.ClasswiseTop5    = classwiseTop5;
+        ViewBag.TestwiseTop5     = testwiseTop5;
+        ViewBag.SubjectwiseTop5  = subjectwiseTop5;
+        ViewBag.ExamSubjectMap   = examSubjectMap;
+        return View();
+    }
+
     public IActionResult PrintResult(string examName, int? yearId, int? classId, int? sectionId,
         int? batchId, int? studentId, DateTime? testDate)
     {
-        int yr = yearId ?? lookup.GetCurrentYearId() ?? 1;
-        var result = svc.GetTestResult(examName, yr, classId, sectionId, batchId, studentId, testDate);
+        var result = DedupeMarks(svc.GetTestResult(examName, yearId ?? 0, classId, sectionId, batchId, studentId, null));
         ViewBag.ExamName  = examName;
         ViewBag.TestDate  = testDate?.ToString("dd MMM yyyy") ?? "";
         ViewBag.ClassId   = classId;
@@ -111,25 +249,41 @@ public class MarksController(MarksService svc, LookupService lookup) : Controlle
     public IActionResult DownloadReport(string examName, int? yearId, int? classId,
         int? sectionId, int? batchId, DateTime? testDate)
     {
-        int yr = yearId ?? lookup.GetCurrentYearId() ?? 1;
-        var data = svc.GetTestResult(examName, yr, classId, sectionId, batchId, null, testDate);
+        var data = DedupeMarks(svc.GetTestResult(examName, yearId ?? 0, classId, sectionId, batchId, null, null));
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("Roll No,Student Name,Admission No,Class,Section,Batch,Subject,Marks Obtained,Max Marks,%,Grade,Result");
-        var byStudent = data.GroupBy(m => m.StudentId);
-        foreach (var sg in byStudent.OrderBy(g => g.First().RollNo))
+        foreach (var sg in data.GroupBy(m => m.StudentId).OrderBy(g => g.First().RollNo))
         {
-            var f = sg.First();
             foreach (var mk in sg.OrderBy(m => m.SubjectName))
             {
                 var pct = mk.MaxMarks > 0 && mk.MarksObtained.HasValue
                     ? (mk.MarksObtained.Value * 100 / mk.MaxMarks).ToString("0")
                     : "AB";
-                var result2 = mk.Grade == "AB" ? "ABSENT" : (mk.MarksObtained.HasValue && mk.MarksObtained.Value * 100 / mk.MaxMarks >= 35 ? "PASS" : "FAIL");
+                var result2 = mk.Grade == "AB" ? "ABSENT"
+                    : (mk.MarksObtained.HasValue && mk.MarksObtained.Value * 100 / mk.MaxMarks >= 35 ? "PASS" : "FAIL");
+                sb.AppendLine(string.Join(",",
+                    Csv(mk.RollNo), Csv(mk.FullName), Csv(mk.AdmissionNo),
+                    Csv(mk.ClassName), Csv(mk.SectionName), Csv(mk.BatchName), Csv(mk.SubjectName),
+                    mk.Grade == "AB" ? "AB" : mk.MarksObtained?.ToString("0") ?? "",
+                    mk.MaxMarks.ToString(), pct, Csv(mk.Grade), result2));
             }
         }
         var fileName = $"TestReport_{examName}_{testDate?.ToString("ddMMMyyyy") ?? "NoDate"}.csv";
         return File(System.Text.Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", fileName);
     }
+
+    static string Csv(string? v) =>
+        v == null ? "" : (v.Contains(',') || v.Contains('"') ? $"\"{v.Replace("\"", "\"\"")}\"" : v);
+
+    // When the old SP returns duplicate rows per student+subject (one per duplicate exam),
+    // keep the best row: actual marks > absent(AB) > anything else.
+    static List<TestMark> DedupeMarks(List<TestMark> rows) =>
+        rows.GroupBy(m => (m.StudentId, m.SubjectId))
+            .Select(g =>
+                g.FirstOrDefault(x => x.MarksObtained.HasValue)   // row with real marks wins
+                ?? g.FirstOrDefault(x => x.Grade == "AB")          // then AB (absent)
+                ?? g.First())                                       // fallback
+            .ToList();
 }
 
 public class MarksSaveReq

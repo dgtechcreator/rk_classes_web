@@ -77,7 +77,7 @@ CREATE PROCEDURE sp_GetDashboardStats AS BEGIN
     (SELECT COUNT(*) FROM Students WHERE CAST(CreatedAt AS DATE)=CAST(GETDATE() AS DATE))                       AS NewToday,
     (SELECT COUNT(*) FROM Attendance WHERE AttendanceDate=CAST(GETDATE() AS DATE) AND Status='Present')         AS PresentToday,
     (SELECT COUNT(*) FROM Attendance WHERE AttendanceDate=CAST(GETDATE() AS DATE) AND Status='Absent')          AS AbsentToday,
-    (SELECT ISNULL(SUM(NetAmount),0) FROM FeePayments WHERE MONTH(PaymentDate)=MONTH(GETDATE()) AND YEAR(PaymentDate)=YEAR(GETDATE())) AS FeesThisMonth,
+    (SELECT ISNULL(SUM(fp.NetAmount),0) FROM FeePayments fp INNER JOIN Students s ON s.StudentId=fp.StudentId WHERE s.Status <> 'Deleted' AND MONTH(fp.PaymentDate)=MONTH(GETDATE()) AND YEAR(fp.PaymentDate)=YEAR(GETDATE())) AS FeesThisMonth,
     (SELECT ISNULL(SUM(Amount),0)   FROM Expenses     WHERE MONTH(ExpenseDate)=MONTH(GETDATE()) AND YEAR(ExpenseDate)=YEAR(GETDATE())) AS ExpensesThisMonth,
     (SELECT COUNT(*) FROM Students WHERE Status='Active' AND ClassId=1) AS Class1Count,
     (SELECT COUNT(*) FROM Students WHERE Status='Active' AND ClassId=2) AS Class2Count,
@@ -289,11 +289,19 @@ CREATE PROCEDURE sp_SaveFeePayment
   @CollectedBy INT=NULL, @NewPaymentId INT OUTPUT
 AS BEGIN
   SET NOCOUNT ON;
-  DECLARE @RNo NVARCHAR(30)='RCP-'+CAST(YEAR(GETDATE()) AS NVARCHAR)+'-'
-    +RIGHT('0000'+CAST((SELECT ISNULL(MAX(PaymentId),0)+1 FROM FeePayments) AS NVARCHAR),4);
+  DECLARE @RNo NVARCHAR(30), @Counter INT=1, @MaxAttempts INT=100;
+
+  WHILE @Counter <= @MaxAttempts BEGIN
+    SET @RNo = 'RCP-'+CAST(YEAR(GETDATE()) AS NVARCHAR)+'-'
+      +RIGHT('0000'+CAST(@Counter AS NVARCHAR),4);
+
+    IF NOT EXISTS(SELECT 1 FROM FeePayments WHERE ReceiptNo=@RNo) BREAK;
+    SET @Counter = @Counter + 1;
+  END
+
   INSERT INTO FeePayments(ReceiptNo,StudentId,FeeTypeId,Amount,Discount,LateFine,NetAmount,
     PaymentDate,PaymentMode,TransactionRef,AcademicYearId,Month,Remarks,CollectedBy)
-  VALUES(@RNo,@StudentId,@FeeTypeId,@Amount,@Discount,@LateFine,@Amount-@Discount+@LateFine,
+  VALUES(@RNo,@StudentId,@FeeTypeId,@Amount,@Discount,@LateFine,@Amount+@LateFine,
     @PaymentDate,@PaymentMode,@TransactionRef,@AcademicYearId,@Month,@Remarks,@CollectedBy);
   SET @NewPaymentId=SCOPE_IDENTITY();
 END

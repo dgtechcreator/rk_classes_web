@@ -6,6 +6,7 @@ namespace SchoolMS.Services;
 public class FeeStructureService(FeeStructureRepo repo)
 {
     public List<FeeStructure>     GetAll(int? yr, int? cls, int? sec) => repo.GetAll(yr, cls, sec);
+    public List<FeeStructure>     GetAllForStudent(int studentId)     => repo.GetAllForStudent(studentId);
     public int                    Save(FeeStructure fs, int by)       => repo.Save(fs, by);
     public void                   Delete(int id)                      => repo.Delete(id);
     public List<FeeStructureSummary> GetSummary(int? yr)             => repo.GetSummary(yr);

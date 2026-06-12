@@ -1,0 +1,330 @@
+@model SchoolMS.Web.ViewModels.FeePayVM
+@{ ViewData["Title"] = "Fees Payment"; }
+
+<style>
+.fp-wrap { font-family: 'Segoe UI', Arial, sans-serif; color: #222; max-width: 1100px; }
+
+/* ── Page title ── */
+.fp-page-title { font-size: 22px; font-weight: 800; color: #111; margin-bottom: 20px; }
+
+/* ── Info box ── */
+.fp-info-box {
+  background: #fff; border: 1px solid #ddd; border-radius: 8px;
+  padding: 18px 24px; margin-bottom: 24px;
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px 24px;
+}
+.fp-info-item { font-size: 13.5px; color: #333; }
+.fp-info-item strong { color: #111; }
+
+/* ── Form panel ── */
+.fp-panel {
+  background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 24px;
+}
+.fp-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px 24px;
+}
+.fp-field label {
+  display: block; font-size: 12.5px; color: #666; margin-bottom: 5px; font-weight: 500;
+}
+.fp-input {
+  width: 100%; padding: 9px 12px; border: 1px solid #ccc; border-radius: 6px;
+  font-size: 14px; background: #fff; box-sizing: border-box;
+}
+.fp-input:focus { outline: none; border-color: #2563eb; }
+.fp-input[readonly] { background: #f5f5f5; color: #555; cursor: default; }
+.fp-input.highlight { background: #f0f7ff; border-color: #93c5fd; }
+
+/* ── Buttons ── */
+.fp-btn-row { display: flex; gap: 12px; margin-top: 24px; }
+.btn-submit {
+  background: #28a745; color: #fff; border: none; border-radius: 6px;
+  padding: 10px 30px; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.btn-submit:hover { background: #218838; }
+.btn-back {
+  background: #fd7e14; color: #fff; border: none; border-radius: 6px;
+  padding: 10px 26px; font-size: 14px; font-weight: 700; cursor: pointer;
+  text-decoration: none; display: inline-flex; align-items: center;
+}
+.btn-back:hover { background: #e8690e; color: #fff; }
+
+/* Payment mode select */
+.fp-select {
+  width: 100%; padding: 9px 12px; border: 1px solid #ccc; border-radius: 6px;
+  font-size: 14px; background: #fff; box-sizing: border-box; cursor: pointer;
+}
+.fp-select:focus { outline: none; border-color: #2563eb; }
+
+@@media (max-width: 700px) {
+  .fp-info-box { grid-template-columns: 1fr 1fr; }
+  .fp-grid     { grid-template-columns: 1fr 1fr; }
+}
+@@media (max-width: 480px) {
+  .fp-info-box { grid-template-columns: 1fr; }
+  .fp-grid     { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="fp-wrap">
+  <div class="fp-page-title">Fees Payment</div>
+
+  <!-- Info box -->
+  <div class="fp-info-box">
+    <div class="fp-info-item"><strong>Receipt Date:</strong> @DateTime.Today.ToString("dd/MM/yyyy")</div>
+    <div class="fp-info-item"><strong>Student:</strong> @Model.Student.FullName?.ToUpper()</div>
+    <div class="fp-info-item"><strong>Academic Year:</strong> @(Model.Student.YearName ?? "—")</div>
+    <div class="fp-info-item"><strong>Standard:</strong> @(Model.Student.ClassName ?? "—")</div>
+    <div class="fp-info-item"><strong>Medium:</strong> @(Model.Student.SectionName ?? "—")</div>
+    <div class="fp-info-item"><strong>Batch:</strong> @(Model.Student.BatchName ?? "—")</div>
+    <div class="fp-info-item" style="color:@(Model.ActualFee>0?"#15803d":"#dc2626");font-weight:700;">
+      <strong>Total Fee:</strong> ₹ @Model.ActualFee.ToString("N0")
+      @if(Model.ActualFee == 0){<span style="font-size:11px;color:#dc2626;font-weight:400;"> (no fee structure set)</span>}
+    </div>
+    <div class="fp-info-item"><strong>Total Paid:</strong> ₹ @Model.TotalPaid.ToString("N0")</div>
+    <div class="fp-info-item" style="font-weight:700;color:@(Model.Balance>0?"#dc2626":"#15803d");">
+      <strong>Balance Due:</strong> ₹ @Model.Balance.ToString("N0")
+    </div>
+  </div>
+
+  @* Fee heads breakdown *@
+  @if (Model.FeeStructures.Any())
+  {
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;">
+      @foreach (var fs in Model.FeeStructures)
+      {
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 18px;min-width:150px;">
+          <div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;margin-bottom:2px;">@fs.FeeTypeName</div>
+          <div style="font-size:20px;font-weight:800;color:#15803d;">₹@fs.Amount.ToString("N0")</div>
+          <div style="font-size:11px;color:#666;">Due: @fs.DueDay<sup>th</sup> of month</div>
+        </div>
+      }
+    </div>
+  }
+
+  @* Previous Payments History *@
+  @if (Model.PaymentHistory.Any())
+  {
+    <div style="background:#fff;border:1px solid #ddd;border-radius:8px;padding:18px 24px;margin-bottom:20px;">
+      <div style="font-size:15px;font-weight:800;color:#111;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #f0f0f0;">
+        <i class="fas fa-history" style="color:#2563eb;margin-right:6px;"></i>Previous Payments
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#f8f9fa;border-bottom:2px solid #dee2e6;">
+            <th style="padding:8px 12px;text-align:left;font-weight:700;color:#555;">#</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:700;color:#555;">Receipt No</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:700;color:#555;">Date</th>
+            <th style="padding:8px 12px;text-align:right;font-weight:700;color:#555;">Amount Paid</th>
+            <th style="padding:8px 12px;text-align:right;font-weight:700;color:#555;">Discount</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:700;color:#555;">Mode</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:700;color:#555;">Ref / Remarks</th>
+            <th style="padding:8px 12px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @{ int hsr = 0; }
+          @foreach (var p in Model.PaymentHistory)
+          {
+            hsr++;
+            <tr style="border-bottom:1px solid #f0f0f0;">
+              <td style="padding:8px 12px;color:#888;">@hsr</td>
+              <td style="padding:8px 12px;font-weight:600;color:#2563eb;">
+                <a href="/Fees/Receipt/@p.PaymentId" target="_blank">@p.ReceiptNo</a>
+              </td>
+              <td style="padding:8px 12px;">@p.PaymentDate.ToString("dd/MM/yyyy")</td>
+              <td style="padding:8px 12px;text-align:right;font-weight:700;color:#15803d;">₹@p.NetAmount.ToString("N0")</td>
+              <td style="padding:8px 12px;text-align:right;color:#dc2626;">@(p.Discount>0?"₹"+p.Discount.ToString("N0"):"—")</td>
+              <td style="padding:8px 12px;">@p.PaymentMode</td>
+              <td style="padding:8px 12px;color:#666;font-size:12px;">
+                @(string.IsNullOrWhiteSpace(p.TransactionRef) ? "" : p.TransactionRef)
+                @(string.IsNullOrWhiteSpace(p.Remarks) ? "" : (!string.IsNullOrWhiteSpace(p.TransactionRef) ? " · " : "") + p.Remarks)
+                @(string.IsNullOrWhiteSpace(p.TransactionRef) && string.IsNullOrWhiteSpace(p.Remarks) ? "—" : "")
+              </td>
+              <td style="padding:8px 12px;">
+                <form method="post" action="/Fees/DeletePayment/@p.PaymentId?returnStudentId=@Model.Student.StudentId" style="margin:0;"
+                      onsubmit="return confirm('Delete receipt @p.ReceiptNo?\n₹@p.NetAmount.ToString("N0") will be reversed from paid amount.')">
+                  @Html.AntiForgeryToken()
+                  <button type="submit" title="Delete this payment"
+                    style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:5px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;">
+                    <i class="fas fa-trash"></i> Delete
+                  </button>
+                </form>
+              </td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr style="background:#f0fdf4;border-top:2px solid #bbf7d0;">
+            <td colspan="3" style="padding:8px 12px;font-weight:700;color:#15803d;">Total Paid</td>
+            <td style="padding:8px 12px;text-align:right;font-weight:800;color:#15803d;font-size:15px;">₹@Model.TotalPaid.ToString("N0")</td>
+            <td colspan="4" style="padding:8px 12px;font-weight:700;color:#dc2626;">
+              Balance Due: <span id="balanceDueFooter">₹@Model.Balance.ToString("N0")</span>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  }
+
+  <!-- Payment Form -->
+  <div class="fp-panel">
+    <form method="post" action="/Fees/SavePay">
+      <input type="hidden" name="studentId" value="@Model.Student.StudentId"/>
+
+      <div class="fp-grid">
+
+        <div class="fp-field">
+          <label>Student</label>
+          <input class="fp-input" readonly value="@Model.Student.FullName"/>
+        </div>
+        <div class="fp-field">
+          <label>Academic Year</label>
+          <input class="fp-input" readonly value="@Model.Student.YearName"/>
+        </div>
+        <div class="fp-field">
+          <label>Std</label>
+          <input class="fp-input" readonly value="@Model.Student.ClassName"/>
+        </div>
+
+        <div class="fp-field">
+          <label>Actual Fees</label>
+          <input class="fp-input" id="actualFees" readonly value="@Model.ActualFee.ToString("0")"/>
+        </div>
+        <div class="fp-field">
+          <label>Existing Balance</label>
+          <input class="fp-input" id="existingBalance" readonly value="@Model.Balance.ToString("0")"/>
+        </div>
+        <div class="fp-field">
+          <label>Payment Date</label>
+          <input class="fp-input" type="date" name="paymentDate"
+                 value="@Model.PaymentDate.ToString("yyyy-MM-dd")" required/>
+        </div>
+
+        <div class="fp-field">
+          <label>Due Date</label>
+          <input class="fp-input" type="date" name="dueDate"
+                 value="@(Model.DueDate.HasValue ? Model.DueDate.Value.ToString("yyyy-MM-dd") : "")"/>
+        </div>
+                <div class="fp-field" style="display:flex;gap:12px;align-items:flex-end;">
+                    <div style="flex:1;">
+                        <label>
+                            Additional Discount
+                            @if (Model.ExistingDiscount > 0)
+                            {
+                                <span style="font-size:11px;color:#dc2626;font-weight:400;">
+                                    (already given ₹@Model.ExistingDiscount.ToString("N0"))
+                                </span>
+                            }
+                        </label>
+                        <input class="fp-input @(Model.ExistingDiscount > 0 ? "" : "highlight")"
+                               type="number" name="additionalDiscount" id="discount"
+                               value="0" min="0" step="0.01" placeholder="0"
+                               @(Model.ExistingDiscount > 0 ? "readonly" : "") />
+                    </div>
+                    @if (Model.ExistingDiscount == 0)
+                    {
+                        <button type="button" id="discountBtn"
+                                onclick="toggleDiscountBtn()"
+                                style="background:#4CAF50;color:#fff;border:none;padding:10px 18px;border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;">
+                            <span style="font-size:16px;">✓</span> Apply
+                        </button>
+                    }
+                </div>
+        <div class="fp-field">
+          <label>Payable After Discount</label>
+          <input class="fp-input" id="payable" readonly value="@Model.Balance.ToString("0")"/>
+        </div>
+
+        <div class="fp-field">
+          <label>Paying Now</label>
+          <input class="fp-input highlight" type="number" name="payingNow" id="payingNow"
+                 min="0" step="0.01" oninput="recalc()"
+                 value="@(Model.Balance > 0 ? Model.Balance.ToString("0") : "")"
+                 placeholder="0" required/>
+        </div>
+        <div class="fp-field">
+          <label>Balance Amount</label>
+          <input class="fp-input" id="balanceAmt" readonly value="@Model.Balance.ToString("0")"/>
+        </div>
+        <div class="fp-field">
+          <label>Payment Mode</label>
+          <select name="paymentMode" class="fp-select">
+            <option value="Cash">Cash</option>
+            <option value="Online Transfer">Online Transfer</option>
+            <option value="Cheque">Cheque</option>
+            <option value="Demand Draft">Demand Draft</option>
+          </select>
+        </div>
+
+        <div class="fp-field">
+          <label>Transaction Ref</label>
+          <input class="fp-input" type="text" name="transactionRef" placeholder="UTR / Cheque No. (optional)"/>
+        </div>
+        <div class="fp-field" style="grid-column: span 2;">
+          <label>Remarks</label>
+          <input class="fp-input" type="text" name="remarks" placeholder="Optional remarks"/>
+        </div>
+
+      </div>
+
+      <div class="fp-btn-row">
+        <button type="submit" class="btn-submit">Submit</button>
+        <a href="/Fees/Index" class="btn-back">Back</a>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+@section Scripts {
+    <script>
+                const actualFee = @Model.ActualFee;
+        const totalPaid = @Model.TotalPaid;
+        const existingDiscount = @Model.ExistingDiscount;
+
+        // ✅ Agar discount already diya hai toh apply mat karo dobara
+        let discountApplied = false;
+        let userEditedPaying = false;
+
+        function recalc() {
+          const disc    = parseFloat(document.getElementById('discount').value) || 0;
+          // ✅ Balance = actualFee - existingDiscount(already saved) - totalPaid - newDiscount
+          const payable = Math.max(0, actualFee - existingDiscount - totalPaid - (discountApplied ? disc : 0));
+
+          if (!userEditedPaying) {
+            document.getElementById('payingNow').value = payable.toFixed(0);
+          }
+
+          const paying = parseFloat(document.getElementById('payingNow').value) || 0;
+          const remain = Math.max(0, payable - paying);
+
+          document.getElementById('payable').value    = payable.toFixed(0);
+          document.getElementById('balanceAmt').value = remain.toFixed(0);
+          if (document.getElementById('balanceDueFooter'))
+            document.getElementById('balanceDueFooter').textContent = '₹' + remain.toFixed(0);
+        }
+
+        function toggleDiscountBtn() {
+          discountApplied = !discountApplied;
+          const btn = document.getElementById('discountBtn');
+          if (btn) {
+            if (discountApplied) {
+              btn.style.background = '#dc2626';
+              btn.innerHTML = '<span style="font-size:16px;">✗</span> Remove';
+            } else {
+              btn.style.background = '#4CAF50';
+              btn.innerHTML = '<span style="font-size:16px;">✓</span> Apply';
+            }
+          }
+          userEditedPaying = false;
+          recalc();
+        }
+
+        document.getElementById('payingNow').addEventListener('input', function() {
+          userEditedPaying = true;
+          recalc();
+        });
+
+        recalc();
+    </script>
+}

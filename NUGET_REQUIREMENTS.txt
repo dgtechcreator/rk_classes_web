@@ -1,0 +1,68 @@
+NuGet Packages Required for PDF to Excel Conversion:
+
+1. iTextSharp (for PDF reading)
+   Command: dotnet add package iTextSharp --version 5.5.13.3
+
+2. EPPlus (for Excel creation)
+   Command: dotnet add package EPPlus --version 7.0.4
+
+3. System.Drawing.Common (for Colors)
+   Command: dotnet add package System.Drawing.Common --version 8.0.1
+
+Installation Instructions:
+========================
+
+Option 1: Via Package Manager Console
+--------------------------------------
+Install-Package iTextSharp -Version 5.5.13.3
+Install-Package EPPlus -Version 7.0.4
+Install-Package System.Drawing.Common -Version 8.0.1
+
+Option 2: Via .NET CLI
+---------------------
+Open command prompt in your project directory and run:
+
+dotnet add package iTextSharp --version 5.5.13.3
+dotnet add package EPPlus --version 7.0.4
+dotnet add package System.Drawing.Common --version 8.0.1
+
+Option 3: Edit .csproj file directly
+------------------------------------
+Add these lines to your .csproj file:
+
+<ItemGroup>
+    <PackageReference Include="iTextSharp" Version="5.5.13.3" />
+    <PackageReference Include="EPPlus" Version="7.0.4" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.1" />
+</ItemGroup>
+
+Then run: dotnet restore
+
+Features of the Converter:
+=========================
+✓ Extracts Invoice Header Information (Invoice #, Date, Supplier, etc.)
+✓ Extracts Container Details Table (14 rows of shipping containers)
+✓ Extracts Bill Items (Charges breakdown)
+✓ Extracts Tax Summary (SGST, CGST, IGST calculations)
+✓ Creates 4 Excel Sheets:
+  - Invoice Summary: Quick reference of key invoice data
+  - Container Details: Complete container information with dates and charges
+  - Bill Items: Itemized charges breakdown
+  - Tax Summary: Tax calculation details
+
+Output Format:
+==============
+The Excel file will be properly formatted with:
+- Color-coded headers
+- Proper column widths
+- Number formatting for amounts
+- Frozen panes for easy navigation
+- Summary totals
+
+Customization Options:
+======================
+You can modify the converter to:
+1. Add more data extraction fields
+2. Change color schemes in CreateXxxSheet methods
+3. Add formulas for automatic calculations
+4. Export to different file formats (CSV, JSON, etc.)

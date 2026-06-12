@@ -28,4 +28,8 @@ public class MastersService(MastersRepo repo)
     public List<Subject> GetSubjects()         => repo.GetSubjects();
     public int  SaveSubject(Subject m)         => repo.SaveSubject(m);
     public void DeleteSubject(int id)          => repo.DeleteSubject(id);
+
+    public List<ExpenseCat> GetExpenseCategories()    => repo.GetExpenseCategories();
+    public int  SaveExpenseCat(ExpenseCat m)          => repo.SaveExpenseCat(m);
+    public void DeleteExpenseCat(int id)              => repo.DeleteExpenseCat(id);
 }

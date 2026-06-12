@@ -15,19 +15,23 @@ public class ExpensesController(ExpensesService svc, LookupService lookup) : Con
         return View(new ExpenseListVM {
             Expenses=data, Total=total, Page=page, Search=search,
             CategoryFilter=category, MonthFilter=month, YearFilter=year,
-            Categories=lookup.GetExpCats()
+            Categories=lookup.GetExpCats(),
+            Years=lookup.GetYears()
         });
     }
 
     public IActionResult Create() => View("Form", new ExpenseFormVM {
-        Expense=new Expense { ExpenseDate=DateTime.Today }, Categories=lookup.GetExpCats()
+        Expense=new Expense { ExpenseDate=DateTime.Today },
+        Categories=lookup.GetExpCats(),
+        Years=lookup.GetYears()
     });
 
     public IActionResult Edit(int id)
     {
         return View("Form", new ExpenseFormVM {
             Expense=new Expense { ExpenseId=id, ExpenseDate=DateTime.Today },
-            Categories=lookup.GetExpCats()
+            Categories=lookup.GetExpCats(),
+            Years=lookup.GetYears()
         });
     }
 

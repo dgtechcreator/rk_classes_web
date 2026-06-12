@@ -8,7 +8,7 @@ namespace SchoolMS.Web.Controllers;
 [RequireLogin]
 public class FacultyController(FacultyService svc, LookupService lookup) : Controller
 {
-    public IActionResult Index(int page=1, string? search=null, string? status=null, int? designationId=null)
+    public IActionResult Index(int page=1, string? search=null, string? status="Active", int? designationId=null)
     {
         var (data, total) = svc.GetAll(search, status, designationId, page, 15);
         ViewBag.Designations  = svc.GetDesignations();
@@ -57,6 +57,14 @@ public class FacultyController(FacultyService svc, LookupService lookup) : Contr
         var id = svc.Save(model, picPath, uid);
         TempData["Success"] = "Faculty member saved successfully.";
         return RedirectToAction("Details", new { id });
+    }
+
+    [HttpPost]
+    public IActionResult Delete(int id)
+    {
+        svc.Delete(id);
+        TempData["Success"] = "Faculty member marked as Inactive.";
+        return RedirectToAction("Index");
     }
 
     public IActionResult Details(int id)

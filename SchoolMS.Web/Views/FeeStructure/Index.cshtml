@@ -69,7 +69,7 @@
     @foreach(var s in sections){<option value="@s.SectionId" selected=@((int?)(ViewBag.SectionId)==s.SectionId?"selected":"")>@s.SectionName</option>}
   </select>
   <select name="classId" class="fs">
-    <option value="">All Classes</option>
+    <option value="">All Std</option>
     @foreach(var c in classes){<option value="@c.ClassId" selected=@((int?)(ViewBag.ClassId)==c.ClassId?"selected":"")>@c.ClassName</option>}
   </select>
   <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Filter</button>

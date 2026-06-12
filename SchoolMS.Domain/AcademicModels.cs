@@ -16,6 +16,10 @@ public class Class
     public int    OrderNo{get;set;}
     public bool   IsActive{get;set;}=true;
     public int    StudentCount{get;set;}
+    public int?   CreatedBy{get;set;}
+    public string? CreatedByName{get;set;}
+    public int?   DeletedBy{get;set;}
+    public string? DeletedByName{get;set;}
 }
 
 public class Section
@@ -24,6 +28,10 @@ public class Section
     public string SectionName{get;set;}="";
     public bool   IsActive{get;set;}=true;
     public int    StudentCount{get;set;}
+    public int?   CreatedBy{get;set;}
+    public string? CreatedByName{get;set;}
+    public int?   DeletedBy{get;set;}
+    public string? DeletedByName{get;set;}
 }
 
 public class Batch
@@ -32,6 +40,10 @@ public class Batch
     public string BatchName{get;set;}="";
     public bool   IsActive{get;set;}=true;
     public int    StudentCount{get;set;}
+    public int?   CreatedBy{get;set;}
+    public string? CreatedByName{get;set;}
+    public int?   DeletedBy{get;set;}
+    public string? DeletedByName{get;set;}
 }
 
 public class FeeType
@@ -42,21 +54,34 @@ public class FeeType
     public bool    IsActive{get;set;}=true;
     public int     StructureCount{get;set;}
     public int     PaymentCount{get;set;}
+    public int?    CreatedBy{get;set;}
+    public string? CreatedByName{get;set;}
+    public int?    DeletedBy{get;set;}
+    public string? DeletedByName{get;set;}
 }
 
-public class ExpenseCat { public int CategoryId{get;set;} public string CategoryName{get;set;}=""; }
+public class ExpenseCat {
+    public int    CategoryId{get;set;}
+    public string CategoryName{get;set;}="";
+    public bool   IsActive{get;set;}=true;
+    public int    UsageCount{get;set;}
+}
 
 public class Subject
 {
     public int     SubjectId{get;set;}
     public string  SubjectName{get;set;}="";
     public string? SubjectCode{get;set;}
-    public int     ClassId{get;set;}
+    public int?    ClassId{get;set;}
     public string? ClassName{get;set;}
     public int     MaxMarks{get;set;}=100;
     public int     PassMarks{get;set;}=35;
     public bool    IsActive{get;set;}=true;
     public int     UsageCount{get;set;}
+    public int?    CreatedBy{get;set;}
+    public string? CreatedByName{get;set;}
+    public int?    DeletedBy{get;set;}
+    public string? DeletedByName{get;set;}
 }
 
 public class Exam

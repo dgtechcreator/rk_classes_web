@@ -45,7 +45,7 @@
       {
         var td = ex.TestDate?.ToString("yyyy-MM-dd") ?? "";
         var active = ex.ExamName == examName && td == testDate;
-        <a href="/Marks/Index?yearId=@ex.AcademicYearId&classId=@ex.ClassId&sectionId=@sectionId&batchId=@batchId&examName=@Uri.EscapeDataString(ex.ExamName)&testDate=@td&maxMarks=@maxMarks"
+        <a href="/Marks/Index?yearId=@ex.AcademicYearId&classId=@ex.ClassId&sectionId=@sectionId&batchId=@batchId&subjectId=@subjectId&examName=@Uri.EscapeDataString(ex.ExamName)&testDate=@td&maxMarks=@maxMarks"
            style="display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:99px;font-size:12px;font-weight:700;border:1.5px solid @(active?"var(--p)":"var(--bdr)");background:@(active?"#f5f3ff":"var(--sur)");color:@(active?"var(--p)":"var(--mu)");text-decoration:none;transition:all .15s;"
            onmouseover="this.style.borderColor='var(--p)';this.style.color='var(--p)'"
            onmouseout="@(active?"":"this.style.borderColor='var(--bdr)';this.style.color='var(--mu)'")">
@@ -74,7 +74,7 @@
   </select>
 
   <select name="sectionId" class="fs" id="sel_section">
-    <option value="">All Sections</option>
+    <option value="">All Medium/Stream</option>
     @foreach (var s in sections)
     {
       if (sectionId == s.SectionId) { <option value="@s.SectionId" selected>@s.SectionName</option> }
@@ -83,7 +83,7 @@
   </select>
 
   <select name="classId" class="fs" id="sel_class" onchange="this.form.submit()">
-    <option value="">— Class —</option>
+    <option value="">— Std —</option>
     @foreach (var c in classes)
     {
       if (classId == c.ClassId) { <option value="@c.ClassId" selected>@c.ClassName</option> }
@@ -130,9 +130,9 @@
 
 @* ── States ─────────────────────────────────────────────────── *@
 @if (classId == null)
-{<div class="card"><div class="empty"><div class="empty-ico">✏️</div><h3>Select Filters to Begin</h3><p>Choose Academic Year, Section, Class, Subject and enter a test name, then click Load.</p></div></div>}
+{<div class="card"><div class="empty"><div class="empty-ico">✏️</div><h3>Select Filters to Begin</h3><p>Choose Academic Year, Medium/Stream, Std, Subject and enter a test name, then click Load.</p></div></div>}
 else if (!subjects.Any())
-{<div class="card"><div class="empty"><div class="empty-ico">📚</div><h3>No subjects for this class</h3><p>Add subjects in Masters setup.</p></div></div>}
+{<div class="card"><div class="empty"><div class="empty-ico">📚</div><h3>No subjects found</h3><p>Add subjects in Academic Manager.</p></div></div>}
 else if (subjectId == null || string.IsNullOrWhiteSpace(examName))
 {<div class="card"><div class="empty"><div class="empty-ico">✏️</div><h3>Select Subject &amp; Test Name</h3><p>Pick a subject, enter the test name and date, then click Load.</p></div></div>}
 else if (!hasData)
@@ -159,7 +159,7 @@ else
       <div style="font-size:22px;font-weight:800;color:var(--err);">@absentCnt</div>
     </div>
     <div class="card" style="padding:12px 16px;border-top:3.5px solid var(--warn);">
-      <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Class Average</div>
+      <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Std Average</div>
       <div id="avgDisp" style="font-size:22px;font-weight:800;color:var(--warn);">
         @(entered > 0 ? Model!.Where(m=>m.MarksObtained.HasValue).Average(m=>(double)m.MarksObtained!.Value).ToString("0.1") : "—")
       </div>
@@ -184,7 +184,6 @@ else
       </div>
       <div class="df g8">
         <button class="btn btn-outline btn-sm" onclick="clearAll()"><i class="fas fa-eraser"></i> Clear</button>
-        <button class="btn btn-primary" onclick="saveMarks()"><i class="fas fa-save"></i> Save Marks</button>
       </div>
     </div>
 
@@ -195,7 +194,7 @@ else
           <th style="width:44px;">#</th>
           <th style="width:80px;">Roll No</th>
           <th>Student Name</th>
-          <th>Class / Section</th>
+          <th>Std / Medium/Stream</th>
           <th>Batch</th>
           <th style="min-width:220px;">Marks (/ @maxMarks)</th>
           <th style="width:60px;">Grade</th>
@@ -252,7 +251,7 @@ else
 
     <div style="padding:14px 16px;border-top:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <span id="savedMsg" style="font-size:13px;"></span>
-      <button class="btn btn-primary" onclick="saveMarks()"><i class="fas fa-save"></i> Save All Marks</button>
+      <button class="btn btn-primary" onclick="saveMarks(this)"><i class="fas fa-save"></i> Save All Marks</button>
     </div>
   </div>
 }
@@ -329,38 +328,48 @@ function updateStats() {
 }
 function clearAll(){if(!confirm('Clear all on-screen values?'))return;document.querySelectorAll('.mk-inp').forEach(i=>{if(!absentSet.has(parseInt(i.dataset.sid))){i.value='';setRow(i,null,MAX_MARKS);}});}
 
-async function saveMarks() {
+async function saveMarks(btn) {
   const entries=[];
+  // Add absent students first
   absentSet.forEach(sid=>entries.push({studentId:sid,subjectId:@(subjectId??0),marks:0,isAbsent:true}));
+  // Add ALL students who have a value in the marks input (including pre-filled existing marks)
   document.querySelectorAll('.mk-inp').forEach(i=>{
     const sid=parseInt(i.dataset.sid);
     if(absentSet.has(sid))return;
     const v=i.value.trim();
-    if(v!=='')entries.push({studentId:sid,subjectId:@(subjectId??0),marks:parseFloat(v),isAbsent:false});
+    if(v===''||isNaN(parseFloat(v)))return;
+    entries.push({studentId:sid,subjectId:@(subjectId??0),marks:parseFloat(v),isAbsent:false});
   });
-  if(!entries.length){alert('No marks or absent entries to save.');return;}
-  const btn=event.currentTarget; btn.disabled=true; btn.textContent='Saving...';
+  if(!entries.length){alert('No marks or absent entries to save.\nEnter marks for at least one student first.');return;}
+
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Saving...';
   const msg=document.getElementById('savedMsg');
   try {
-    const res=await fetch('/Marks/Save',{method:'POST',headers:{'Content-Type':'application/json'},
+    const res=await fetch('/Marks/Save',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        examName:@Html.Raw($"'{examName.Replace("'","\\'")}'" ),
+        examName:@Json.Serialize(examName),
         classId:@(classId??0),
         yearId:@(yearId??0),
         maxMarks:MAX_MARKS,
-        testDate:@Html.Raw(string.IsNullOrWhiteSpace(testDate) ? "null" : $"\"{testDate}\""),
+        testDate:@Json.Serialize(string.IsNullOrWhiteSpace(testDate) ? null : testDate),
         entries
-      })});
+      })
+    });
+    if(!res.ok)throw new Error('HTTP '+res.status);
     const d=await res.json();
     const ac=entries.filter(e=>e.isAbsent).length, mk=entries.filter(e=>!e.isAbsent).length;
     msg.textContent=d.success?'✅ Saved: '+mk+' marks, '+ac+' absent':'❌ '+d.message;
     msg.style.color=d.success?'var(--ok)':'var(--err)';
-    setTimeout(()=>msg.textContent='',6000);
+    setTimeout(()=>msg.textContent='',8000);
   } catch(err) {
     msg.textContent='❌ Save failed: '+err.message;
     msg.style.color='var(--err)';
-    setTimeout(()=>msg.textContent='',6000);
-  } finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-save"></i> Save All Marks'; }
+  } finally {
+    btn.disabled=false;
+    btn.innerHTML='<i class="fas fa-save"></i> Save All Marks';
+  }
 }
 updateStats();
 </script>

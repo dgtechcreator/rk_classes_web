@@ -27,7 +27,7 @@
   var totalAmt  = Model.Sum(f => f.Amount);
   var totalPaid = Model.Sum(f => f.PaidAmount);
   var totalBal  = Model.Sum(f => f.BalanceAmount);
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;" class="fees-kpi-strip">
     <div class="card" style="padding:14px 16px;border-top:3.5px solid var(--p);">
       <div style="font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Total Billed</div>
       <div style="font-size:20px;font-weight:800;color:var(--txt);">₹@totalAmt.ToString("N0")</div>
@@ -56,11 +56,11 @@
     @foreach(var y in years){<option value="@y.YearId" selected=@((int?)ViewBag.YearId==y.YearId?"selected":"")>@y.YearName @(y.IsCurrent?"✓ Current":"")</option>}
   </select>
   <select name="sectionId" class="fs">
-    <option value="">All Sections</option>
+    <option value="">All Medium/Stream</option>
     @foreach(var s in sections){<option value="@s.SectionId" selected=@((int?)ViewBag.SectionId==s.SectionId?"selected":"")>@s.SectionName</option>}
   </select>
   <select name="classId" class="fs">
-    <option value="">All Classes</option>
+    <option value="">All Std</option>
     @foreach(var c in classes){<option value="@c.ClassId" selected=@((int?)ViewBag.ClassId==c.ClassId?"selected":"")>@c.ClassName</option>}
   </select>
   <select name="feeTypeId" class="fs">
@@ -92,7 +92,7 @@
     <table>
       <thead>
         <tr>
-          <th>Student</th><th>Class / Section</th><th>Fee Type</th>
+          <th>Student</th><th>Std / Medium/Stream</th><th>Fee Type</th>
           <th>Month</th><th>Due Date</th>
           <th>Billed</th><th>Paid</th><th>Balance</th>
           <th>Status</th><th></th>

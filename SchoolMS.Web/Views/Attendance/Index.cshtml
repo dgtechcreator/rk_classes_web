@@ -1,38 +1,131 @@
 @model SchoolMS.Web.ViewModels.AttendanceVM
 @{ ViewData["Title"] = "Attendance"; }
 
+<style>
+/* Mobile Responsive - Attendance Filters */
+@@media (max-width: 768px) {
+  .filter-flex-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+    align-items: flex-end !important;
+  }
+  .filter-flex-row > div {
+    min-width: unset !important;
+  }
+  .filter-flex-row .btn {
+    grid-column: span 2;
+    width: 100%;
+  }
+}
+
+@@media (max-width: 480px) {
+  .filter-flex-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .filter-flex-row > div {
+    width: 100%;
+  }
+  .filter-flex-row .fc,
+  .filter-flex-row .fs {
+    width: 100% !important;
+  }
+  .filter-flex-row .btn {
+    grid-column: span 1;
+    width: 100%;
+  }
+}
+</style>
+
 <div class="pg-hdr">
   <div class="pg-row">
     <div><h1>📅 Attendance</h1><p>Mark daily student attendance</p></div>
-    <a href="/Attendance/Report" class="btn btn-outline"><i class="fas fa-chart-bar"></i> View Report</a>
+    <a href="/Attendance/Report" class="btn btn-outline"><i class="fas fa-chart-bar"></i> Attendance Report</a>
   </div>
 </div>
 
 <form method="get" action="/Attendance/Index" id="flt">
-<div class="filter-bar">
-  <i class="fas fa-filter" style="color:var(--mu);font-size:13px;"></i>
-  <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" class="fc" style="width:160px;"/>
-  <select name="sectionId" class="fs">
-    <option value="">All Sections</option>
-    @foreach(var s in Model.Sections){<option value="@s.SectionId" selected=@(Model.SectionId==s.SectionId?"selected":"")>@s.SectionName</option>}
-  </select>
-  <select name="classId" class="fs">
-    <option value="">— Select Class —</option>
-    @foreach(var c in Model.Classes){<option value="@c.ClassId" selected=@(Model.ClassId==c.ClassId?"selected":"")>@c.ClassName</option>}
-  </select>
-  <select name="batchId" class="fs">
-    <option value="">All Batches</option>
-    @foreach(var b in Model.Batches){<option value="@b.BatchId" selected=@(Model.BatchId==b.BatchId?"selected":"")>@b.BatchName</option>}
-  </select>
-  <button type="submit" class="btn btn-primary" style="white-space:nowrap;">
-    <i class="fas fa-search"></i> Search
-  </button>
-  @if (Model.ClassId.HasValue || Model.SectionId.HasValue || Model.BatchId.HasValue)
-  {
-    <a href="/Attendance/Index?date=@Model.Date.ToString("yyyy-MM-dd")" class="btn btn-outline" style="white-space:nowrap;">
-      <i class="fas fa-times"></i> Clear
-    </a>
-  }
+<div class="card" style="margin-bottom:16px;padding:16px 18px;">
+
+  @* Row 1: Date + dropdowns + search *@
+  <div class="filter-flex-row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px;">
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Date</label>
+      <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" class="fc" style="width:155px;"/>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Medium / Stream</label>
+      <select name="sectionId" class="fs" style="min-width:155px;">
+        <option value="">— Select —</option>
+        @foreach(var s in Model.Sections)
+        {<option value="@s.SectionId" selected=@(Model.SectionId==s.SectionId?"selected":"")>@s.SectionName</option>}
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Std</label>
+      <select name="classId" class="fs" style="min-width:130px;">
+        <option value="">— Select —</option>
+        @foreach(var c in Model.Classes)
+        {<option value="@c.ClassId" selected=@(Model.ClassId==c.ClassId?"selected":"")>@c.ClassName</option>}
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Batch</label>
+      <select name="batchId" class="fs" style="min-width:130px;">
+        <option value="">All Batches</option>
+        @foreach(var b in Model.Batches)
+        {<option value="@b.BatchId" selected=@(Model.BatchId==b.BatchId?"selected":"")>@b.BatchName</option>}
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:1px;">
+      <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
+      @if (Model.ClassId.HasValue || Model.SectionId.HasValue || Model.BatchId.HasValue)
+      {<a href="/Attendance/Index" class="btn btn-outline"><i class="fas fa-times"></i> Clear</a>}
+    </div>
+  </div>
+
+  @* Row 2: Lecture details *@
+  <div class="filter-flex-row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding-top:12px;border-top:1px dashed var(--bdr);">
+    <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
+      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">
+        <i class="fas fa-book" style="color:var(--p);margin-right:3px;"></i>Subject
+      </label>
+      <select name="subject" id="inpSubject" class="fs" style="min-width:160px;">
+        <option value="">— Select Subject —</option>
+        @foreach(var s in Model.Subjects)
+        { if(Model.Subject==s.SubjectName){<option value="@s.SubjectName" selected>@s.SubjectName</option>}
+          else{<option value="@s.SubjectName">@s.SubjectName</option>} }
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
+      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">
+        <i class="fas fa-chalkboard-teacher" style="color:var(--p);margin-right:3px;"></i>Faculty Name
+      </label>
+      <select name="sirName" id="inpSirName" class="fs" style="min-width:160px;">
+        <option value="">— Select Teacher —</option>
+        @foreach(var t in Model.Teachers)
+        {
+          if(Model.SirName==t.FullName){<option value="@t.FullName" selected>@t.FullName</option>}
+          else{<option value="@t.FullName">@t.FullName</option>}
+        }
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">
+        <i class="fas fa-clock" style="color:var(--ok);margin-right:3px;"></i>Start Time
+      </label>
+      <input type="time" name="startTime" id="inpStartTime" value="@Model.StartTime" class="fc" style="width:135px;"/>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">
+        <i class="fas fa-clock" style="color:var(--err);margin-right:3px;"></i>End Time
+      </label>
+      <input type="time" name="endTime" id="inpEndTime" value="@Model.EndTime" class="fc" style="width:135px;"/>
+    </div>
+  </div>
+
 </div>
 </form>
 
@@ -40,8 +133,12 @@
 {
 <div class="card">
   <div class="card-hdr">
-    <span class="card-ttl"><i class="fas fa-users" style="color:var(--p);margin-right:6px;"></i>
+    <span class="card-ttl">
+      <i class="fas fa-users" style="color:var(--p);margin-right:6px;"></i>
       @Model.Records.Count Students — @Model.Date.ToString("dddd, dd MMMM yyyy")
+      @if (!string.IsNullOrEmpty(Model.Subject)){<span style="font-size:12px;font-weight:400;color:var(--mu);margin-left:8px;">| @Model.Subject</span>}
+      @if (!string.IsNullOrEmpty(Model.SirName)){<span style="font-size:12px;font-weight:400;color:var(--mu);margin-left:4px;">| @Model.SirName</span>}
+
     </span>
     <div class="df g8">
       <button class="btn btn-success btn-sm" onclick="markAll('Present')"><i class="fas fa-check"></i> All Present</button>
@@ -50,18 +147,29 @@
     </div>
   </div>
 
-  <!-- Summary Bar -->
-  <div style="display:flex;gap:14px;margin-bottom:16px;padding:10px 14px;background:var(--sur2);border-radius:var(--rs);border:1px solid var(--bdr);">
+  <div style="display:flex;gap:14px;margin-bottom:16px;padding:10px 14px;background:var(--sur2);border-radius:var(--rs);border:1px solid var(--bdr);flex-wrap:wrap;">
     <span style="font-size:13px;font-weight:700;">Total: <strong>@Model.Records.Count</strong></span>
     <span style="font-size:13px;font-weight:700;color:var(--ok);">Present: <strong id="cP">0</strong></span>
     <span style="font-size:13px;font-weight:700;color:var(--err);">Absent: <strong id="cA">0</strong></span>
     <span style="font-size:13px;font-weight:700;color:var(--warn);">Late: <strong id="cL">0</strong></span>
+    @if (!string.IsNullOrEmpty(Model.StartTime) || !string.IsNullOrEmpty(Model.EndTime))
+    {
+      <span style="font-size:13px;font-weight:600;color:var(--mu);margin-left:auto;">
+        <i class="fas fa-clock"></i>
+        @(string.IsNullOrEmpty(Model.StartTime) ? "—" : Model.StartTime)
+        @if (!string.IsNullOrEmpty(Model.EndTime)){<text> → @Model.EndTime</text>}
+      </span>
+    }
   </div>
 
   <div class="tbl-wrap">
   <table>
     <thead>
-      <tr><th>#</th><th>Photo</th><th>Roll</th><th>Student Name</th><th>Class / Section</th><th>Batch</th><th style="min-width:200px;">Attendance</th></tr>
+      <tr>
+        <th>#</th><th>Photo</th><th>Roll</th><th>Student Name</th>
+        <th>Std / Medium</th><th>Batch</th>
+        <th style="min-width:220px;">Attendance</th>
+      </tr>
     </thead>
     <tbody>
     @{ int idx = 0; }
@@ -75,7 +183,10 @@
           else{<div class="stu-av" style="width:34px;height:34px;font-size:12px;">@r.FullName[0]</div>}
         </td>
         <td><span class="mono" style="font-size:12px;">@(r.RollNo??"—")</span></td>
-        <td><div class="fw7">@r.FullName</div><div style="font-size:11px;" class="text-mu">@r.AdmissionNo</div></td>
+        <td>
+          <div class="fw7">@r.FullName</div>
+          <div style="font-size:11px;" class="text-mu">@r.AdmissionNo</div>
+        </td>
         <td style="font-size:12.5px;">@r.ClassName / @r.SectionName</td>
         <td><span class="badge b-purple" style="font-size:11px;">@r.BatchName</span></td>
         <td>
@@ -98,7 +209,7 @@ else if (Model.ClassId.HasValue)
 }
 else
 {
-  <div class="card"><div class="empty"><div class="empty-ico">📅</div><h3>Select Filters &amp; Search</h3><p>Choose a date, section, class and/or batch, then click <strong>Search</strong> to load students for the current academic year.</p></div></div>
+  <div class="card"><div class="empty"><div class="empty-ico">📅</div><h3>Select Filters &amp; Search</h3><p>Choose a date, Medium/Stream, Std and/or Batch, then click <strong>Search</strong> to load students.</p></div></div>
 }
 
 @section Scripts {
@@ -129,27 +240,38 @@ function updateCounts() {
   document.getElementById('cL').textContent = vs.filter(v=>v==='Late').length;
 }
 async function saveAtt() {
+  const subject   = document.getElementById('inpSubject')?.value  || null;
+  const sirName   = document.getElementById('inpSirName')?.value  || null;
+  const startTime = document.getElementById('inpStartTime')?.value || null;
+  const endTime   = document.getElementById('inpEndTime')?.value   || null;
+
   const entries = Object.entries(att).map(([id,status])=>({studentId:parseInt(id),status,remarks:null}));
   const res = await fetch('/Attendance/Save', {
-    method:'POST', headers:{'Content-Type':'application/json'},
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
     body: JSON.stringify({
-      date: '@Model.Date.ToString("yyyy-MM-dd")',
-      classId: @(Model.ClassId?.ToString()??"null"),
-      sectionId: @(Model.SectionId?.ToString()??"null"),
-      batchId: @(Model.BatchId?.ToString()??"null"),
+      date:      '@Model.Date.ToString("yyyy-MM-dd")',
+      classId:   @(Model.ClassId?.ToString()   ?? "null"),
+      sectionId: @(Model.SectionId?.ToString() ?? "null"),
+      batchId:   @(Model.BatchId?.ToString()   ?? "null"),
+      subject, sirName, startTime, endTime,
       entries
     })
   });
   const d = await res.json();
   if (d.success) toast('✅ ' + d.message, 'success');
-  else toast('❌ Error saving attendance', 'danger');
+  else           toast('❌ Error saving attendance', 'danger');
 }
 updateCounts();
+
 function toast(msg, type) {
   const el = document.createElement('div');
   el.className = 'alert alert-' + (type==='success'?'success':'danger');
   el.textContent = msg;
-  Object.assign(el.style, {position:'fixed',top:'76px',right:'22px',zIndex:'9999',minWidth:'260px',boxShadow:'0 4px 20px rgba(0,0,0,.13)'});
+  Object.assign(el.style, {
+    position:'fixed', top:'76px', right:'22px', zIndex:'9999',
+    minWidth:'260px', boxShadow:'0 4px 20px rgba(0,0,0,.13)'
+  });
   document.body.appendChild(el);
   setTimeout(()=>el.remove(), 4000);
 }

@@ -3,6 +3,54 @@ document.addEventListener('DOMContentLoaded', () => {
   const ts = document.getElementById('_ts'), te = document.getElementById('_te');
   if (ts?.textContent.trim()) toast(ts.textContent.trim(), 'success');
   if (te?.textContent.trim()) toast(te.textContent.trim(), 'danger');
+
+  // ── Mobile Sidebar Toggle ──────────────────────────────
+  const sidebar  = document.querySelector('.sidebar');
+  const overlay  = document.getElementById('sbOverlay');
+  const menuTog  = document.getElementById('menuTog');
+
+  function openSidebar() {
+    sidebar?.classList.add('open');
+    overlay?.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSidebar() {
+    sidebar?.classList.remove('open');
+    overlay?.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  menuTog?.addEventListener('click', () => {
+    sidebar?.classList.contains('open') ? closeSidebar() : openSidebar();
+  });
+
+  // Tap overlay to close
+  overlay?.addEventListener('click', closeSidebar);
+
+  // Close sidebar when a nav link is clicked on mobile
+  sidebar?.querySelectorAll('.nav-item').forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth <= 768) closeSidebar();
+    });
+  });
+
+  // Close on resize to desktop
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) closeSidebar();
+  });
+
+  // Blue background on selects that have a value selected
+  function updateSelect(sel) {
+    if (sel.value && sel.value !== '') {
+      sel.classList.add('fs-filled');
+    } else {
+      sel.classList.remove('fs-filled');
+    }
+  }
+  document.querySelectorAll('select.fs').forEach(sel => {
+    updateSelect(sel);
+    sel.addEventListener('change', () => updateSelect(sel));
+  });
 });
 
 function toast(msg, type = 'success') {

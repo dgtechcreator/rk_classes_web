@@ -1,0 +1,344 @@
+@model SchoolMS.Web.ViewModels.ParentDashboardVM
+@{
+  Layout = "_ParentLayout";
+  var sel = Model.SelectedChild;
+  var activeTab = Model.ActiveTab ?? "attendance";
+  ViewData["Title"] = sel != null ? sel.FullName : "Dashboard";
+  ViewBag.SelectedStudentId = sel?.StudentId;
+  ViewBag.ActiveTab = activeTab;
+  ViewBag.SidebarChildren = Model.Children;
+
+  // Pre-compute marks grouping to avoid nested @{} inside @if blocks
+  var byExam = Model.Marks
+      .GroupBy(m => new { m.ExamId, m.ExamName, Date = m.TestDate })
+      .OrderByDescending(g => g.Key.Date)
+      .ToList();
+}
+
+<style>
+/* ── No children ── */
+.no-child {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+  padding: 60px 20px; text-align: center; color: #aaa;
+}
+.no-child i { font-size: 48px; display: block; margin-bottom: 14px; color: #ddd; }
+
+/* ── Student info card ── */
+.stu-card {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+  margin-bottom: 20px; overflow: hidden;
+}
+.stu-card-head {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%);
+  padding: 18px 22px; display: flex; align-items: center; gap: 16px; color: #fff;
+}
+.stu-av-lg {
+  width: 58px; height: 58px; border-radius: 50%; flex-shrink: 0;
+  object-fit: cover; border: 3px solid rgba(255,255,255,.4);
+  background: rgba(255,255,255,.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 800; color: #fff;
+}
+.stu-av-lg img { width: 58px; height: 58px; border-radius: 50%; object-fit: cover; }
+.stu-head-info h2 { font-size: 18px; font-weight: 800; margin-bottom: 3px; }
+.stu-head-info p  { font-size: 12px; opacity: .8; margin-bottom: 2px; }
+.stu-meta-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid #f0f0f0;
+}
+.stu-meta-item { padding: 11px 18px; border-right: 1px solid #f0f0f0; }
+.stu-meta-item:last-child { border-right: none; }
+.stu-meta-item .lbl { font-size: 10.5px; color: #999; margin-bottom: 3px; }
+.stu-meta-item .val { font-size: 13.5px; font-weight: 700; color: #111; }
+
+/* ── KPI strips ── */
+.kpi-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 14px; margin-bottom: 20px;
+}
+.kpi-card {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+  padding: 16px 14px; text-align: center;
+}
+.kpi-card .kv { font-size: 26px; font-weight: 800; color: #111; line-height: 1; }
+.kpi-card .kl { font-size: 11px; color: #888; margin-top: 5px; }
+.kpi-card.green .kv { color: #15803d; }
+.kpi-card.red   .kv { color: #dc2626; }
+.kpi-card.amber .kv { color: #b45309; }
+
+/* ── Fee KPIs ── */
+.fee-kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 20px; }
+.fee-kpi { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 14px; text-align:center; }
+.fee-kpi .kv { font-size:24px; font-weight:800; }
+.fee-kpi .kl { font-size:11px; color:#888; margin-top:5px; }
+
+/* ── Alert box ── */
+.alert-warn {
+  background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+  padding: 11px 16px; font-size: 13px; color: #92400e; font-weight: 600;
+  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+}
+.alert-ok {
+  background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+  padding: 11px 16px; font-size: 13px; color: #15803d; font-weight: 600;
+  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+}
+
+/* ── Table ── */
+.pp-table-wrap { background:#fff; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; margin-bottom:16px; }
+.pp-table { width:100%; border-collapse:collapse; font-size:13px; }
+.pp-table thead tr { background:#f8f9fa; }
+.pp-table thead th { padding:10px 14px; text-align:left; font-weight:700; color:#333; border-bottom:2px solid #e5e7eb; white-space:nowrap; }
+.pp-table tbody td { padding:9px 14px; border-bottom:1px solid #f0f0f0; color:#333; }
+.pp-table tbody tr:last-child td { border-bottom:none; }
+.pp-table tfoot td { padding:9px 14px; font-weight:700; background:#f8f9fa; border-top:2px solid #e5e7eb; }
+.pp-empty { text-align:center; padding:36px; color:#bbb; font-size:13px; }
+.pp-empty i { font-size:32px; display:block; margin-bottom:10px; }
+
+/* ── Badges ── */
+.badge { border-radius:5px; padding:2px 9px; font-size:11px; font-weight:700; }
+.badge-present { background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; }
+.badge-absent  { background:#fff5f5; color:#dc2626; border:1px solid #fecaca; }
+.badge-late    { background:#fffbeb; color:#b45309; border:1px solid #fde68a; }
+.badge-pass    { background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; }
+.badge-fail    { background:#fff5f5; color:#dc2626; border:1px solid #fecaca; }
+
+/* ── Marks exam group ── */
+.exam-group { margin-bottom:20px; }
+.exam-title {
+  background:#f8f9fa; border:1px solid #e5e7eb; border-bottom:none;
+  border-radius:8px 8px 0 0; padding:10px 16px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.exam-title .en { font-size:14px; font-weight:800; color:#1e3a5f; }
+.exam-title .ed { font-size:11px; color:#888; margin-top:2px; }
+.exam-title .ep { font-size:13px; font-weight:800; }
+
+/* ── Section title ── */
+.sec-title { font-size:15px; font-weight:800; color:#111; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.sec-title i { color:#cc0000; }
+
+@@media (max-width:700px) {
+  .kpi-row { grid-template-columns: repeat(2,1fr); }
+  .fee-kpi-row { grid-template-columns: repeat(3,1fr); }
+  .stu-meta-row { grid-template-columns: 1fr 1fr; }
+}
+@@media (max-width:480px) {
+  .kpi-row { grid-template-columns: repeat(2,1fr); gap:10px; }
+  .fee-kpi-row { grid-template-columns: repeat(3,1fr); gap:8px; }
+  .stu-card-head { padding:14px 14px; }
+  .stu-head-info h2 { font-size:16px; }
+}
+</style>
+
+@if (!Model.Children.Any())
+{
+  <div class="no-child">
+    <i class="fas fa-child"></i>
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px;">No students found</div>
+    <div style="font-size:13px;">Your phone number does not match any student record.<br/>Contact the school to update parent contact details.</div>
+  </div>
+}
+else if (sel == null)
+{
+  <div class="no-child">
+    <i class="fas fa-arrow-left"></i>
+    <div style="font-size:15px;font-weight:700;">Select a child from the sidebar</div>
+  </div>
+}
+else
+{
+  @* ── Student info card ── *@
+  <div class="stu-card">
+    <div class="stu-card-head">
+      @if (!string.IsNullOrEmpty(sel.ProfilePicPath))
+      {<div class="stu-av-lg"><img src="@sel.ProfilePicPath" alt="@sel.FullName"/></div>}
+      else
+      {<div class="stu-av-lg">@(sel.FullName?.Length > 0 ? sel.FullName[0].ToString().ToUpper() : "?")</div>}
+      <div class="stu-head-info">
+        <h2>@sel.FullName.ToUpper()</h2>
+        <p>@(sel.ClassName ?? "—") &nbsp;·&nbsp; @(sel.SectionName ?? "—") @if(!string.IsNullOrEmpty(sel.BatchName)){<text>&nbsp;·&nbsp; @sel.BatchName</text>}</p>
+        <p>Adm: @sel.AdmissionNo &nbsp;|&nbsp; Year: @(sel.YearName ?? "—")</p>
+      </div>
+    </div>
+    <div class="stu-meta-row">
+      <div class="stu-meta-item"><div class="lbl">Father</div><div class="val">@(sel.FatherName ?? "—")</div></div>
+      <div class="stu-meta-item"><div class="lbl">Mother</div><div class="val">@(sel.MotherName ?? "—")</div></div>
+      <div class="stu-meta-item"><div class="lbl">Roll No</div><div class="val">@(sel.RollNo ?? "—")</div></div>
+    </div>
+  </div>
+
+  @* ══════════════════════ ATTENDANCE ══════════════════════ *@
+  @if (activeTab == "attendance")
+  {
+    <div class="sec-title"><i class="fas fa-calendar-check"></i> Attendance Summary</div>
+
+    @if (Model.Attendance != null)
+    {
+      var att = Model.Attendance;
+      <div class="kpi-row">
+        <div class="kpi-card green">
+          <div class="kv">@att.AttendancePct.ToString("0.0")%</div>
+          <div class="kl">Attendance %</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kv">@att.PresentDays</div>
+          <div class="kl">Present Days</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kv">@att.AbsentDays</div>
+          <div class="kl">Absent Days</div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kv">@att.LateDays</div>
+          <div class="kl">Late Days</div>
+        </div>
+      </div>
+    }
+
+    @if (Model.AttDetail.Any())
+    {
+      <div class="sec-title" style="margin-top:4px;"><i class="fas fa-list"></i> Attendance Detail</div>
+      <div class="pp-table-wrap">
+        <table class="pp-table">
+          <thead><tr>
+            <th>Date</th><th>Status</th><th>Subject</th><th>Teacher</th>
+          </tr></thead>
+          <tbody>
+            @foreach (var d in Model.AttDetail.OrderByDescending(x => x.AttendanceDate))
+            {
+              <tr>
+                <td>@d.AttendanceDate.ToString("dd MMM yyyy")</td>
+                <td>
+                  @if(d.Status=="Present"){<span class="badge badge-present">Present</span>}
+                  else if(d.Status=="Absent"){<span class="badge badge-absent">Absent</span>}
+                  else{<span class="badge badge-late">@d.Status</span>}
+                </td>
+                <td>@(d.Subject ?? "—")</td>
+                <td>@(d.SirName ?? "—")</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    else if (Model.Attendance == null || Model.Attendance.TotalDays == 0)
+    {
+      <div class="pp-table-wrap"><div class="pp-empty"><i class="fas fa-calendar-times"></i>No attendance records yet</div></div>
+    }
+  }
+
+  @* ══════════════════════ MARKS ══════════════════════ *@
+  @if (activeTab == "marks")
+  {
+    <div class="sec-title"><i class="fas fa-chart-bar"></i> Test Marks</div>
+    @if (!byExam.Any())
+    {
+      <div class="pp-table-wrap"><div class="pp-empty"><i class="fas fa-chart-bar"></i>No marks records yet</div></div>
+    }
+    else
+    {
+      @foreach (var grp in byExam)
+      {
+        var mlist = grp.ToList();
+        decimal tot  = mlist.Where(x => x.Grade != "AB" && x.MarksObtained.HasValue).Sum(x => x.MarksObtained!.Value);
+        int     mmax = mlist.Sum(x => x.MaxMarks);
+        decimal pct  = mmax > 0 ? Math.Round(tot * 100m / mmax, 1) : 0;
+        string  pctColor = pct >= 60 ? "#15803d" : pct >= 35 ? "#b45309" : "#dc2626";
+
+        <div class="exam-group">
+          <div class="exam-title">
+            <div>
+              <div class="en"><i class="fas fa-file-alt" style="margin-right:6px;color:#2563eb;"></i>@grp.Key.ExamName</div>
+              @if (grp.Key.Date.HasValue){<div class="ed">@grp.Key.Date.Value.ToString("dd MMM yyyy")</div>}
+            </div>
+            <div class="ep" style="color:@pctColor;">@tot / @mmax &nbsp;(@pct%)</div>
+          </div>
+          <div class="pp-table-wrap" style="border-radius:0 0 10px 10px;border-top:none;">
+            <table class="pp-table">
+              <thead><tr>
+                <th>Subject</th><th style="text-align:right">Marks</th><th style="text-align:right">Out of</th><th style="text-align:right">%</th><th>Grade</th><th>Result</th>
+              </tr></thead>
+              <tbody>
+                @foreach (var mk in mlist.OrderBy(x => x.SubjectName))
+                {
+                  bool isAb = mk.Grade == "AB";
+                  decimal mp = !isAb && mk.MaxMarks > 0 && mk.MarksObtained.HasValue
+                      ? Math.Round(mk.MarksObtained.Value * 100m / mk.MaxMarks, 1) : 0;
+                  string res = isAb ? "Absent" : mp >= 35 ? "Pass" : "Fail";
+                  <tr>
+                    <td style="font-weight:600;">@mk.SubjectName</td>
+                    <td style="text-align:right;font-weight:700;">@(isAb ? "AB" : mk.MarksObtained?.ToString("0") ?? "—")</td>
+                    <td style="text-align:right;">@mk.MaxMarks</td>
+                    <td style="text-align:right;">@(isAb ? "—" : mp.ToString("0.0")+"%")</td>
+                    <td><strong>@(mk.Grade ?? "—")</strong></td>
+                    <td>
+                      @if(res=="Pass"){<span class="badge badge-pass">Pass</span>}
+                      else if(res=="Absent"){<span class="badge badge-late">Absent</span>}
+                      else{<span class="badge badge-fail">Fail</span>}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    }
+  }
+
+  @* ══════════════════════ FEES ══════════════════════ *@
+  @if (activeTab == "fees")
+  {
+    <div class="sec-title"><i class="fas fa-rupee-sign"></i> Fee Details</div>
+    <div class="fee-kpi-row">
+      <div class="fee-kpi">
+        <div class="kv" style="color:#1e3a5f;">₹@Model.ActualFee.ToString("N0")</div>
+        <div class="kl">Total Fee</div>
+      </div>
+      <div class="fee-kpi">
+        <div class="kv" style="color:#15803d;">₹@Model.TotalPaid.ToString("N0")</div>
+        <div class="kl">Paid</div>
+      </div>
+      <div class="fee-kpi">
+        <div class="kv" style="color:#dc2626;">₹@(Math.Max(0,Model.Balance).ToString("N0"))</div>
+        <div class="kl">Balance Due</div>
+      </div>
+    </div>
+
+    @if (Model.Balance > 0)
+    {<div class="alert-warn"><i class="fas fa-exclamation-triangle"></i> Balance of ₹@Model.Balance.ToString("N0") is due. Please contact the school.</div>}
+    else if (Model.TotalPaid > 0)
+    {<div class="alert-ok"><i class="fas fa-check-circle"></i> All fees paid. No balance due.</div>}
+
+    @if (Model.FeeHistory.Any())
+    {
+      <div class="pp-table-wrap">
+        <table class="pp-table">
+          <thead><tr>
+            <th>Receipt No</th><th>Date</th><th style="text-align:right">Amount Paid</th><th>Mode</th><th>Remarks</th>
+          </tr></thead>
+          <tbody>
+            @foreach (var f in Model.FeeHistory.OrderByDescending(x => x.PaymentDate))
+            {
+              <tr>
+                <td style="font-weight:700;color:#2563eb;">@f.ReceiptNo</td>
+                <td>@f.PaymentDate.ToString("dd/MM/yyyy")</td>
+                <td style="text-align:right;font-weight:700;color:#15803d;">₹@f.NetAmount.ToString("N0")</td>
+                <td>@f.PaymentMode</td>
+                <td style="color:#666;font-size:12px;">@(f.Remarks ?? "—")</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot><tr>
+            <td colspan="2">Total Paid</td>
+            <td style="text-align:right;color:#15803d;font-size:15px;">₹@Model.TotalPaid.ToString("N0")</td>
+            <td colspan="2"></td>
+          </tr></tfoot>
+        </table>
+      </div>
+    }
+    else
+    {<div class="pp-table-wrap"><div class="pp-empty"><i class="fas fa-receipt"></i>No payment records yet</div></div>}
+  }
+}

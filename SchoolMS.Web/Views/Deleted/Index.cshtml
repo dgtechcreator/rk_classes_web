@@ -1,0 +1,258 @@
+@using SchoolMS.Domain
+@{
+    ViewData["Title"] = "Deleted Records";
+    var students = ViewBag.Students as List<Student>     ?? new();
+    var faculty  = ViewBag.Faculty  as List<Faculty>     ?? new();
+    var receipts = ViewBag.Receipts as List<FeePayment>  ?? new();
+}
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <h1><i class="fas fa-trash-restore" style="color:var(--p);"></i> Deleted Records</h1>
+      <p>Records marked as Inactive — nothing is permanently deleted</p>
+    </div>
+  </div>
+</div>
+
+@* Summary cards *@
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;">
+  <div class="card" style="padding:18px 22px;border-top:3.5px solid var(--p);display:flex;align-items:center;gap:16px;">
+    <div style="width:46px;height:46px;border-radius:50%;background:#fff0f0;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
+      <i class="fas fa-user-graduate" style="color:var(--p);"></i>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Deleted Students</div>
+      <div style="font-size:28px;font-weight:800;color:var(--p);">@students.Count</div>
+    </div>
+  </div>
+  <div class="card" style="padding:18px 22px;border-top:3.5px solid #b45309;display:flex;align-items:center;gap:16px;">
+    <div style="width:46px;height:46px;border-radius:50%;background:#fffbeb;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
+      <i class="fas fa-chalkboard-teacher" style="color:#b45309;"></i>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Deleted Faculty</div>
+      <div style="font-size:28px;font-weight:800;color:#b45309;">@faculty.Count</div>
+    </div>
+  </div>
+  <div class="card" style="padding:18px 22px;border-top:3.5px solid #7c3aed;display:flex;align-items:center;gap:16px;">
+    <div style="width:46px;height:46px;border-radius:50%;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
+      <i class="fas fa-receipt" style="color:#7c3aed;"></i>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Deleted Receipts</div>
+      <div style="font-size:28px;font-weight:800;color:#7c3aed;">@receipts.Count</div>
+    </div>
+  </div>
+  <div class="card" style="padding:18px 22px;border-top:3.5px solid var(--ok);display:flex;align-items:center;gap:16px;">
+    <div style="width:46px;height:46px;border-radius:50%;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
+      <i class="fas fa-database" style="color:var(--ok);"></i>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Total Records</div>
+      <div style="font-size:28px;font-weight:800;color:var(--ok);">@(students.Count + faculty.Count + receipts.Count)</div>
+    </div>
+  </div>
+</div>
+
+@* Deleted Students *@
+<div class="card" style="margin-bottom:22px;">
+  <div style="padding:16px 20px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px;">
+    <i class="fas fa-user-graduate" style="color:var(--p);"></i>
+    <span style="font-weight:700;font-size:15px;">Deleted Students</span>
+    <span style="background:#fff0f0;color:var(--p);font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;margin-left:4px;">@students.Count</span>
+  </div>
+  <div class="tbl-wrap">
+    @if (!students.Any())
+    {
+      <div class="empty" style="padding:30px 20px;">
+        <div class="empty-ico">✅</div>
+        <h3>No deleted students</h3>
+        <p>All students are currently active.</p>
+      </div>
+    }
+    else
+    {
+    <table>
+      <thead>
+        <tr>
+          <th>Photo</th>
+          <th>Admission No</th>
+          <th>Student Name</th>
+          <th>Std</th>
+          <th>Medium/Stream</th>
+          <th>Father Name</th>
+          <th>Contact</th>
+          <th>Deactivated On</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      @foreach (var s in students)
+      {
+        <tr>
+          <td>
+            @if (!string.IsNullOrEmpty(s.ProfilePicPath))
+            {<img src="@s.ProfilePicPath" class="stu-pic" style="opacity:.6;"/>}
+            else
+            {<div class="stu-av" style="background:#e5e7eb;color:#9ca3af;font-size:14px;">@(s.FullName.Length>0?s.FullName[0].ToString().ToUpper():"?")</div>}
+          </td>
+          <td><span class="mono" style="font-size:12px;color:var(--mu);">@s.AdmissionNo</span></td>
+          <td>
+            <div class="fw7" style="color:var(--mu);">@s.FullName</div>
+            <div style="font-size:11px;color:var(--mu2);">Roll: @(s.RollNo ?? "—")</div>
+          </td>
+          <td style="color:var(--mu);">@s.ClassName</td>
+          <td><span class="badge b-inactive">@s.SectionName</span></td>
+          <td style="font-size:13px;color:var(--mu);">@s.FatherName</td>
+          <td style="font-size:12.5px;color:var(--mu2);">@s.Phone</td>
+          <td style="font-size:12px;color:var(--mu2);">@s.CreatedAt.ToString("dd MMM yyyy")</td>
+          <td>
+            <form method="post" action="/Deleted/RestoreStudent/@s.StudentId"
+                  onsubmit="return confirm('Restore @s.FullName to Active?')">
+              @Html.AntiForgeryToken()
+              <button type="submit" class="btn btn-outline btn-sm" title="Restore"
+                      style="color:#16a34a;border-color:#86efac;">
+                <i class="fas fa-undo"></i> Restore
+              </button>
+            </form>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+    }
+  </div>
+</div>
+
+@* Deleted Faculty *@
+<div class="card" style="margin-bottom:22px;">
+  <div style="padding:16px 20px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px;">
+    <i class="fas fa-chalkboard-teacher" style="color:#b45309;"></i>
+    <span style="font-weight:700;font-size:15px;">Deleted Faculty</span>
+    <span style="background:#fffbeb;color:#b45309;font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;margin-left:4px;">@faculty.Count</span>
+  </div>
+  <div class="tbl-wrap">
+    @if (!faculty.Any())
+    {
+      <div class="empty" style="padding:30px 20px;">
+        <div class="empty-ico">✅</div>
+        <h3>No deleted faculty</h3>
+        <p>All faculty members are currently active.</p>
+      </div>
+    }
+    else
+    {
+    <table>
+      <thead>
+        <tr>
+          <th>Photo</th>
+          <th>Emp. Code</th>
+          <th>Name</th>
+          <th>Designation</th>
+          <th>Phone</th>
+          <th>Joining Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      @foreach (var f in faculty)
+      {
+        <tr>
+          <td>
+            @if (!string.IsNullOrEmpty(f.ProfilePicPath))
+            {<img src="@f.ProfilePicPath" class="stu-pic" style="opacity:.6;"/>}
+            else
+            {<div class="stu-av" style="background:#e5e7eb;color:#9ca3af;">@f.FullName[0]</div>}
+          </td>
+          <td><span class="mono" style="font-size:12px;color:var(--mu);">@f.EmployeeCode</span></td>
+          <td>
+            <div class="fw7" style="color:var(--mu);">@f.FullName</div>
+            @if (!string.IsNullOrEmpty(f.Qualification))
+            {<div style="font-size:11px;color:var(--mu2);">@f.Qualification</div>}
+          </td>
+          <td><span class="badge b-inactive">@(f.DesignationName ?? "—")</span></td>
+          <td style="font-size:13px;color:var(--mu);">@(f.Phone ?? "—")</td>
+          <td style="font-size:12.5px;color:var(--mu2);">@(f.DateOfJoining?.ToString("dd MMM yyyy") ?? "—")</td>
+          <td>
+            <form method="post" action="/Deleted/RestoreFaculty/@f.FacultyId"
+                  onsubmit="return confirm('Restore @f.FullName to Active?')">
+              @Html.AntiForgeryToken()
+              <button type="submit" class="btn btn-outline btn-sm" title="Restore"
+                      style="color:#16a34a;border-color:#86efac;">
+                <i class="fas fa-undo"></i> Restore
+              </button>
+            </form>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+    }
+  </div>
+</div>
+
+@* Deleted Receipts *@
+<div class="card">
+  <div style="padding:16px 20px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px;">
+    <i class="fas fa-receipt" style="color:#7c3aed;"></i>
+    <span style="font-weight:700;font-size:15px;">Deleted Receipts</span>
+    <span style="background:#f5f3ff;color:#7c3aed;font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;margin-left:4px;">@receipts.Count</span>
+  </div>
+  <div class="tbl-wrap">
+    @if (!receipts.Any())
+    {
+      <div class="empty" style="padding:30px 20px;">
+        <div class="empty-ico">✅</div>
+        <h3>No deleted receipts</h3>
+        <p>All fee receipts are currently active.</p>
+      </div>
+    }
+    else
+    {
+    <table>
+      <thead>
+        <tr>
+          <th>Receipt No</th>
+          <th>Student</th>
+          <th>Std</th>
+          <th>Fee Type</th>
+          <th>Amount</th>
+          <th>Payment Date</th>
+          <th>Deleted On</th>
+          <th>Deleted By</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      @foreach (var rcpt in receipts)
+      {
+        <tr>
+          <td><span class="mono" style="font-size:12px;color:var(--mu);">@rcpt.ReceiptNo</span></td>
+          <td>
+            <div class="fw7" style="color:var(--mu);">@rcpt.StudentName</div>
+            <div style="font-size:11px;color:var(--mu2);">@rcpt.AdmissionNo</div>
+          </td>
+          <td style="font-size:13px;color:var(--mu);">@rcpt.ClassName / @rcpt.SectionName</td>
+          <td><span class="badge b-purple">@(rcpt.FeeTypeName ?? "—")</span></td>
+          <td style="font-weight:800;color:var(--ok);">₹@rcpt.NetAmount.ToString("N0")</td>
+          <td style="font-size:12px;color:var(--mu2);">@rcpt.PaymentDate.ToString("dd MMM yyyy")</td>
+          <td style="font-size:12px;color:var(--mu2);">@(rcpt.DeletedAt?.ToString("dd MMM yyyy HH:mm") ?? "—")</td>
+          <td style="font-size:12.5px;">@(rcpt.DeletedByName ?? "—")</td>
+          <td>
+            <form method="post" action="/Deleted/RestoreReceipt/@rcpt.PaymentId"
+                  onsubmit="return confirm('Restore receipt @rcpt.ReceiptNo?')">
+              @Html.AntiForgeryToken()
+              <button type="submit" class="btn btn-outline btn-sm" title="Restore"
+                      style="color:#16a34a;border-color:#86efac;">
+                <i class="fas fa-undo"></i> Restore
+              </button>
+            </form>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+    }
+  </div>
+</div>

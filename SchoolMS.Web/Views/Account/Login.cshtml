@@ -5,61 +5,118 @@
 <head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Sign In — RK Classes</title>
+<link rel="icon" type="image/png" href="/icons/favicon.png?v=3"/>
+<link rel="shortcut icon" type="image/png" href="/icons/favicon.png?v=3"/>
+<link rel="apple-touch-icon" href="/icons/icon-192.png?v=3"/>
+<meta name="theme-color" content="#1e3a5f"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <style>
 *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
 
 body {
-  font-family:'Inter',sans-serif;
+  font-family:'Arial',sans-serif;
   min-height:100vh;
   display:flex;
+  flex-direction:column;
   align-items:center;
   justify-content:center;
-  background:#f0f2f5;
+  background: url('/images/bg.jpg') center/cover no-repeat fixed;
+  position:relative;
+}
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  background:inherit;
+  filter:blur(4px) brightness(.92);
+  z-index:0;
 }
 
+/* ── Card ── */
 .card {
-  width:100%;
-  max-width:380px;
-  margin:20px;
-  background:#fff;
+  position:relative;
+  z-index:1;
+  width:780px;
+  max-width:96vw;
+  background:rgba(210,228,240,0.90);
+  backdrop-filter:blur(8px);
   border-radius:16px;
-  box-shadow:0 4px 6px rgba(0,0,0,.05), 0 20px 50px rgba(0,0,0,.12);
-  padding:40px 36px 36px;
-  text-align:center;
+  box-shadow:0 8px 40px rgba(0,0,0,.28);
+  margin:20px;
 }
 
-/* logo */
-.logo-img {
-  width:90px;
-  height:90px;
-  border-radius:50%;
-  object-fit:cover;
-  margin:0 auto 16px;
-  display:block;
-  box-shadow:0 4px 16px rgba(0,0,0,.12);
+/* ── Header ── */
+.inst-header {
+  padding:11px 0 10px;
+  border-bottom: none;
 }
-
-.school-name {
-  font-size:20px;
+.inst-header-top {
+  display:flex;
+  justify-content:space-between;
+  font-size:13.5px;
   font-weight:800;
+  font-family:'Arial',sans-serif;
   color:#1a2147;
-  margin-bottom:2px;
+  margin-bottom:5px;
+  padding:0 20px;
+  border-bottom: none;
+}
+.inst-name {
+  display:block;
+  width:100%;
+  font-family:'Arial',sans-serif;
+  font-size:19px;
+  font-weight:800;
+  color:#cc0000;
+  padding:0 20px;
+  text-align:center;
+  letter-spacing:0;
+  word-spacing:0;
 }
 
-.school-sub {
-  font-size:12px;
-  color:#9ca3af;
-  font-weight:500;
-  margin-bottom:28px;
+/* ── Two-column body ── */
+.card-body {
+  display:grid;
+  grid-template-columns:1.2fr 1fr;
+  gap:20px;
+  padding:28px 36px 36px;
+  align-items:center;
+  justify-items: center;
 }
 
-/* divider */
-.divider {
-  height:1px;
-  background:#f3f4f6;
-  margin-bottom:24px;
+/* ── Left: logos ── */
+.logo-col {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+}
+.text-logo {
+  max-width:200px;
+  width:100%;
+  object-fit:contain;
+}
+.circle-logo {
+  width:190px;
+  height:190px;
+  object-fit:contain;
+}
+
+/* ── Right: form ── */
+.form-col {
+  display:flex;
+  flex-direction:column;
+  width:100%;
+  max-width:420px;
+}
+.please-login {
+  text-align:center;
+  font-size:18px;
+  font-weight:800;
+  color:#cc0000;
+  letter-spacing:.5px;
+  margin-bottom:22px;
+  font-family:'Arial',sans-serif;
 }
 
 /* error */
@@ -67,166 +124,312 @@ body {
   background:#fff5f5;
   border:1px solid #fecaca;
   border-radius:8px;
-  padding:10px 14px;
-  font-size:13px;
+  padding:9px 12px;
+  font-size:12.5px;
   color:#dc2626;
-  font-weight:500;
+  font-weight:600;
   display:flex;
   align-items:center;
-  gap:8px;
-  margin-bottom:16px;
-  text-align:left;
-  animation:shake .35s ease;
-}
-@@keyframes shake {
-  0%,100%{transform:none;} 25%{transform:translateX(-4px);} 75%{transform:translateX(4px);}
+  gap:7px;
+  margin-bottom:12px;
 }
 
-/* fields */
-.field { margin-bottom:14px; text-align:left; }
-
-.field-lbl {
-  font-size:12px;
-  font-weight:600;
-  color:#374151;
-  margin-bottom:6px;
-  display:block;
+/* inputs */
+.inp-row {
+  display:flex;
+  align-items:center;
+  background:#ececec;
+  border-radius:30px;
+  margin-bottom:14px;
+  padding:4px;
+  box-shadow:0 1px 4px rgba(0,0,0,.08);
 }
-
-.inp-wrap { position:relative; }
-
-.inp-ic {
-  position:absolute;
-  left:12px;
-  top:50%;
-  transform:translateY(-50%);
-  color:#d1d5db;
-  font-size:13px;
-  pointer-events:none;
-  transition:color .2s;
+.inp-ico {
+  width:38px;
+  height:38px;
+  min-width:38px;
+  background:#cc0000;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  font-size:14px;
 }
-
 .inp {
-  width:100%;
-  height:44px;
-  border-radius:8px;
-  border:1.5px solid #e5e7eb;
-  background:#fff;
-  padding:0 40px 0 36px;
+  flex:1;
+  height:38px;
+  border:none;
+  background:transparent;
+  padding:0 14px 0 12px;
   font-size:13.5px;
-  font-family:inherit;
-  font-weight:500;
-  color:#111827;
+  font-family:'Arial',sans-serif;
+  color:#222;
   outline:none;
-  transition:border-color .2s, box-shadow .2s;
 }
-.inp::placeholder { color:#d1d5db; }
-.inp:focus {
-  border-color:#c0392b;
-  box-shadow:0 0 0 3px rgba(192,57,43,.08);
-}
-.inp-wrap:focus-within .inp-ic { color:#c0392b; }
-
+.inp::placeholder { color:#aaa; }
 .eye-btn {
-  position:absolute;
-  right:12px;
-  top:50%;
-  transform:translateY(-50%);
   background:none;
   border:none;
   cursor:pointer;
-  color:#d1d5db;
+  color:#999;
   font-size:13px;
-  padding:4px;
+  padding:0 12px 0 0;
   transition:color .2s;
 }
-.eye-btn:hover { color:#6b7280; }
+.eye-btn:hover { color:#555; }
 
-/* button */
+/* remember + forgot */
+.remember-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:18px;
+  font-size:13px;
+  color:#333;
+}
+.remember-row label {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  cursor:pointer;
+  font-weight:500;
+}
+.remember-row input[type=checkbox] {
+  width:14px;
+  height:14px;
+  accent-color:#cc0000;
+  cursor:pointer;
+}
+.forgot {
+  color:#cc0000;
+  font-weight:700;
+  text-decoration:none;
+  font-size:13px;
+}
+.forgot:hover { text-decoration:underline; }
+
+/* login button */
 .login-btn {
   width:100%;
-  height:44px;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-  background:#1a2147;
+  height:48px;
+  background:#cc0000;
   color:#fff;
-  font-size:14px;
-  font-weight:700;
-  font-family:inherit;
-  letter-spacing:.2px;
+  border:none;
+  border-radius:30px;
+  font-size:16px;
+  font-weight:800;
+  font-family:'Arial',sans-serif;
+  letter-spacing:1.5px;
+  cursor:pointer;
   display:flex;
   align-items:center;
   justify-content:center;
   gap:8px;
-  margin-top:6px;
   transition:background .2s, transform .15s;
 }
-.login-btn:hover { background:#c0392b; transform:translateY(-1px); }
+.login-btn:hover { background:#a80000; transform:translateY(-1px); }
 .login-btn:active { transform:scale(.98); }
-.login-btn.loading .btn-txt, .login-btn.loading .btn-ic { display:none; }
+.login-btn.loading span { display:none; }
 .login-btn.loading .spinner { display:block; }
 .login-btn .spinner { display:none; }
 
-@@keyframes spin { to { transform:rotate(360deg); } }
+@@keyframes spin { to{transform:rotate(360deg);} }
 .spinner {
-  width:17px; height:17px;
-  border:2px solid rgba(255,255,255,.3);
+  width:18px; height:18px;
+  border:2.5px solid rgba(255,255,255,.35);
   border-top-color:#fff;
   border-radius:50%;
-  animation:spin .6s linear infinite;
+  animation:spin .65s linear infinite;
 }
 
-.footer {
-  margin-top:24px;
-  font-size:11.5px;
-  color:#d1d5db;
-  font-weight:500;
+/* ════════════════════════════════════════
+   RESPONSIVE — tablet & mobile
+   ════════════════════════════════════════ */
+
+/* Large tablet: 601px – 860px */
+@@media (max-width:860px) {
+  .card { width:95vw; margin:12px; }
+  .card-body { gap:8px; padding:22px 24px 28px; }
+  .inst-name { font-size:16px; font-weight:800; letter-spacing:0; word-spacing:0; }
+  .text-logo  { max-width:160px; }
+  .circle-logo{ width:155px; height:155px; }
+  .please-login { font-size:16px; margin-bottom:16px; }
+}
+
+/* Small tablet / large phone: 481px – 600px — stack columns */
+@@media (max-width:600px) {
+  .card { width:96vw; margin:10px; border-radius:12px; }
+  .card-body {
+    grid-template-columns:1fr;
+    padding:18px 20px 26px;
+    gap:4px;
+  }
+  /* Logos stack vertically, centered — matching mobile reference */
+  .logo-col {
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    gap:14px;
+    padding-bottom:10px;
+  }
+  .text-logo  { max-width:240px; width:80%; }
+  .circle-logo{ width:160px; height:160px; }
+  .inst-header-top { font-size:12px; }
+  .inst-name  { font-size:clamp(12px,3.8vw,17px); font-weight:800; letter-spacing:0; word-spacing:0; white-space:nowrap; }
+  .please-login { font-size:17px; margin-bottom:14px; }
+  .inp-row    { margin-bottom:12px; }
+  .inp        { font-size:13px; }
+  .remember-row { font-size:12px; }
+  .forgot     { font-size:12px; }
+}
+
+/* Mobile: ≤ 480px */
+@@media (max-width:480px) {
+  .card { width:98vw; margin:6px; border-radius:10px; }
+  .card-body { padding:14px 14px 22px; gap:4px; }
+  /* Logos stack vertically, centered */
+  .logo-col {
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    gap:12px;
+    padding-bottom:8px;
+  }
+  .text-logo  { max-width:230px; width:80%; }
+  .circle-logo{ width:145px; height:145px; }
+  .inst-header { padding:9px 0 8px; }
+  .inst-header-top { font-size:11px; padding:0 12px; }
+  .inst-name  { font-size:clamp(11px,3.6vw,16px); font-weight:800; padding:0 8px; letter-spacing:0; word-spacing:0; white-space:nowrap; }
+  .please-login { font-size:16px; margin-bottom:14px; }
+  .inp-ico    { width:36px; height:36px; min-width:36px; font-size:13px; }
+  .inp        { height:36px; font-size:13px; }
+  .inp-row    { margin-bottom:11px; }
+  .login-btn  { height:46px; font-size:15px; }
+  .remember-row { margin-bottom:14px; font-size:12px; }
+}
+
+/* Very small phones: ≤ 360px */
+@@media (max-width:360px) {
+  .inst-name  { font-size:clamp(10px,3.4vw,14px); font-weight:800; letter-spacing:0; word-spacing:0; white-space:nowrap; }
+  .text-logo  { max-width:190px; width:70%; }
+  .circle-logo{ width:120px; height:120px; }
+  .please-login { font-size:14px; }
 }
 </style>
 </head>
 <body>
 
 <div class="card">
-  <img src="/images/rk-logo.png" alt="RK Classes" class="logo-img"/>
-  <div class="school-name">RK Classes</div>
-  <div class="school-sub">School Management System</div>
-  <div class="divider"></div>
 
-  @if (Model?.Error != null)
-  {<div class="err-box"><i class="fas fa-exclamation-circle"></i> @Model.Error</div>}
-
-  <form method="post" action="/Account/Login" id="loginForm">
-    <div class="field">
-      <label class="field-lbl">Username</label>
-      <div class="inp-wrap">
-        <i class="fas fa-user inp-ic"></i>
-        <input class="inp" type="text" name="Username" value="@Model?.Username"
-               placeholder="Enter username" autofocus required autocomplete="username"/>
-      </div>
+  <!-- Header -->
+  <div class="inst-header">
+    <div class="inst-header-top">
+      <span>Kapil Sir's</span>
+      <span>SINCE : 2002</span>
     </div>
-    <div class="field">
-      <label class="field-lbl">Password</label>
-      <div class="inp-wrap">
-        <i class="fas fa-lock inp-ic"></i>
-        <input class="inp" type="password" name="Password" id="pwdField"
-               placeholder="Enter password" required autocomplete="current-password"/>
-        <button type="button" class="eye-btn" onclick="togglePwd()">
-          <i class="fas fa-eye" id="eyeIcon"></i>
+    <div class="inst-name">RAMJEET KALAVATI EDUCATIONAL INSTITUTE</div>
+  </div>
+
+  <!-- Two-column body -->
+  <div class="card-body">
+
+    <!-- Left: logos -->
+    <div class="logo-col">
+      <img src="/images/rklogin%20(1).png" alt="RK Classes" class="text-logo"/>
+      <img src="/images/rkclassess.png" alt="RK Classes" class="circle-logo"/>
+    </div>
+
+    <!-- Right: form -->
+    <div class="form-col">
+      <div class="please-login">PLEASE LOGIN</div>
+
+      @if (Model?.Error != null)
+      {<div class="err-box"><i class="fas fa-exclamation-circle"></i> @Model.Error</div>}
+
+      <form method="post" action="/Account/Login" id="loginForm">
+        <div class="inp-row">
+          <div class="inp-ico"><i class="fas fa-user"></i></div>
+          <input class="inp" type="text" name="Username" value="@Model?.Username"
+                 placeholder="Enter username" autofocus required autocomplete="username"/>
+        </div>
+        <div class="inp-row">
+          <div class="inp-ico"><i class="fas fa-lock"></i></div>
+          <input class="inp" type="password" name="Password" id="pwdField"
+                 placeholder="Enter password" required autocomplete="current-password"/>
+          <button type="button" class="eye-btn" onclick="togglePwd()">
+            <i class="fas fa-eye" id="eyeIcon"></i>
+          </button>
+        </div>
+        <div class="remember-row">
+          <label><input type="checkbox" name="RememberMe"/> Remember me</label>
+          <a href="#" class="forgot">Forgot password?</a>
+        </div>
+        <button type="submit" class="login-btn" id="loginBtn">
+          <span>LOGIN</span>
+          <div class="spinner"></div>
         </button>
-      </div>
-    </div>
-    <button type="submit" class="login-btn" id="loginBtn">
-      <i class="fas fa-sign-in-alt btn-ic"></i>
-      <span class="btn-txt">Sign In</span>
-      <div class="spinner"></div>
-    </button>
-  </form>
+      </form>
 
-  <div class="footer">© 2025–26 RK Classes · All rights reserved</div>
+      <!-- Parent Login link — LOGIN ke niche -->
+      <div style="text-align:center;margin-top:14px;padding-top:12px;border-top:1px solid #c5d8e8;">
+        <a href="/Parent/Login"
+           style="display:inline-flex;align-items:center;gap:6px;
+                  font-size:13px;font-weight:800;color:#cc0000;text-decoration:none;">
+          <i class="fas fa-user-friends"></i> Parent / Guardian Login
+        </a>
+      </div>
+
+      <!-- Download App Button -->
+      <div style="text-align:center;margin-top:14px;">
+        <button id="installBtn" style="padding:10px 20px;background:#cc0000;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;transition:background .2s;"><i class="fas fa-download"></i> Download App</button>
+      </div>
+
+    </div>
+
+  </div>
 </div>
 
 <script>
+let deferredPrompt;
+const installBtn = document.getElementById('installBtn');
+
+// Only run if button exists
+if (installBtn) {
+  // Listen for install prompt
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    // Show button when app can be installed
+    installBtn.style.display = 'inline-block';
+  });
+
+  // When user clicks Download App button
+  installBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+      // Show the install prompt
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User response: ${outcome}`);
+
+      if (outcome === 'accepted') {
+        // App was installed, hide button
+        installBtn.style.display = 'none';
+      }
+
+      deferredPrompt = null;
+    }
+  });
+
+  // When app is successfully installed
+  window.addEventListener('appinstalled', () => {
+    console.log('PWA installed successfully!');
+    // Hide the button after installation
+    installBtn.style.display = 'none';
+    // Keep user on login page - they can now login
+  });
+}
+
 function togglePwd() {
   var f = document.getElementById('pwdField');
   var i = document.getElementById('eyeIcon');

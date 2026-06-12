@@ -46,16 +46,21 @@ public class FeeStructureController(FeeStructureService svc, LookupService looku
     }
 
     [HttpPost]
-    public IActionResult Save(FeeStructure model)
+    public IActionResult Save(FeeStructure model, string? returnTo)
     {
         int uid = HttpContext.Session.GetUserId() ?? 1;
         var newId = svc.Save(model, uid);
         if (newId == -1)
         {
             TempData["Error"] = "A fee structure for this Year / Class / Section / Fee Type already exists.";
+            // Return to origin — Masters or FeeStructure
+            if (returnTo == "masters")
+            { TempData["OpenTab"] = "feesetup"; return RedirectToAction("Index", "Masters"); }
             return RedirectToAction("Create");
         }
-        TempData["Success"] = "Fee structure saved. Fees applied to existing students automatically.";
+        TempData["Success"] = "Fee head saved successfully.";
+        if (returnTo == "masters")
+        { TempData["OpenTab"] = "feesetup"; return RedirectToAction("Index", "Masters"); }
         return RedirectToAction("Index");
     }
 

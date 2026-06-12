@@ -25,6 +25,15 @@
       </div>
 
       <div class="fg">
+        <label>Academic Year</label>
+        <select name="AcademicYearId" class="fs">
+          <option value="">— Select Year —</option>
+          @foreach(var y in Model.Years)
+          {<option value="@y.YearId" selected=@(Model.AcademicYearId==y.YearId || (Model.AcademicYearId==null && y.IsCurrent)?"selected":"")>@y.YearName @(y.IsCurrent?" (Current)":"")</option>}
+        </select>
+      </div>
+
+      <div class="fg">
         <label>Category *</label>
         <select name="Expense.CategoryId" class="fs" required>
           <option value="">— Select Category —</option>
@@ -55,11 +64,6 @@
       <div class="fg">
         <label>Bill / Invoice No</label>
         <input type="text" name="Expense.BillNo" value="@Model.Expense.BillNo" class="fc" placeholder="Bill or invoice reference"/>
-      </div>
-
-      <div class="fg">
-        <label>Vendor / Payee Name</label>
-        <input type="text" name="Expense.VendorName" value="@Model.Expense.VendorName" class="fc" placeholder="Vendor or payee name"/>
       </div>
 
       <div class="fg" style="grid-column:1/-1;">

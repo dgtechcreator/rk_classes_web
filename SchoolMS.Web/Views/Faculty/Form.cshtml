@@ -19,7 +19,7 @@
   <input type="hidden" name="FacultyId"      value="@Model.FacultyId"/>
   <input type="hidden" name="ProfilePicPath" value="@Model.ProfilePicPath"/>
 
-  <div style="display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:start;">
+  <div class="photo-form-grid" style="display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:start;">
 
     @* Photo *@
     <div class="card" style="text-align:center;padding:22px;">
@@ -128,7 +128,9 @@
           <div class="fg">
             <label>Status</label>
             <select name="Status" class="fs">
-              @foreach(var s in new[]{"Active","Inactive","Relieved"}){<option value="@s" selected=@(Model.Status==s?"selected":"")>@s</option>}
+              @{ var frmSt = Model.Status ?? "Active"; }
+              @if(frmSt=="Inactive"){ <option value="Active">Active</option><option value="Inactive" selected>Inactive</option> }
+              else {                  <option value="Active" selected>Active</option><option value="Inactive">Inactive</option> }
             </select>
           </div>
           <div class="fg full">

@@ -1,5 +1,14 @@
 @model SchoolMS.Domain.FeePayment
-@{ Layout = null; }
+@{
+    Layout = null;
+    // Use stored DueDate from payment, or calculate from ViewBag if not stored
+    var dueDate = Model.DueDate;
+    if (!dueDate.HasValue)
+    {
+        dueDate = ViewBag.DueDate as DateTime?;
+    }
+    var remainingBalance = ViewBag.RemainingBalance as decimal? ?? 0;
+}
 @functions {
     static string AmountInWords(decimal number)
     {
@@ -26,125 +35,188 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
-.page { background: #fff; max-width: 780px; margin: 0 auto; border: 2px solid #000; padding: 0; }
-.no-print { max-width: 780px; margin: 0 auto 16px; display: flex; gap: 10px; }
-.no-print button { flex: 1; padding: 10px; font-size: 14px; font-weight: 700; cursor: pointer; border-radius: 6px; border: none; }
-.btn-print { background: #1a237e; color: #fff; }
-.btn-close  { background: #fff; color: #1a237e; border: 2px solid #1a237e !important; }
 
-/* ── Header ───── */
-.top-label { font-size: 11px; font-weight: 700; padding: 4px 10px; border-bottom: 1px solid #000; }
-.institute-name { text-align: center; font-size: 22px; font-weight: 900; letter-spacing: 1px;
-  padding: 8px 10px 4px; text-transform: uppercase; }
-.logo-addr-row { display: flex; border-top: 1px solid #000; }
-.logo-side { display: flex; align-items: center; gap: 12px; padding: 10px 14px; flex: 1.4; border-right: 1px solid #000; }
-.logo-side img { height: 70px; object-fit: contain; }
-.addr-text { font-size: 11px; line-height: 1.6; }
-.student-side { flex: 1; padding: 10px 14px; font-size: 11.5px; line-height: 1.8; }
-.student-side .s-name { font-weight: 700; font-size: 13px; }
+/* ── Buttons ── */
+.no-print { max-width: 820px; margin: 0 auto 14px; display: flex; gap: 10px; }
+.no-print button {
+  flex: 1; padding: 11px; font-size: 14px; font-weight: 700;
+  cursor: pointer; border-radius: 6px; border: none;
+}
+.btn-print     { background: #1a237e; color: #fff; }
+.btn-landscape { background: #0d6832; color: #fff; }
+.btn-close     { background: #fff; color: #1a237e; border: 2px solid #1a237e !important; }
 
-/* ── Receipt Table ───── */
-.rtable { width: 100%; border-collapse: collapse; border-top: 1px solid #000; }
-.rtable td { border: 1px solid #000; padding: 6px 10px; font-size: 12px; vertical-align: middle; }
+/* ── Page box ── */
+.page { background: #fff; max-width: 820px; margin: 0 auto; border: 2px solid #333; }
+
+/* ── Top label ── */
+.top-label { font-size: 18px; font-weight: 700; padding: 5px 12px; display: flex; justify-content: space-between; align-items: center; }
+
+/* ── Institute name ── */
+.institute-name {
+  text-align: center; font-size: 22px; font-weight: 900;
+  letter-spacing: 2.5px; text-transform: uppercase;
+  padding: 10px 10px 9px; border-bottom: 2px solid #333;
+}
+
+/* ── Header row ── */
+.header-row { display: flex; border-bottom: 1px solid #333; }
+
+/* Left: logos + address */
+.left-side { flex: 1.6; border-right: 1px solid #333; padding: 10px 14px; }
+.logos-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.logo-circle { height: 160px; width: auto; flex-shrink: 0; }
+.logo-rk {
+  height: 130px; width: auto; object-fit: contain; object-position: left;
+  filter: contrast(1.4) brightness(0.85);   /* darker for B&W print */
+}
+.addr-text { font-size: 12px; line-height: 1.75; color: #111; }
+
+/* Right: student info */
+.right-side { flex: 1; padding: 12px 16px 8px; font-size: 11.5px; line-height: 1.85; color: #111; }
+.s-name { font-weight: 700; font-size: 13px; margin-bottom: 4px; text-transform: uppercase; color: #111; }
+.right-side .lbl { font-weight: 700; }
+
+/* ── Receipt table ── */
+.rtable { width: 100%; border-collapse: collapse; }
+.rtable td { border: 1px solid #333; padding: 7px 11px; font-size: 12px; vertical-align: middle; }
 .rtable .hdr-cell { font-weight: 700; font-size: 13px; }
-.rtable .wide { width: 40%; }
-.rtable .mid  { width: 35%; }
-.rtable .sml  { width: 25%; }
 
-/* ── Terms ───── */
-.terms { border-top: 1px solid #000; padding: 8px 14px 12px; font-size: 11px; line-height: 1.7; }
+/* ── Terms ── */
+.terms { border-top: 1px solid #333; padding: 8px 14px 14px; font-size: 11px; line-height: 1.85; }
 .terms strong { font-size: 12px; }
 
+/* ══════════════════════════════════════════════
+   PRINT — A5 PORTRAIT  (default)
+══════════════════════════════════════════════ */
 @@media print {
-  body { background: #fff; padding: 0; }
+  @@page { size: A5 portrait; margin: 6mm 8mm; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { background: #fff; padding: 0; margin: 0; }
   .no-print { display: none !important; }
-  .page { border: 1px solid #000; max-width: 100%; }
+  .page { border: 1px solid #000; max-width: 100%; width: 100%; box-shadow: none; page-break-inside: avoid; }
+  .top-label        { font-size: 14px;  padding: 3px 8px; display: flex; justify-content: space-between; align-items: center; }
+  .institute-name   { font-size: 14px;  padding: 5px 8px 4px; letter-spacing: 1.5px; }
+  .left-side        { padding: 6px 10px; }
+  .logos-row        { gap: 6px; margin-bottom: 4px; }
+  .logo-circle      { height: 85px; }
+  .logo-rk          { height: 85px; }
+  .addr-text        { font-size: 8.5px; line-height: 1.55; }
+  .right-side       { padding: 7px 10px 5px; font-size: 9px; line-height: 1.7; }
+  .s-name           { font-size: 10px;  margin-bottom: 2px; }
+  .rtable td        { padding: 4px 8px; font-size: 9px; }
+  .rtable .hdr-cell { font-size: 10px; }
+  .terms            { padding: 5px 10px 7px; font-size: 8.5px; line-height: 1.6; }
+  .terms strong     { font-size: 9px; }
+}
+
+/* ══════════════════════════════════════════════
+   PRINT — A5 LANDSCAPE  (orientation:landscape)
+══════════════════════════════════════════════ */
+@@media print and (orientation: landscape) {
+  @@page { size: A5 landscape; margin: 5mm 8mm; }
+  .logo-circle    { height: 48px; }
+  .logo-rk        { height: 72px; }
+  .addr-text      { font-size: 8px;  line-height: 1.45; }
+  .right-side     { padding: 6px 10px 4px; font-size: 8.5px; line-height: 1.6; }
+  .s-name         { font-size: 9.5px; }
+  .rtable td      { padding: 3px 7px; font-size: 8.5px; }
+  .terms          { padding: 4px 10px 6px; font-size: 8px; line-height: 1.5; }
 }
 </style>
 </head>
 <body>
 
 <div class="no-print">
-  <button class="btn-print" onclick="window.print()">🖨️ Print Receipt</button>
-  <button class="btn-close"  onclick="history.back()">✕ Close</button>
+  <button class="btn-print"     onclick="printPortrait()">🖨️ Print Receipt (Portrait)</button>
+  <button class="btn-landscape" onclick="printLandscape()">🖨️ Print Landscape</button>
+  <button class="btn-close"     onclick="history.back()">✕ Close</button>
 </div>
 
 @{
-  var payYear    = Model.PaymentDate.Month >= 4
-                     ? $"{Model.PaymentDate.Year}-{Model.PaymentDate.Year+1}"
-                     : $"{Model.PaymentDate.Year-1}-{Model.PaymentDate.Year}";
-  var amtWords   = AmountInWords(Model.NetAmount) + " Only/-";
-  var isCheque   = Model.PaymentMode == "Cheque" || Model.PaymentMode == "Demand Draft";
-  var isOnline   = Model.PaymentMode == "Online Transfer" || Model.PaymentMode == "UPI";
-  var chequeNo   = isCheque  ? (Model.TransactionRef ?? "") : "";
-  var onlineRef  = isOnline  ? (Model.TransactionRef ?? "") : "";
+  var payYear   = Model.PaymentDate.Month >= 4
+                    ? $"{Model.PaymentDate.Year}-{Model.PaymentDate.Year+1}"
+                    : $"{Model.PaymentDate.Year-1}-{Model.PaymentDate.Year}";
+  var amtWords  = AmountInWords(Model.NetAmount) + " Only/-";
+  var isCheque  = Model.PaymentMode == "Cheque" || Model.PaymentMode == "Demand Draft";
+  var isOnline  = Model.PaymentMode == "Online Transfer" || Model.PaymentMode == "UPI";
+  var chequeNo  = isCheque ? (Model.TransactionRef ?? "") : "";
+  var onlineRef = isOnline ? (Model.TransactionRef ?? "") : "";
 }
 
 <div class="page">
 
-  @* ── Top label ─────────────────────────────────────────── *@
-  <div class="top-label">Kapil Sir's</div>
+  <div class="top-label">
+    <span>Kapil Sir's</span>
+    <span>SINCE : 2002</span>
+  </div>
 
-  @* ── Institute name ────────────────────────────────────── *@
   <div class="institute-name">Ramjeet Kalavati Educational Institute</div>
 
-  @* ── Logo + address | Student info ─────────────────────── *@
-  <div class="logo-addr-row">
-    <div class="logo-side">
-      <img src="/images/rk-logo.png" alt="RK Classes"/>
+  <div class="header-row">
+
+    <!-- LEFT: logos + address -->
+    <div class="left-side">
+      <div class="logos-row">
+        <img class="logo-rk"     src="/images/rkBw.png" alt="RK Classes Since 2002"/>
+        <img class="logo-circle" src="/images/rkname.png" alt="RK Name"/>
+      </div>
       <div class="addr-text">
-        Shop No. 2, Santosh Society, Krishna Naga,<br/>
-        Near Eden School Kajupada Pipe Line,<br/>
+        Shop No. 2, Santosh Society, Krishna Nagar,<br/>
+        Near Eden School, Kajupada Pipe Line,<br/>
         Sakinaka, Mumbai 400072.<br/>
         <b>E-Mail:</b> rkclasseskapilsir2002@gmail.com<br/>
         <b>Website:</b> www.myrkclasses.com<br/>
         <b>Mobile No:</b> 9870375795 / 8108499214
       </div>
     </div>
-    <div class="student-side">
+
+    <!-- RIGHT: student info -->
+    <div class="right-side">
       <div class="s-name">@(Model.StudentName?.ToUpper() ?? "—")</div>
-      <div>Address:</div>
-      <div><b>Contact No.:</b> @("—")</div>
-      <div><b>E-Mail:</b> @(Model.Remarks ?? "-")</div>
+      <div><span class="lbl">Address:</span> @(Model.StudentAddress ?? "")</div>
+      <div><span class="lbl">Contact No.:</span> @(Model.FatherPhone ?? Model.StudentPhone ?? "-")</div>
+      <div><span class="lbl">E-Mail:</span> @(Model.StudentEmail ?? "-")</div>
     </div>
+
   </div>
 
-  @* ── Receipt details table ──────────────────────────────── *@
+  <!-- Receipt details table -->
   <table class="rtable">
     <tr>
-      <td class="hdr-cell wide">Fees Receipt (@payYear)</td>
-      <td class="mid">Receipt Date: @Model.PaymentDate.ToString("dd-MM-yyyy")</td>
-      <td class="sml">Receipt No.: @Model.ReceiptNo</td>
+      <td class="hdr-cell" style="width:40%;">Fees Receipt (@payYear)</td>
+      <td style="width:32%;"><b>Receipt Date:</b> @Model.PaymentDate.ToString("dd-MM-yyyy")</td>
+      <td style="width:28%;"><b>Receipt No.:</b> @Model.ReceiptNo</td>
     </tr>
     <tr>
-      <td>Course:- @(Model.ClassName ?? "—")</td>
-      <td colspan="2">Stream / Medium:- @(Model.SectionName ?? "—")</td>
+      <td><b>Course:-</b> @(Model.ClassName ?? "—")</td>
+      <td><b>Stream / Medium:-</b> @(Model.SectionName ?? "—")</td>
+      <td><b>Batch:-</b> @(Model.BatchName ?? "—")</td>
     </tr>
     <tr>
-      <td colspan="3">Amount received:- @Model.NetAmount.ToString("N0")/-</td>
+      <td colspan="3"><b>Amount received:-</b> @Model.NetAmount.ToString("N0")/-</td>
     </tr>
     <tr>
-      <td colspan="3">Amount received (in words):- @amtWords</td>
+      <td colspan="3"><b>Amount received (in words):-</b> @amtWords</td>
     </tr>
     <tr>
-      <td>Payment Mode:- @Model.PaymentMode</td>
-      <td colspan="2">Cheque No.: @chequeNo</td>
+      <td><b>Payment Mode:-</b> @Model.PaymentMode</td>
+      <td colspan="2"><b>Cheque No.:</b> @(string.IsNullOrWhiteSpace(chequeNo) ? "NA" : chequeNo)</td>
     </tr>
     <tr>
-      <td>Cheque Dated:-</td>
-      <td colspan="2">Bank Name:-</td>
+      <td><b>Cheque Dated:-</b> @(string.IsNullOrWhiteSpace(chequeNo) ? "NA" : "-")</td>
+      <td colspan="2"><b>Bank Name:-</b> @(string.IsNullOrWhiteSpace(chequeNo) ? "NA" : "-")</td>
     </tr>
     <tr>
-      <td>IFSC Code:-</td>
-      <td colspan="2">Online Tranx. No.:- @onlineRef</td>
+      <td><b>IFSC Code:-</b> @(string.IsNullOrWhiteSpace(chequeNo) ? "NA" : "-")</td>
+      <td colspan="2"><b>Online Tranx. No.:-</b> @(string.IsNullOrWhiteSpace(onlineRef) ? "NA" : onlineRef)</td>
     </tr>
     <tr>
-      <td>Due Date:-</td>
-      <td colspan="2">Due fees:-</td>
+      <td><b>Due Date:-</b> @(dueDate.HasValue ? dueDate.Value.ToString("dd-MM-yyyy") : "Nil")</td>
+      <td colspan="2"><b>Due fees:-</b> @(remainingBalance > 0 ? "₹" + remainingBalance.ToString("N0") : "Nil")</td>
     </tr>
   </table>
 
-  @* ── Terms ──────────────────────────────────────────────── *@
   <div class="terms">
     <strong>Term and Conditions:</strong><br/>
     1) This receipt of fees is an acknowledgement of the payment made to<br/>
@@ -154,5 +226,22 @@ body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
   </div>
 
 </div>
+
+<script>
+function printPortrait() {
+  var s = document.getElementById('ls-style');
+  if (s) s.textContent = '';
+  window.print();
+}
+function printLandscape() {
+  var at = String.fromCharCode(64);
+  var rule = at + 'media print{' + at + 'page{size:A5 landscape;margin:5mm 8mm;}}';
+  var s = document.getElementById('ls-style');
+  if (!s) { s = document.createElement('style'); s.id = 'ls-style'; document.head.appendChild(s); }
+  s.textContent = rule;
+  window.print();
+  setTimeout(function(){ s.textContent = ''; }, 1500);
+}
+</script>
 </body>
 </html>

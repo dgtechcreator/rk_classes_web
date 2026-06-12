@@ -26,5 +26,30 @@ public class Student
     public string?   RollNo{get;set;}
     public string?   BloodGroup{get;set;}
     public string    Status{get;set;}="Active";
+    public DateTime? AdmissionDate{get;set;}
+    public string?   Nationality{get;set;}
+    public string?   MotherTongue{get;set;}
+    public string?   Religion{get;set;}
+    public string?   PlaceOfBirth{get;set;}
+    public string?   AadhaarNo{get;set;}
+    public string?   AlternatePhone{get;set;}
+    public string?   PreviousPercentage{get;set;}
+    public string?   PreviousSchool{get;set;}
+    public string?   Board{get;set;}
+    public string?   FatherOccupation{get;set;}
+    public string?   MotherOccupation{get;set;}
+    public string?   GuardianName{get;set;}
+    public string?   GuardianOccupation{get;set;}
+    public string?   GuardianPhone{get;set;}
+    public string?   City{get;set;}
+    public string?   State{get;set;}
+    public string?   District{get;set;}
+    public string?   Pincode{get;set;}
+    public string?   PermanentAddress{get;set;}
     public DateTime  CreatedAt{get;set;}
+    public int?      CreatedBy{get;set;}
+    public string?   CreatedByName{get;set;}
+    public int?      DeletedBy{get;set;}
+    public string?   DeletedByName{get;set;}
+    public DateTime? DeletedAt{get;set;}
 }

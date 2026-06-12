@@ -27,9 +27,8 @@
 }
 
 <form method="post" action="/FeeStructure/Save" style="max-width:680px;">
-  <input type="hidden" name="StructureId"    value="@Model.StructureId"/>
-  <input type="hidden" name="AcademicYearId" value="@yearId"/>
-  <input type="hidden" name="IsMonthly"      value="true"/>
+  <input type="hidden" name="StructureId" value="@Model.StructureId"/>
+  <input type="hidden" name="IsMonthly"   value="true"/>
 
   <div class="card">
     <div class="card-hdr">
@@ -48,10 +47,14 @@
     <div class="form-grid">
 
       <div class="fg full">
-        <label>Academic Year</label>
-        <div class="fc" style="background:#f5f3ff;color:var(--p);font-weight:700;cursor:default;">
-          @yearName @(currentYear?.YearId == yearId ? "(Current)" : "")
-        </div>
+        <label>Academic Year *</label>
+        <select name="AcademicYearId" class="fs" required @(Model.StructureId>0?"disabled":"")>
+          <option value="">— Select Academic Year —</option>
+          @foreach(var y in years)
+          {<option value="@y.YearId" selected=@(yearId==y.YearId?"selected":"")>@y.YearName @(y.IsCurrent?"(Current)":"")</option>}
+        </select>
+        @if (Model.StructureId > 0)
+        {<input type="hidden" name="AcademicYearId" value="@yearId"/>}
       </div>
 
       <div class="fg">
@@ -66,9 +69,9 @@
       </div>
 
       <div class="fg">
-        <label>Class *</label>
+        <label>Std *</label>
         <select name="ClassId" class="fs" required @(Model.StructureId>0?"disabled":"")>
-          <option value="">— Select Class —</option>
+          <option value="">— Select Std —</option>
           @foreach(var c in classes)
           {<option value="@c.ClassId" selected=@(Model.ClassId==c.ClassId?"selected":"")>@c.ClassName</option>}
         </select>

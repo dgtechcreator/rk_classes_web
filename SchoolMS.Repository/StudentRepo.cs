@@ -22,6 +22,9 @@ public class StudentRepo(CommonConnectivity db)
         var l = db.Read("sp_GetStudentById", new() { { "@StudentId", id } }, MapStudent);
         return l.FirstOrDefault();
     }
+    public void Delete(int id)  => db.Exec("sp_DeleteStudent",  new() { { "@StudentId", id } });
+    public void Restore(int id) => db.Exec("sp_RestoreStudent", new() { { "@StudentId", id } });
+
     public int Save(Student s, string? pic, int by) => db.ExecOut("sp_SaveStudent", new() {
         { "@StudentId",s.StudentId }, { "@AdmissionNo",s.AdmissionNo==""?null:s.AdmissionNo },
         { "@FullName",s.FullName }, { "@DateOfBirth",s.DateOfBirth }, { "@Gender",s.Gender },
@@ -30,7 +33,8 @@ public class StudentRepo(CommonConnectivity db)
         { "@Email",s.Email }, { "@Address",s.Address }, { "@ProfilePicPath",pic },
         { "@AcademicYearId",s.AcademicYearId }, { "@ClassId",s.ClassId }, { "@SectionId",s.SectionId },
         { "@BatchId",s.BatchId }, { "@RollNo",s.RollNo }, { "@BloodGroup",s.BloodGroup },
-        { "@Status",s.Status }, { "@CreatedBy",by }
+        { "@Status",s.Status }, { "@AdmissionDate",s.AdmissionDate },
+        { "@CreatedBy",by }
     }, "@NewStudentId");
 
     static Student MapStudent(SqlDataReader r) => new() {
@@ -46,6 +50,16 @@ public class StudentRepo(CommonConnectivity db)
         SectionId=G.G<int?>(r,"SectionId"), SectionName=G.G<string>(r,"SectionName"),
         BatchId=G.G<int?>(r,"BatchId"), BatchName=G.G<string>(r,"BatchName"),
         RollNo=G.G<string>(r,"RollNo"), BloodGroup=G.G<string>(r,"BloodGroup"),
-        Status=G.G<string>(r,"Status")??"Active", CreatedAt=G.G<DateTime>(r,"CreatedAt")
+        Status=G.G<string>(r,"Status")??"Active", CreatedAt=G.G<DateTime>(r,"CreatedAt"),
+        AdmissionDate=G.G<DateTime?>(r,"AdmissionDate"),
+        Nationality=G.G<string>(r,"Nationality"), MotherTongue=G.G<string>(r,"MotherTongue"),
+        Religion=G.G<string>(r,"Religion"), PlaceOfBirth=G.G<string>(r,"PlaceOfBirth"),
+        AadhaarNo=G.G<string>(r,"AadhaarNo"), AlternatePhone=G.G<string>(r,"AlternatePhone"),
+        PreviousPercentage=G.G<string>(r,"PreviousPercentage"), PreviousSchool=G.G<string>(r,"PreviousSchool"),
+        Board=G.G<string>(r,"Board"), FatherOccupation=G.G<string>(r,"FatherOccupation"),
+        MotherOccupation=G.G<string>(r,"MotherOccupation"), GuardianName=G.G<string>(r,"GuardianName"),
+        GuardianOccupation=G.G<string>(r,"GuardianOccupation"), GuardianPhone=G.G<string>(r,"GuardianPhone"),
+        City=G.G<string>(r,"City"), State=G.G<string>(r,"State"), District=G.G<string>(r,"District"),
+        Pincode=G.G<string>(r,"Pincode"), PermanentAddress=G.G<string>(r,"PermanentAddress")
     };
 }

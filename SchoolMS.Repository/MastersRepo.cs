@@ -102,4 +102,19 @@ public class MastersRepo(CommonConnectivity db)
     }, "@NewId");
 
     public void DeleteSubject(int id) => db.Exec("sp_DeleteSubject", new(){{"@SubjectId",id}});
+
+    // ── Expense Categories ────────────────────────────────────
+    public List<ExpenseCat> GetExpenseCategories() => db.Read("sp_GetExpenseCategories", new(),
+        r => new ExpenseCat {
+            CategoryId   = G.G<int>(r,"CategoryId"),
+            CategoryName = G.G<string>(r,"CategoryName") ?? "",
+            IsActive     = G.G<bool>(r,"IsActive"),
+            UsageCount   = G.G<int>(r,"UsageCount")
+        });
+
+    public int SaveExpenseCat(ExpenseCat m) => db.ExecOut("sp_SaveExpenseCategory", new() {
+        {"@CategoryId",m.CategoryId}, {"@CategoryName",m.CategoryName}, {"@IsActive",m.IsActive}
+    }, "@NewId");
+
+    public void DeleteExpenseCat(int id) => db.Exec("sp_DeleteExpenseCategory", new(){{"@CategoryId",id}});
 }

@@ -33,7 +33,46 @@ public class LookupRepo(CommonConnectivity db)
             Class1Count=G.G<int>(r,"Class1Count"), Class2Count=G.G<int>(r,"Class2Count"),
             Class3Count=G.G<int>(r,"Class3Count"), TotalStaff=G.G<int>(r,"TotalStaff")
         });
-        return l.FirstOrDefault() ?? new DashboardStats();
+        var stats = l.FirstOrDefault() ?? new DashboardStats();
+
+        // Populate dynamic class strengths
+        var colors = new[] { "#6d28d9", "#db2777", "#2563eb", "#059669", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899" };
+        var classStrengths = db.Sql(@"
+            SELECT c.ClassId, c.ClassName, c.OrderNo, COUNT(s.StudentId) as StudentCount
+            FROM Classes c
+            LEFT JOIN Students s ON s.ClassId=c.ClassId AND ISNULL(s.Status,'Active') <> 'Deleted'
+            WHERE c.IsActive=1
+            GROUP BY c.ClassId, c.ClassName, c.OrderNo
+            ORDER BY c.OrderNo",
+            r => new ClassStrengthStat {
+                ClassName = G.G<string>(r,"ClassName")??"",
+                StudentCount = G.G<int>(r,"StudentCount")
+            });
+
+        for (int i = 0; i < classStrengths.Count; i++)
+        {
+            classStrengths[i].Color = colors[i % colors.Length];
+        }
+
+        stats.ClassStrengths = classStrengths.Where(c => c.StudentCount > 0).ToList();
+
+        // Populate all classes
+        stats.AllClasses = db.Sql(@"
+            SELECT c.ClassId, c.ClassName, c.OrderNo, c.IsActive, COUNT(s.StudentId) as StudentCount
+            FROM Classes c
+            LEFT JOIN Students s ON s.ClassId=c.ClassId AND ISNULL(s.Status,'Active') <> 'Deleted'
+            WHERE c.IsActive=1
+            GROUP BY c.ClassId, c.ClassName, c.OrderNo, c.IsActive
+            ORDER BY c.OrderNo",
+            r => new ClassAllStat {
+                ClassId = G.G<int>(r,"ClassId"),
+                ClassName = G.G<string>(r,"ClassName")??"",
+                OrderNo = G.G<int>(r,"OrderNo"),
+                StudentCount = G.G<int>(r,"StudentCount"),
+                IsActive = G.G<bool>(r,"IsActive")
+            });
+
+        return stats;
     }
     public List<Student> GetStudentDropdown() => db.Sql("SELECT StudentId,FullName,AdmissionNo,ClassId FROM Students WHERE Status='Active' ORDER BY FullName",
         r => new Student { StudentId=G.G<int>(r,"StudentId"), FullName=G.G<string>(r,"FullName")??"", AdmissionNo=G.G<string>(r,"AdmissionNo")??"", ClassId=G.G<int?>(r,"ClassId") });

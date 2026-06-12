@@ -1,0 +1,297 @@
+@model SchoolMS.Web.ViewModels.ParentLoginVM
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Parent Login — RK Classes</title>
+<link rel="icon" type="image/png" href="/icons/favicon.png?v=3"/>
+<link rel="apple-touch-icon" href="/images/rk-circle-logo.png?v=4"/>
+<meta name="theme-color" content="#cc0000"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+body {
+  font-family:'Segoe UI',Arial,sans-serif;
+  min-height:100vh; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  background: url('/images/bg.jpg') center/cover no-repeat fixed;
+  position:relative;
+}
+body::before {
+  content:''; position:fixed; inset:0;
+  background:inherit; filter:blur(4px) brightness(.88); z-index:0;
+}
+.card {
+  position:relative; z-index:1;
+  width:420px; max-width:96vw;
+  background:rgba(210,228,240,0.93);
+  backdrop-filter:blur(10px);
+  border-radius:18px; box-shadow:0 8px 40px rgba(0,0,0,.28);
+  margin:20px; overflow:hidden;
+}
+/* header */
+.card-head {
+  background:rgba(210,228,240,0.95); padding:18px 0 14px;
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  border-bottom:2px solid #b8d0e0;
+}
+.card-head img { max-width:260px; width:85%; object-fit:contain; }
+.card-head h1 { font-size:15px; font-weight:800; color:#cc0000; letter-spacing:.5px; margin-top:2px; }
+.card-head p  { font-size:11.5px; color:#555; }
+/* body */
+.card-body { padding:24px 28px 28px; }
+/* tabs */
+.tab-row {
+  display:flex; margin-bottom:20px;
+  border:1.5px solid #cc0000; border-radius:8px; overflow:hidden;
+}
+.tab-btn {
+  flex:1; padding:9px 0; font-size:13px; font-weight:700; border:none;
+  cursor:pointer; background:#fff; color:#cc0000; transition:all .2s;
+}
+.tab-btn.active { background:#cc0000; color:#fff; }
+/* inputs */
+.inp-row {
+  display:flex; align-items:center; background:#ececec;
+  border-radius:30px; margin-bottom:14px; padding:4px;
+  box-shadow:0 1px 4px rgba(0,0,0,.08);
+}
+.inp-ico {
+  width:38px; height:38px; min-width:38px;
+  background:#cc0000; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-size:14px;
+}
+.inp {
+  flex:1; height:38px; border:none; background:transparent;
+  padding:0 14px 0 12px; font-size:13.5px; color:#222; outline:none;
+  font-family:'Segoe UI',Arial,sans-serif;
+}
+.inp::placeholder { color:#aaa; }
+.eye-btn { background:none; border:none; cursor:pointer; color:#999; font-size:13px; padding:0 12px 0 0; }
+.eye-btn:hover { color:#555; }
+.err-box {
+  background:#fff5f5; border:1px solid #fecaca; border-radius:8px;
+  padding:9px 12px; font-size:12.5px; color:#dc2626; font-weight:600;
+  display:flex; align-items:center; gap:7px; margin-bottom:14px;
+}
+.submit-btn {
+  width:100%; height:46px; background:#cc0000; color:#fff; border:none;
+  border-radius:30px; font-size:15px; font-weight:800;
+  letter-spacing:1px; cursor:pointer; transition:background .2s, transform .15s;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.submit-btn:hover { background:#a80000; transform:translateY(-1px); }
+.submit-btn:active { transform:scale(.98); }
+.submit-btn.loading .btn-txt { display:none; }
+.submit-btn.loading .spinner { display:block; }
+.submit-btn .spinner { display:none; }
+@@keyframes spin { to{transform:rotate(360deg);} }
+.spinner { width:18px; height:18px; border:2.5px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; animation:spin .65s linear infinite; }
+.hint { font-size:11.5px; color:#666; text-align:center; margin-top:14px; line-height:1.6; }
+.hint a { color:#cc0000; font-weight:700; text-decoration:none; cursor:pointer; }
+.hint a:hover { text-decoration:underline; }
+.form-section { display:none; }
+.form-section.active { display:block; }
+.back-link { text-align:center; margin-top:8px; padding-top:1px; border-top:1px solid #c5d8e8; }
+.back-link a { font-size:12px; color:#666; text-decoration:none; font-weight:600; }
+.back-link a:hover { color:#cc0000; }
+
+/* Mobile Responsive */
+@@media (max-width: 600px) {
+  .card { width:95vw; margin:15px 10px; border-radius:14px; }
+  .card-head { padding:14px 0 10px; gap:4px; }
+  .card-head img { max-width:200px; width:75%; margin-top:12px !important; }
+  .card-head h1 { font-size:13px; margin-top:0; }
+  .card-head p { font-size:10px; }
+  .card-body { padding:18px 20px 22px; }
+  .tab-btn { font-size:12px; padding:8px 0; }
+  .inp-row { margin-bottom:12px; }
+  .inp-ico { width:34px; height:34px; font-size:13px; }
+  .inp { height:34px; font-size:12px; padding:0 12px 0 10px; }
+  .submit-btn { height:42px; font-size:14px; }
+}
+
+@@media (max-width: 480px) {
+  .card { width:98vw; margin:10px 5px; border-radius:12px; }
+  .card-head { padding:12px 0 8px; }
+  .card-head img { max-width:160px; width:70%; margin-top:8px !important; }
+  .card-head h1 { font-size:12px; }
+  .card-head p { font-size:9px; }
+  .card-body { padding:14px 16px 18px; }
+  .tab-btn { font-size:11px; padding:7px 0; }
+  .inp-ico { width:32px; height:32px; font-size:12px; }
+  .inp { height:32px; font-size:11px; }
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- Header -->
+  <div class="card-head">
+    <div style="position:absolute;top:12px;left:14px;font-size:13px;font-weight:700;color:#1a237e;">Kapil Sir's</div>
+    <img src="/images/rklogo3.png" alt="RK Classes" style="margin-top:20px;"/>
+    <h1>PARENT / GUARDIAN PORTAL</h1>
+    <p>For any Enquiry contact on the given phone number and email</p>
+  </div>
+
+  <!-- Body -->
+  <div class="card-body">
+
+    <!-- Tabs -->
+    <div class="tab-row">
+      <button class="tab-btn @(Model.ShowRegister ? "" : "active")" id="tabLogin" onclick="switchTab('login')">
+        <i class="fas fa-sign-in-alt"></i> Login
+      </button>
+      <button class="tab-btn @(Model.ShowRegister ? "active" : "")" id="tabReg" onclick="switchTab('register')">
+        <i class="fas fa-user-plus"></i> Register
+      </button>
+    </div>
+
+    <!-- ── LOGIN ── -->
+    <div class="form-section @(Model.ShowRegister ? "" : "active")" id="secLogin">
+      @if (Model.Error != null)
+      {<div class="err-box"><i class="fas fa-exclamation-circle"></i> @Model.Error</div>}
+
+      <form method="post" action="/Parent/Login" onsubmit="spin(this)">
+        <div class="inp-row">
+          <div class="inp-ico"><i class="fas fa-phone"></i></div>
+          <input class="inp" type="tel" name="Phone" value="@Model.Phone"
+                 placeholder="Parent phone number" autofocus required autocomplete="tel"/>
+        </div>
+        <div class="inp-row">
+          <div class="inp-ico"><i class="fas fa-lock"></i></div>
+          <input class="inp" type="password" name="Password" id="lpwd"
+                 placeholder="Password" required autocomplete="current-password"/>
+          <button type="button" class="eye-btn" onclick="toggleEye('lpwd','leye')">
+            <i class="fas fa-eye" id="leye"></i>
+          </button>
+        </div>
+        <button type="submit" class="submit-btn">
+          <span class="btn-txt"><i class="fas fa-sign-in-alt"></i> &nbsp;LOGIN</span>
+          <div class="spinner"></div>
+        </button>
+      </form>
+      <div class="hint">
+        <a onclick="switchTab('register')">Register Now</a>
+      </div>
+    </div>
+
+    <!-- ── REGISTER ── -->
+    <div class="form-section @(Model.ShowRegister ? "active" : "")" id="secRegister">
+      @if (Model.RegError != null)
+      {<div class="err-box"><i class="fas fa-exclamation-circle"></i> @Model.RegError</div>}
+
+      <form method="post" action="/Parent/Register" onsubmit="spin(this)">
+        <div class="inp-row">
+          <div class="inp-ico"><i class="fas fa-phone"></i></div>
+          <input class="inp" type="tel" name="RegPhone" value="@Model.RegPhone"
+                 placeholder="Parent phone number" required autocomplete="tel"/>
+        </div>
+        <div class="inp-row">
+          <div class="inp-ico"><i class="fas fa-user"></i></div>
+          <input class="inp" type="text" name="RegFullName" value="@Model.RegFullName"
+                 placeholder="Your name (optional)" autocomplete="name"/>
+        </div>
+        <div class="inp-row">
+          <div class="inp-ico"><i class="fas fa-lock"></i></div>
+          <input class="inp" type="password" name="RegPassword" id="rpwd"
+                 placeholder="Set a password" required autocomplete="new-password"/>
+          <button type="button" class="eye-btn" onclick="toggleEye('rpwd','reye')">
+            <i class="fas fa-eye" id="reye"></i>
+          </button>
+        </div>
+        <div class="inp-row">
+          <div class="inp-ico"><i class="fas fa-lock"></i></div>
+          <input class="inp" type="password" name="RegPassword2"
+                 placeholder="Confirm password" required autocomplete="new-password"/>
+        </div>
+        <button type="submit" class="submit-btn">
+          <span class="btn-txt"><i class="fas fa-user-plus"></i> &nbsp;REGISTER</span>
+          <div class="spinner"></div>
+        </button>
+      </form>
+      <div class="hint">
+        Already have an account? <a onclick="switchTab('login')">Login Now</a>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:14px;margin-bottom:12px;">
+      <button id="installBtn" style="padding:10px 20px;background:#cc0000;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;transition:background .2s;"><i class="fas fa-download"></i> Download App</button>
+    </div>
+
+    <div class="back-link">
+      <a href="/Account/Login"><i class="fas fa-arrow-left"></i> Staff Login</a>
+    </div>
+
+    <div style="padding-top:1px;border-top:1px solid #d4e0e8;margin-top:16px;font-size:11.5px;color:#555;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;">
+        <div><i class="fas fa-phone" style="margin-right:5px;color:#cc0000;"></i><strong>Phone</strong> 9870375795 / 8108499214</div>
+        <div style="color:#ddd;">|</div>
+        <div><i class="fas fa-envelope" style="margin-right:5px;color:#cc0000;"></i><strong>Email</strong> rkclasseskapilsir2002@gmail.com</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let deferredPrompt;
+const installBtn = document.getElementById('installBtn');
+
+// Only run if button exists
+if (installBtn) {
+  // Listen for install prompt
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    // Show button when app can be installed
+    installBtn.style.display = 'inline-block';
+  });
+
+  // When user clicks Download App button
+  installBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+      // Show the install prompt
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`User response: ${outcome}`);
+
+      if (outcome === 'accepted') {
+        // App was installed, hide button
+        installBtn.style.display = 'none';
+      }
+
+      deferredPrompt = null;
+    }
+  });
+
+  // When app is successfully installed
+  window.addEventListener('appinstalled', () => {
+    console.log('PWA installed successfully!');
+    // Hide the button after installation
+    installBtn.style.display = 'none';
+    // Keep user on login page - they can now login
+  });
+}
+
+function switchTab(t) {
+  document.getElementById('secLogin').classList.toggle('active', t==='login');
+  document.getElementById('secRegister').classList.toggle('active', t==='register');
+  document.getElementById('tabLogin').classList.toggle('active', t==='login');
+  document.getElementById('tabReg').classList.toggle('active', t==='register');
+}
+function toggleEye(fid, iid) {
+  var f=document.getElementById(fid), i=document.getElementById(iid);
+  f.type = f.type==='password'?'text':'password';
+  i.className = f.type==='password'?'fas fa-eye':'fas fa-eye-slash';
+}
+function spin(form) {
+  var btn = form.querySelector('.submit-btn');
+  if(btn){ btn.classList.add('loading'); btn.disabled=true; }
+}
+</script>
+</body>
+</html>

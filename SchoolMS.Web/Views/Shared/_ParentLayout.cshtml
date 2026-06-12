@@ -1,0 +1,291 @@
+@using SchoolMS.Web.Filters
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>@ViewData["Title"] — RK Classes Parent Portal</title>
+<link rel="icon" type="image/png" href="/icons/favicon.png?v=3"/>
+<link rel="shortcut icon" type="image/png" href="/icons/favicon.png?v=3"/>
+<link rel="apple-touch-icon" href="/images/rk-circle-logo.png?v=4"/>
+<meta name="apple-mobile-web-app-title" content="RK Classes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<link rel="manifest" href="/site.webmanifest"/>
+<meta name="theme-color" content="#cc0000"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; color: #222; display: flex; min-height: 100vh; padding-bottom: 50px; }
+
+/* ── Sidebar ── */
+.pp-sidebar {
+  width: 240px; min-width: 240px; background: #fff;
+  border-right: 1px solid #e5e7eb;
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; height: 100vh;
+  z-index: 200; transition: transform .25s;
+  overflow-y: auto;
+}
+.pp-brand {
+  padding: 24px 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex; align-items: center; gap: 10px;
+}
+.pp-brand img { max-width: 100%; height: auto; object-fit: contain; }
+.pp-brand-text { flex: 1; }
+.pp-brand-text .t1 { font-size: 14px; font-weight: 800; color: #cc0000; }
+.pp-brand-text .t2 { font-size: 10px; color: #888; margin-top: 1px; }
+#sbClose {
+  display: none; background: none; border: none; cursor: pointer;
+  font-size: 16px; color: #888; padding: 4px;
+}
+
+/* ── Child selector in sidebar ── */
+.pp-child-section { padding: 12px 12px 6px; }
+.pp-child-label { font-size: 10px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; padding: 0 4px; }
+.pp-child-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  text-decoration: none; color: inherit; margin-bottom: 4px;
+  transition: background .15s;
+}
+.pp-child-card:hover  { background: #f3f4f6; }
+.pp-child-card.active { background: #fff5f5; border: 1px solid #fecaca; }
+.pp-child-av {
+  width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+  object-fit: cover; background: #cc0000;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 800; color: #fff;
+}
+.pp-child-av img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; }
+.pp-child-info .cn { font-size: 12.5px; font-weight: 700; color: #111; }
+.pp-child-info .cm { font-size: 10.5px; color: #888; }
+
+/* ── Nav links ── */
+.pp-nav { padding: 8px 12px; flex: 1; }
+.pp-nav-label { font-size: 10px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; padding: 10px 4px 6px; }
+.pp-nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 8px; margin-bottom: 2px;
+  font-size: 13px; font-weight: 600; color: #444;
+  text-decoration: none; cursor: pointer; border: none; background: none; width: 100%;
+  transition: background .15s, color .15s;
+}
+.pp-nav-item:hover  { background: #f3f4f6; color: #111; }
+.pp-nav-item.active { background: #cc0000; color: #fff; }
+.pp-nav-item .nav-ic { width: 20px; text-align: center; }
+
+/* ── Sidebar footer ── */
+.pp-sb-foot {
+  padding: 12px 16px; border-top: 1px solid #f0f0f0;
+}
+.pp-user-tile {
+  display: flex; align-items: center; gap: 10px;
+}
+.pp-u-av {
+  width: 34px; height: 34px; border-radius: 50%; background: #cc0000;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.pp-u-name { font-size: 12.5px; font-weight: 700; color: #111; }
+.pp-u-role { font-size: 10.5px; color: #888; }
+.pp-logout-btn {
+  margin-left: auto; color: #888; font-size: 15px;
+  text-decoration: none; padding: 4px;
+}
+.pp-logout-btn:hover { color: #cc0000; }
+
+/* ── Overlay (mobile) ── */
+.pp-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4);
+  z-index: 190;
+}
+.pp-overlay.show { display: block; }
+
+/* ── Top header ── */
+.pp-topbar {
+  position: fixed; top: 0; left: 240px; right: 0; height: 54px;
+  background: #fff; border-bottom: 1px solid #e5e7eb;
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 20px; z-index: 100;
+}
+.pp-menu-tog {
+  display: none; background: none; border: none; cursor: pointer;
+  font-size: 18px; color: #555; padding: 4px 8px 4px 0;
+}
+.pp-topbar-title { font-size: 16px; font-weight: 700; color: #111; }
+.pp-topbar-space { flex: 1; }
+
+/* ── Main content ── */
+.pp-main {
+  margin-left: 240px; margin-top: 54px;
+  padding: 24px 24px 40px; flex: 1; min-width: 0;
+}
+
+/* ── Toast ── */
+.pp-toast {
+  background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px;
+  padding: 10px 16px; font-size: 13px; font-weight: 600; color: #15803d;
+  display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+}
+
+/* ── Footer ── */
+.pp-footer { display: none; }
+
+/* ── Table ── */
+.pp-table-wrap { overflow-x: auto; }
+.pp-table { min-width: 100%; }
+.pp-table td { white-space: nowrap; }
+
+/* ── Contact Footer Mobile ── */
+@@media (max-width: 480px) {
+  body { padding-bottom: 70px; }
+}
+
+/* ── RESPONSIVE ── */
+@@media (max-width: 768px) {
+  .pp-sidebar { transform: translateX(-100%); }
+  .pp-sidebar.open { transform: translateX(0); }
+  .pp-topbar { left: 0; }
+  .pp-main { margin-left: 0; padding: 16px 14px 32px; }
+  .pp-menu-tog { display: block; }
+  #sbClose { display: block; }
+}
+@@media (max-width: 480px) {
+  .pp-main { padding: 12px 10px 60px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── App Splash Screen ── -->
+<div id="appSplash" style="position:fixed;inset:0;background:#fff;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s ease;">
+ @*  <img src="/images/rk-circle-logo.png" alt="RK Classes"
+       style="width:180px;height:180px;object-fit:contain;"/> *@
+  <div style="margin-top:18px;font-family:'Segoe UI',Arial,sans-serif;font-size:22px;font-weight:800;color:#cc0000;letter-spacing:2px;text-align:center;">RK CLASSES</div>
+</div>
+<script>
+(function(){
+  window.addEventListener('load', function(){
+    var s = document.getElementById('appSplash');
+    if(!s) return;
+    setTimeout(function(){
+      s.style.opacity='0';
+      setTimeout(function(){ if(s.parentNode) s.parentNode.removeChild(s); }, 500);
+    }, 900);
+  });
+})();
+</script>
+
+@{
+  var pName  = Context.Session.GetParentName();
+  var pPhone = Context.Session.GetParentPhone();
+  var selId  = ViewBag.SelectedStudentId as int?;
+  var activeTab = ViewBag.ActiveTab as string ?? "attendance";
+  var children = ViewBag.SidebarChildren as List<SchoolMS.Domain.Student> ?? new();
+}
+
+<!-- ── Sidebar ── -->
+<aside class="pp-sidebar" id="ppSidebar">
+  <div class="pp-brand">
+    <img src="/images/rklogo3.png" alt="RK Classes" style="max-width:180px;height:auto;object-fit:contain;"/>
+    <div style="flex:1;"></div>
+    <button id="sbClose" onclick="closeSb()"><i class="fas fa-times"></i></button>
+  </div>
+
+  @if (children.Any())
+  {
+    <div class="pp-child-section">
+      <div class="pp-child-label">My Children</div>
+      @foreach (var c in children)
+      {
+        bool isActive = c.StudentId == selId;
+        <a href="/Parent/Dashboard?studentId=@c.StudentId&tab=@activeTab"
+           class="pp-child-card @(isActive ? "active" : "")" onclick="closeSb()">
+          @if (!string.IsNullOrEmpty(c.ProfilePicPath))
+          {
+            <div class="pp-child-av"><img src="@c.ProfilePicPath" alt="@c.FullName"/></div>
+          }
+          else
+          {
+            <div class="pp-child-av">@(c.FullName?.Length > 0 ? c.FullName[0].ToString().ToUpper() : "?")</div>
+          }
+          <div class="pp-child-info">
+            <div class="cn">@c.FullName</div>
+            <div class="cm">@(c.ClassName ?? "—") · @(c.SectionName ?? "—")</div>
+          </div>
+        </a>
+      }
+    </div>
+  }
+
+  @if (selId.HasValue)
+  {
+    <div class="pp-nav">
+      <div class="pp-nav-label">View</div>
+      <a class="pp-nav-item @(activeTab=="attendance"?"active":"")"
+         href="/Parent/Dashboard?studentId=@selId&tab=attendance" onclick="closeSb()">
+        <span class="nav-ic"><i class="fas fa-calendar-check"></i></span> Attendance
+      </a>
+      <a class="pp-nav-item @(activeTab=="marks"?"active":"")"
+         href="/Parent/Dashboard?studentId=@selId&tab=marks" onclick="closeSb()">
+        <span class="nav-ic"><i class="fas fa-chart-bar"></i></span> Test Marks
+      </a>
+      <a class="pp-nav-item @(activeTab=="fees"?"active":"")"
+         href="/Parent/Dashboard?studentId=@selId&tab=fees" onclick="closeSb()">
+        <span class="nav-ic"><i class="fas fa-rupee-sign"></i></span> Fees
+      </a>
+    </div>
+  }
+
+  <div class="pp-sb-foot">
+    <div class="pp-user-tile">
+      @{ var initStr = !string.IsNullOrEmpty(pName) ? pName : !string.IsNullOrEmpty(pPhone) ? pPhone : "P"; }
+      <div class="pp-u-av">@initStr[0].ToString().ToUpper()</div>
+      <div>
+        <div class="pp-u-name">@(pName ?? pPhone)</div>
+        <div class="pp-u-role">Parent / Guardian</div>
+      </div>
+      <a href="/Parent/Logout" class="pp-logout-btn" title="Logout"><i class="fas fa-sign-out-alt"></i></a>
+    </div>
+  </div>
+</aside>
+
+<div class="pp-overlay" id="ppOverlay" onclick="closeSb()"></div>
+
+<!-- ── Top bar ── -->
+<header class="pp-topbar">
+  <button class="pp-menu-tog" id="menuTog" onclick="openSb()"><i class="fas fa-bars"></i></button>
+  <span class="pp-topbar-title">@(ViewData["Title"] ?? "Parent Portal")</span>
+  <div class="pp-topbar-space"></div>
+  <a href="/Parent/Logout" style="font-size:12px;color:#888;text-decoration:none;display:flex;align-items:center;gap:5px;">
+    <i class="fas fa-sign-out-alt"></i> Logout
+  </a>
+</header>
+
+<!-- ── Main ── -->
+<main class="pp-main">
+  @{
+    var ts = TempData["Success"] as string;
+    if (!string.IsNullOrEmpty(ts))
+    {<div class="pp-toast"><i class="fas fa-check-circle"></i> @ts</div>}
+  }
+  @RenderBody()
+  <div class="pp-footer">RK Classes &nbsp;|&nbsp; Parent Portal &nbsp;|&nbsp; View Only</div>
+</main>
+
+<!-- Fixed Contact Footer -->
+<div style="position:fixed;bottom:0;left:0;right:0;background:#f3f4f6;border-top:1px solid #e5e7eb;padding:9px 16px;z-index:50;display:flex;gap:16px;flex-wrap:nowrap;align-items:center;justify-content:flex-start;font-size:11.5px;font-weight:500;color:#555;overflow-x:auto;padding-left:10px;padding-right:10px;">
+  <div style="display:flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0;"><i class="fas fa-phone" style="font-size:13px;color:#2563eb;"></i><strong>Phone:</strong> 9870375795 / 8108499214</div>
+  <div style="color:#ddd;flex-shrink:0;">|</div>
+  <div style="display:flex;align-items:center;gap:4px;white-space:nowrap;flex-shrink:0;"><i class="fas fa-envelope" style="font-size:13px;color:#2563eb;"></i><strong>Email:</strong> rkclasseskapilsir2002@gmail.com</div>
+</div>
+
+<script>
+function openSb()  { document.getElementById('ppSidebar').classList.add('open'); document.getElementById('ppOverlay').classList.add('show'); }
+function closeSb() { document.getElementById('ppSidebar').classList.remove('open'); document.getElementById('ppOverlay').classList.remove('show'); }
+</script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

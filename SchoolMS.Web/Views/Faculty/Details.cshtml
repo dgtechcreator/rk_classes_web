@@ -27,7 +27,7 @@
       <div style="font-size:18px;font-weight:800;color:var(--txt);">@Model.FullName</div>
       <div style="font-size:13px;color:var(--mu);margin-top:3px;">@Model.DesignationName</div>
       <span class="mono text-p" style="font-size:12px;display:block;margin-top:5px;">@Model.EmployeeCode</span>
-      <span class="badge @(Model.Status=="Active"?"b-active":Model.Status=="Relieved"?"b-absent":"b-inactive")" style="margin-top:10px;">@Model.Status</span>
+      <span class="badge @(Model.Status=="Active"?"b-active":"b-inactive")" style="margin-top:10px;">@Model.Status</span>
 
       <div style="margin-top:18px;">
         @foreach(var (lbl,val) in new[]{

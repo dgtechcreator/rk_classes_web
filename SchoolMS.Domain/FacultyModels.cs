@@ -32,6 +32,9 @@ public class Faculty
     public DateTime  CreatedAt{get;set;}
     public int?      CreatedBy{get;set;}
     public string?   CreatedByName{get;set;}
+    public int?      DeletedBy{get;set;}
+    public string?   DeletedByName{get;set;}
+    public DateTime? DeletedAt{get;set;}
 
     /// <summary>Returns "Firstname ma'am" for Female, "Firstname sir" for Male/other.</summary>
     public string DisplayName =>

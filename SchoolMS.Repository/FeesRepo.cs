@@ -17,27 +17,38 @@ public class FeesRepo(CommonConnectivity db)
         return (data, op.Value is DBNull ? 0 : Convert.ToInt32(op.Value));
     }
 
-    public int Save(int sid, int ftId, decimal amt, decimal disc, decimal fine, DateTime date, string mode, string? txRef, int? yrId, string? month, string? remarks, int by)
+    public int Save(int sid, int? ftId, decimal amt, decimal disc, decimal fine, DateTime date, string mode, string? txRef, int? yrId, string? month, string? remarks, int by, DateTime? dueDate=null)
         => db.ExecOut("sp_SaveFeePayment", new() {
-            {"@StudentId",sid}, {"@FeeTypeId",ftId}, {"@Amount",amt},
+            {"@StudentId",sid}, {"@FeeTypeId",(object?)ftId ?? DBNull.Value}, {"@Amount",amt},
             {"@Discount",disc}, {"@LateFine",fine}, {"@PaymentDate",date},
             {"@PaymentMode",mode}, {"@TransactionRef",txRef}, {"@AcademicYearId",yrId},
-            {"@Month",month}, {"@Remarks",remarks}, {"@CollectedBy",by}
+            {"@Month",month}, {"@Remarks",remarks}, {"@CollectedBy",by}, {"@DueDate",(object?)dueDate ?? DBNull.Value}
         }, "@NewPaymentId");
 
     public FeePayment? GetById(int paymentId)
     {
         var l = db.Sql($@"SELECT fp.*,s.FullName AS StudentName,s.AdmissionNo,s.RollNo,
-            c.ClassName,sec.SectionName,ft.TypeName AS FeeTypeName,u.FullName AS CollectorName
+            s.Phone AS StudentPhone,s.FatherPhone,s.Email AS StudentEmail,s.Address AS StudentAddress,
+            c.ClassName,sec.SectionName,b.BatchName,ft.TypeName AS FeeTypeName,u.FullName AS CollectorName
             FROM FeePayments fp
             LEFT JOIN Students s   ON s.StudentId  = fp.StudentId
             LEFT JOIN Classes  c   ON c.ClassId    = s.ClassId
             LEFT JOIN Sections sec ON sec.SectionId= s.SectionId
+            LEFT JOIN Batches  b   ON b.BatchId    = s.BatchId
             LEFT JOIN FeeTypes ft  ON ft.FeeTypeId = fp.FeeTypeId
             LEFT JOIN Users    u   ON u.UserId     = fp.CollectedBy
             WHERE fp.PaymentId={paymentId}", MapFee);
         return l.FirstOrDefault();
     }
+
+    public void DeletePayment(int paymentId, int deletedBy)
+        => db.Exec("sp_DeleteFeePayment", new() { {"@PaymentId",paymentId}, {"@DeletedBy",deletedBy} });
+
+    public void RestorePayment(int paymentId)
+        => db.Exec("sp_RestoreFeePayment", new() { {"@PaymentId",paymentId} });
+
+    public List<FeePayment> GetDeletedPayments()
+        => db.Read("sp_GetDeletedFeePayments", new(), MapFee);
 
     public List<FeePayment> GetStudentHistory(int studentId)
         => db.Sql($@"SELECT fp.*,s.FullName AS StudentName,s.AdmissionNo,s.RollNo,
@@ -48,7 +59,7 @@ public class FeesRepo(CommonConnectivity db)
             LEFT JOIN Sections sec ON sec.SectionId= s.SectionId
             LEFT JOIN FeeTypes ft  ON ft.FeeTypeId = fp.FeeTypeId
             LEFT JOIN Users    u   ON u.UserId     = fp.CollectedBy
-            WHERE fp.StudentId={studentId}
+            WHERE fp.StudentId={studentId} AND fp.IsDeleted=0
             ORDER BY fp.CreatedAt DESC", MapFee);
 
     static FeePayment MapFee(SqlDataReader r) => new() {
@@ -59,6 +70,7 @@ public class FeesRepo(CommonConnectivity db)
         AdmissionNo    = G.G<string>(r,"AdmissionNo"),
         ClassName      = G.G<string>(r,"ClassName"),
         SectionName    = G.G<string>(r,"SectionName"),
+        BatchName      = G.G<string>(r,"BatchName"),
         FeeTypeId      = G.G<int?>(r,"FeeTypeId"),
         FeeTypeName    = G.G<string>(r,"FeeTypeName"),
         Amount         = G.G<decimal>(r,"Amount"),
@@ -66,11 +78,19 @@ public class FeesRepo(CommonConnectivity db)
         LateFine       = G.G<decimal>(r,"LateFine"),
         NetAmount      = G.G<decimal>(r,"NetAmount"),
         PaymentDate    = G.G<DateTime>(r,"PaymentDate"),
+        DueDate        = G.G<DateTime?>(r,"DueDate"),
         PaymentMode    = G.G<string>(r,"PaymentMode")??"Cash",
         TransactionRef = G.G<string>(r,"TransactionRef"),
         Month          = G.G<string>(r,"Month"),
         Remarks        = G.G<string>(r,"Remarks"),
         CollectorName  = G.G<string>(r,"CollectorName"),
-        CreatedAt      = G.G<DateTime>(r,"CreatedAt")
+        StudentPhone   = G.G<string>(r,"StudentPhone"),
+        FatherPhone    = G.G<string>(r,"FatherPhone"),
+        StudentEmail   = G.G<string>(r,"StudentEmail"),
+        StudentAddress = G.G<string>(r,"StudentAddress"),
+        CreatedAt      = G.G<DateTime>(r,"CreatedAt"),
+        IsDeleted      = G.G<bool>(r,"IsDeleted"),
+        DeletedAt      = G.G<DateTime?>(r,"DeletedAt"),
+        DeletedByName  = G.G<string>(r,"DeletedByName")
     };
 }

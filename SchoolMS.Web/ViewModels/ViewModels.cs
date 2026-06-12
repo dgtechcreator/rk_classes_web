@@ -30,9 +30,15 @@ public class AttendanceVM
     public List<AttendanceRecord> Records{get;set;}=new();
     public DateTime Date{get;set;}=DateTime.Today;
     public int? ClassId{get;set;} public int? SectionId{get;set;} public int? BatchId{get;set;}
+    public string? Subject{get;set;}
+    public string? SirName{get;set;}
+    public string? StartTime{get;set;}
+    public string? EndTime{get;set;}
     public List<Class>   Classes{get;set;}=new();
     public List<Section> Sections{get;set;}=new();
     public List<Batch>   Batches{get;set;}=new();
+    public List<Subject> Subjects{get;set;}=new();
+    public List<Faculty> Teachers{get;set;}=new();
 }
 
 public class MarksVM
@@ -68,17 +74,89 @@ public class FeeCollectVM
     public List<Section>      Sections{get;set;}=new();
 }
 
+// New ViewModel for Pay page (auto-loaded student + fee data)
+public class FeePayVM
+{
+    public SchoolMS.Domain.Student Student{get;set;}=new();
+    public decimal ActualFee{get;set;}
+    public decimal TotalPaid{get;set;}
+    public decimal Balance{get;set;}
+    public decimal ExistingDiscount{get;set;}
+    public DateTime? DueDate{get;set;}
+    public decimal AdditionalDiscount{get;set;}
+    public decimal PayingNow{get;set;}
+    public DateTime PaymentDate{get;set;}=DateTime.Today;
+    public string PaymentMode{get;set;}="Cash";
+    public string? TransactionRef{get;set;}
+    public string? Remarks{get;set;}
+    // Fee heads breakdown
+    public List<SchoolMS.Domain.FeeStructure> FeeStructures{get;set;}=new();
+    // Previous payments for this student
+    public List<SchoolMS.Domain.FeePayment> PaymentHistory{get;set;}=new();
+
+    public bool DiscountAlreadyGiven => ExistingDiscount > 0;
+}
+
+// New ViewModel for Fees Index (student search)
+public class FeesStudentListVM
+{
+    public List<SchoolMS.Domain.Student>      Students{get;set;}=new();
+    public List<SchoolMS.Domain.AcademicYear> Years{get;set;}=new();
+    public List<SchoolMS.Domain.Class>        Classes{get;set;}=new();
+    public List<SchoolMS.Domain.Section>      Sections{get;set;}=new();
+    public int? YearFilter{get;set;}
+    public int? ClassFilter{get;set;}
+    public int? SectionFilter{get;set;}
+    public bool Searched{get;set;}
+    // Fee structures for the selected class – used to show fee amounts in list
+    public List<SchoolMS.Domain.FeeStructure> FeeStructures{get;set;}=new();
+}
+
 public class ExpenseListVM
 {
     public List<Expense> Expenses{get;set;}=new();
     public int Total{get;set;} public int Page{get;set;}=1; public int PageSize{get;set;}=15;
     public string? Search{get;set;} public int? CategoryFilter{get;set;} public int? MonthFilter{get;set;} public int? YearFilter{get;set;}
-    public List<ExpenseCat> Categories{get;set;}=new();
+    public List<ExpenseCat>    Categories{get;set;}=new();
+    public List<AcademicYear>  Years{get;set;}=new();
     public int TotalPages => Math.Max(1,(int)Math.Ceiling((double)Total/PageSize));
 }
 
 public class ExpenseFormVM
 {
     public Expense Expense{get;set;}=new();
-    public List<ExpenseCat> Categories{get;set;}=new();
+    public List<ExpenseCat>   Categories{get;set;}=new();
+    public List<AcademicYear> Years{get;set;}=new();
+    public int? AcademicYearId{get;set;}
+}
+
+// ── Parent Portal ViewModels ──────────────────────────────────────────────────
+public class ParentLoginVM
+{
+    public string  Phone    { get; set; } = "";
+    public string  Password { get; set; } = "";
+    public string? Error    { get; set; }
+    public bool    ShowRegister { get; set; } = false;
+    // Register fields
+    public string? RegPhone     { get; set; }
+    public string? RegPassword  { get; set; }
+    public string? RegPassword2 { get; set; }
+    public string? RegFullName  { get; set; }
+    public string? RegError     { get; set; }
+}
+
+public class ParentDashboardVM
+{
+    public List<Student>       Children       { get; set; } = new();
+    public Student?            SelectedChild  { get; set; }
+    public AttendanceReport?   Attendance     { get; set; }
+    public List<StudentAttendanceDetail> AttDetail { get; set; } = new();
+    public List<TestMark>      Marks          { get; set; } = new();
+    public List<FeePayment>    FeeHistory     { get; set; } = new();
+    public decimal             ActualFee      { get; set; }
+    public decimal             TotalPaid      { get; set; }
+    public decimal             Balance        { get; set; }
+    public string              ActiveTab      { get; set; } = "attendance";
+    public string?             ParentName     { get; set; }
+    public string?             ParentPhone    { get; set; }
 }

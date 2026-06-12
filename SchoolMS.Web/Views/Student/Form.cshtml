@@ -14,7 +14,7 @@
   <input type="hidden" name="Student.StudentId"      value="@Model.Student.StudentId"/>
   <input type="hidden" name="Student.ProfilePicPath" value="@Model.Student.ProfilePicPath"/>
 
-  <div style="display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:start;">
+  <div class="photo-form-grid" style="display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:start;">
 
     <!-- Photo Column -->
     <div class="card" style="text-align:center;padding:22px;">
@@ -72,7 +72,7 @@
             <select name="Student.BloodGroup" class="fs">
               <option value="">— Select —</option>
               @foreach(var b in new[]{"A+","A-","B+","B-","O+","O-","AB+","AB-"})
-              {<option value="@b" selected=@(Model.Student.BloodGroup==b?"selected":"")>@b</option>}
+              { if(Model.Student.BloodGroup==b){<option value="@b" selected>@b</option>}else{<option value="@b">@b</option>} }
             </select>
           </div>
           <div class="fg">
@@ -103,6 +103,10 @@
             <label>Address</label>
             <textarea name="Student.Address" class="fc" rows="2" placeholder="Full address...">@Model.Student.Address</textarea>
           </div>
+          <div class="fg">
+            <label>Admission Date</label>
+            <input type="date" name="Student.AdmissionDate" value="@Model.Student.AdmissionDate?.ToString("yyyy-MM-dd")" class="fc"/>
+          </div>
         </div>
       </div>
 
@@ -121,17 +125,17 @@
             </select>
           </div>
           <div class="fg">
-            <label>Section *</label>
+            <label>Medium/Stream *</label>
             <select name="Student.SectionId" class="fs" required>
-              <option value="">— Select Section —</option>
+              <option value="">— Select Medium/Stream —</option>
               @foreach(var s in Model.Sections)
               {<option value="@s.SectionId" selected=@(Model.Student.SectionId==s.SectionId?"selected":"")>@s.SectionName</option>}
             </select>
           </div>
           <div class="fg">
-            <label>Class *</label>
+            <label>Std *</label>
             <select name="Student.ClassId" class="fs" required>
-              <option value="">— Select Class —</option>
+              <option value="">— Select Std —</option>
               @foreach(var c in Model.Classes)
               {<option value="@c.ClassId" selected=@(Model.Student.ClassId==c.ClassId?"selected":"")>@c.ClassName</option>}
             </select>
@@ -150,9 +154,10 @@
           </div>
           <div class="fg">
             <label>Status</label>
+            @{ var curSt = Model.Student.Status ?? "Active"; }
             <select name="Student.Status" class="fs">
-              @foreach(var s in new[]{"Active","Inactive","Transferred"})
-              {<option value="@s" selected=@(Model.Student.Status==s?"selected":"")>@s</option>}
+              @if(curSt=="Inactive"){ <option value="Active">Active</option><option value="Inactive" selected>Inactive</option> }
+              else {                  <option value="Active" selected>Active</option><option value="Inactive">Inactive</option> }
             </select>
           </div>
         </div>
@@ -162,6 +167,7 @@
           <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Student</button>
         </div>
       </div>
+
     </div>
   </div>
 </form>

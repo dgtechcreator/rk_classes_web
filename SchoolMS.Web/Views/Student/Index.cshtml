@@ -1,13 +1,48 @@
 @model SchoolMS.Web.ViewModels.StudentListVM
 @{ ViewData["Title"] = "Students"; }
 
+<style>
+/* Mobile: Fix student name header, scroll rest */
+@@media (max-width: 768px) {
+  .tbl-wrap table {
+    position: relative;
+  }
+  .tbl-wrap table thead {
+    position: sticky;
+    top: 0;
+    background: #f8f9fa;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .tbl-wrap table tbody tr {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 14px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .tbl-wrap table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0;
+    border: none;
+  }
+  .tbl-wrap table tbody td:first-child::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #666;
+  }
+}
+</style>
+
 <div class="pg-hdr">
   <div class="pg-row">
-    <div><h1>👨‍🎓 Students</h1><p>@Model.Total students registered</p></div>
+    <div><h1>👨‍🎓 Students</h1><p>@Model.Total @(Model.StatusFilter ?? "Active") students</p></div>
     <div class="df g8">
       <a href="/Student/ExportExcel?search=@Model.Search&classId=@Model.ClassFilter&sectionId=@Model.SectionFilter&batchId=@Model.BatchFilter&status=@Model.StatusFilter"
          class="btn btn-outline"><i class="fas fa-file-excel"></i> Export Excel</a>
-      <a href="/Student/Create" class="btn btn-primary"><i class="fas fa-user-plus"></i> New Registration</a>
+      <a href="/Student/Create" class="btn btn-primary"><i class="fas fa-user-plus"></i> New Admission</a>
     </div>
   </div>
 </div>
@@ -17,20 +52,21 @@
   <i class="fas fa-filter" style="color:var(--mu);font-size:13px;"></i>
   <input type="text" name="search" value="@Model.Search" class="fc" placeholder="Search name, admission no..." style="min-width:200px;"/>
   <select name="sectionId" class="fs">
-    <option value="">All Sections</option>
+    <option value="">All Medium/Stream</option>
     @foreach(var s in Model.Sections){<option value="@s.SectionId" selected=@(Model.SectionFilter==s.SectionId?"selected":"")>@s.SectionName</option>}
   </select>
   <select name="classId" class="fs">
-    <option value="">All Classes</option>
+    <option value="">All Std</option>
     @foreach(var c in Model.Classes){<option value="@c.ClassId" selected=@(Model.ClassFilter==c.ClassId?"selected":"")>@c.ClassName</option>}
   </select>
   <select name="batchId" class="fs">
     <option value="">All Batches</option>
     @foreach(var b in Model.Batches){<option value="@b.BatchId" selected=@(Model.BatchFilter==b.BatchId?"selected":"")>@b.BatchName</option>}
   </select>
+  @{ var selSt = Model.StatusFilter ?? "Active"; }
   <select name="status" class="fs">
-    <option value="">All Status</option>
-    @foreach(var s in new[]{"Active","Inactive","Transferred"}){<option value="@s" selected=@(Model.StatusFilter==s?"selected":"")>@s</option>}
+    @if(selSt=="Active"){   <option value="Active"   selected>Active</option>   <option value="Inactive">Inactive</option> }
+    else {                  <option value="Active">Active</option>   <option value="Inactive" selected>Inactive</option> }
   </select>
   <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Search</button>
   <a href="/Student/Index" class="btn btn-outline btn-sm"><i class="fas fa-times"></i></a>
@@ -47,7 +83,7 @@
     {
     <table>
       <thead>
-        <tr><th>Photo</th><th>Admission No</th><th>Student Name</th><th>Class</th><th>Section</th><th>Batch</th><th>Father</th><th>Father Contact</th><th>Mother Contact</th><th>Status</th><th></th></tr>
+        <tr><th>Photo</th><th>Admission No</th><th>Student Name</th><th>Std</th><th>Admission Date</th><th>Medium/Stream</th><th>Batch</th><th>Father</th><th>Father Contact</th><th>Mother Contact</th><th>Status</th><th></th></tr>
       </thead>
       <tbody>
       @foreach (var s in Model.Students)
@@ -60,24 +96,95 @@
           <td><span class="mono text-p" style="font-size:12px;">@s.AdmissionNo</span></td>
           <td><div class="fw7">@s.FullName</div><div style="font-size:11px;" class="text-mu">Roll: @(s.RollNo??"—")</div></td>
           <td>@s.ClassName</td>
+          <td style="font-size:12.5px;" class="text-mu">@(s.AdmissionDate?.ToString("dd/MM/yyyy") ?? "—")</td>
           <td><span class="badge b-purple">@s.SectionName</span></td>
           <td style="font-size:12.5px;" class="text-mu">@s.BatchName</td>
           <td style="font-size:13px;">@s.FatherName</td>
           <td style="font-size:12.5px;" class="text-mu">@s.FatherPhone</td>
           <td style="font-size:12.5px;" class="text-mu">@s.MotherPhone</td>
           <td><span class="badge @(s.Status=="Active"?"b-active":"b-inactive")">@s.Status</span></td>
-          <td><a href="/Student/Edit/@s.StudentId" class="btn btn-outline btn-sm btn-icon" onclick="event.stopPropagation()"><i class="fas fa-edit"></i></a></td>
+          <td onclick="event.stopPropagation()" style="white-space:nowrap;position:relative;">
+            <!-- Call Button -->
+            <div style="display:inline-block;position:relative;">
+              <button class="btn btn-outline btn-sm btn-icon" title="Call" onclick="toggleDropdown(event, 'call-@s.StudentId')">
+                <i class="fas fa-phone"></i>
+              </button>
+              <div id="call-@s.StudentId" class="contact-dropdown" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:100;min-width:160px;">
+                @if (!string.IsNullOrEmpty(s.FatherPhone))
+                {
+                  <a href="tel:@s.FatherPhone" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
+                    📞 Father: @s.FatherPhone
+                  </a>
+                }
+                @if (!string.IsNullOrEmpty(s.Phone))
+                {
+                  <a href="tel:@s.Phone" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
+                    📞 Mother/Student: @s.Phone
+                  </a>
+                }
+              </div>
+            </div>
+
+            <!-- WhatsApp Button -->
+            <div style="display:inline-block;position:relative;">
+              <button class="btn btn-outline btn-sm btn-icon" title="WhatsApp" onclick="toggleDropdown(event, 'whatsapp-@s.StudentId')" style="color:#25D366;">
+                <i class="fab fa-whatsapp"></i>
+              </button>
+              <div id="whatsapp-@s.StudentId" class="contact-dropdown" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:100;min-width:160px;">
+                @if (!string.IsNullOrEmpty(s.FatherPhone))
+                {
+                  <a href="https://wa.me/@(s.FatherPhone.Replace("+", "").Replace(" ", "").Replace("-", ""))?text=Hello" target="_blank" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#25D366;font-size:13px;font-weight:600;">
+                    💬 Father
+                  </a>
+                }
+                @if (!string.IsNullOrEmpty(s.Phone))
+                {
+                  <a href="https://wa.me/@(s.Phone.Replace("+", "").Replace(" ", "").Replace("-", ""))?text=Hello" target="_blank" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#25D366;font-size:13px;font-weight:600;">
+                    💬 Mother/Student
+                  </a>
+                }
+              </div>
+            </div>
+
+            <!-- Edit Button -->
+            <a href="/Student/Edit/@s.StudentId" class="btn btn-outline btn-sm btn-icon" title="Edit"><i class="fas fa-edit"></i></a>
+
+            <!-- Print Button -->
+            <a href="/Student/AdmissionForm/@s.StudentId" class="btn btn-outline btn-sm btn-icon" title="Print Admission Form" target="_blank"><i class="fas fa-print"></i></a>
+
+            <!-- Delete Button -->
+            <form method="post" action="/Student/Delete/@s.StudentId" style="display:inline;" onsubmit="return confirm('Mark @s.FullName as Inactive?')">
+              @Html.AntiForgeryToken()
+              <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+            </form>
+          </td>
         </tr>
       }
       </tbody>
     </table>
     }
   </div>
-  @if (Model.TotalPages > 1)
-  {
-    <div class="pagi">
-      @for (int i = 1; i <= Model.TotalPages; i++)
-      {<a href="/Student/Index?page=@i&search=@Model.Search&classId=@Model.ClassFilter&sectionId=@Model.SectionFilter&batchId=@Model.BatchFilter" class="pg-btn @(i==Model.Page?"active":"")">@i</a>}
-    </div>
-  }
 </div>
+
+<script>
+function toggleDropdown(e, id) {
+  e.preventDefault();
+  e.stopPropagation();
+  const dropdown = document.getElementById(id);
+
+  // Close all other dropdowns
+  document.querySelectorAll('.contact-dropdown').forEach(el => {
+    if (el.id !== id) el.style.display = 'none';
+  });
+
+  // Toggle current dropdown
+  dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', () => {
+  document.querySelectorAll('.contact-dropdown').forEach(el => {
+    el.style.display = 'none';
+  });
+});
+</script>

@@ -1,0 +1,335 @@
+@using SchoolMS.Domain
+@{
+    ViewData["Title"] = "Top 5 Students";
+    var years    = (List<AcademicYear>)ViewBag.Years;
+    var classes  = (List<Class>)ViewBag.Classes;
+    var sections = (List<Section>)ViewBag.Sections;
+    int?  yearId    = ViewBag.YearId;
+    int?  classId   = ViewBag.ClassId;
+    int?  sectionId = ViewBag.SectionId;
+
+    var overallTop5     = (List<TopStudent>)ViewBag.OverallTop5;
+    var classwiseTop5   = (Dictionary<string, List<TopStudent>>)ViewBag.ClasswiseTop5;
+    var testwiseTop5    = (Dictionary<string, List<TopStudent>>)ViewBag.TestwiseTop5;
+    var subjectwiseTop5 = (Dictionary<string, List<TopStudent>>)ViewBag.SubjectwiseTop5;
+    var examSubjectMap  = (Dictionary<string, Dictionary<int, List<TestMark>>>)ViewBag.ExamSubjectMap;
+
+    bool hasData = overallTop5.Any() || classwiseTop5.Any() || testwiseTop5.Any() || subjectwiseTop5.Any();
+}
+
+<style>
+.tp-wrap { font-family:'Segoe UI',Arial,sans-serif; color:#222; }
+.tp-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
+.tp-title  { font-size:22px; font-weight:800; color:#111; display:flex; align-items:center; gap:10px; }
+.tp-title i { color:#f59e0b; }
+.tp-panel { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:18px 22px; margin-bottom:22px; }
+.tp-panel-title { font-size:15px; font-weight:800; color:#111; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid #f0f0f0; }
+.tp-filter-row { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end; }
+.tp-field label { display:block; font-size:12px; color:#444; margin-bottom:4px; font-weight:600; }
+.tp-select {
+  padding:8px 28px 8px 10px; border:1px solid #ccc; border-radius:6px; font-size:13.5px;
+  background:#fff; min-width:160px; cursor:pointer; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 9px center;
+}
+.btn-filter { background:#2563eb; color:#fff; border:none; border-radius:6px; padding:8px 26px; font-size:13.5px; font-weight:700; cursor:pointer; }
+.btn-filter:hover { background:#1d4ed8; }
+.tp-tabs { display:flex; gap:0; margin-bottom:18px; border-bottom:2px solid #e2e8f0; overflow-x:auto; flex-wrap:nowrap; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.tp-tabs::-webkit-scrollbar { display:none; }
+.tp-tab { padding:9px 20px; font-size:13px; font-weight:700; cursor:pointer; border-radius:6px 6px 0 0; border:none; background:none; color:#444; border-bottom:3px solid transparent; margin-bottom:-2px; white-space:nowrap; flex-shrink:0; display:flex; align-items:center; gap:6px; }
+.tp-tab.active { color:#2563eb; border-bottom-color:#2563eb; background:#eff6ff; }
+.tp-tab:hover:not(.active) { background:#f8f9fa; color:#333; }
+@@media (max-width:768px) {
+  .tp-tabs { display:grid; grid-template-columns:1fr 1fr; gap:0; overflow-x:unset; flex-wrap:unset; border-bottom:none; margin-bottom:0; }
+  .tp-tab { border:1px solid #e2e8f0; border-radius:6px; margin:2px; padding:10px 8px; font-size:12px; justify-content:center; text-align:center; border-bottom:3px solid transparent; white-space:nowrap; flex-shrink:unset; }
+  .tp-tab.active { border-color:#bfdbfe; }
+  .tp-tab-content { border-top:2px solid #e2e8f0; padding-top:14px; margin-top:8px; }
+  .tp-filter-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items:end; }
+  .tp-field:last-child { grid-column:1/-1; }
+  .tp-select { min-width:0; width:100%; }
+  .btn-filter { width:100%; padding:10px; }
+  .tw-table { font-size:12px; }
+  .tw-table thead th, .tw-table tbody td { padding:6px 8px; }
+  .top5-grid { gap:8px; }
+  .top5-card { min-width:140px; padding:12px 14px; }
+  .card-pct { font-size:22px; }
+}
+.tp-tab-content { display:none; }
+.tp-tab-content.active { display:block; }
+.sec-title { font-size:16px; font-weight:800; color:#111; margin:0 0 14px; display:flex; align-items:center; gap:8px; }
+.sec-badge { border-radius:12px; padding:2px 10px; font-size:11px; font-weight:700; color:#fff; background:#f59e0b; }
+.top5-grid { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:28px; }
+.top5-card { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:16px 18px; min-width:180px; flex:1; position:relative; transition:box-shadow .15s; }
+.top5-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.1); }
+.top5-card.rank-1 { border-color:#f59e0b; background:linear-gradient(135deg,#fffbeb,#fff); }
+.top5-card.rank-2 { border-color:#94a3b8; background:linear-gradient(135deg,#f8fafc,#fff); }
+.top5-card.rank-3 { border-color:#cd7c2e; background:linear-gradient(135deg,#fdf6ee,#fff); }
+.rank-badge { position:absolute; top:-10px; left:14px; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:#fff; }
+.rank-badge.r1 { background:#f59e0b; } .rank-badge.r2 { background:#94a3b8; } .rank-badge.r3 { background:#cd7c2e; }
+.rank-badge.r4,.rank-badge.r5 { background:#6b7280; }
+.card-name { font-size:15px; font-weight:800; color:#111; margin-top:10px; }
+.card-sub  { font-size:11.5px; color:#555; margin-top:2px; }
+.card-pct  { font-size:28px; font-weight:900; margin-top:10px; color:#2563eb; }
+.top5-card.rank-1 .card-pct { color:#d97706; }
+.card-marks { font-size:12px; color:#444; margin-top:2px; }
+.card-roll  { font-size:11px; color:#555; margin-top:4px; }
+.cls-section { margin-bottom:28px; }
+.cls-label { font-size:14px; font-weight:800; color:#fff; background:#2563eb; border-radius:6px; padding:6px 16px; display:inline-block; margin-bottom:12px; }
+.tw-section { margin-bottom:28px; }
+.tw-exam-label { font-size:14px; font-weight:800; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; color:#15803d; padding:6px 16px; display:inline-block; margin-bottom:10px; }
+.tw-subj-label { font-size:14px; font-weight:800; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:6px; color:#7c3aed; padding:6px 16px; display:inline-block; margin-bottom:10px; }
+.tw-table { width:100%; border-collapse:collapse; font-size:13.5px; }
+.tw-table thead tr { background:#f8f9fa; }
+.tw-table thead th { padding:9px 14px; text-align:left; font-weight:700; color:#333; white-space:nowrap; }
+.tw-table tbody tr { border-bottom:1px solid #f0f0f0; }
+.tw-table tbody tr:hover { background:#f9fafb; }
+.tw-table tbody td { padding:9px 14px; }
+.tw-table td .tw-name { white-space:nowrap; display:block; font-weight:700; }
+.tw-table td .tw-adm  { white-space:nowrap; display:block; font-size:11px; color:#555; }
+.medal { font-size:16px; }
+.subj-chip { background:#eff6ff; border:1px solid #bfdbfe; border-radius:5px; padding:2px 7px; font-size:11px; white-space:nowrap; display:inline-block; margin:2px; }
+.tp-empty { text-align:center; padding:50px 20px; color:#666; }
+.tp-empty .ico { font-size:40px; margin-bottom:10px; }
+</style>
+
+<div class="tp-wrap">
+  <div class="tp-header">
+    <div class="tp-title"><i class="fas fa-trophy"></i> Top 5 Students</div>
+  </div>
+
+  <!-- Filter -->
+  <div class="tp-panel">
+    <div class="tp-panel-title">Filter</div>
+    <form method="get" action="/Marks/TopStudents">
+      <div class="tp-filter-row">
+        <div class="tp-field">
+          <label>Academic Year</label>
+          <select name="yearId" class="tp-select">
+            <option value="">All Years</option>
+            @foreach(var y in years)
+            {
+              <option value="@y.YearId" selected="@(yearId==y.YearId?"selected":null)">@y.YearName @(y.IsCurrent?"(Current)":"")</option>
+            }
+          </select>
+        </div>
+        <div class="tp-field">
+          <label>Medium / Stream</label>
+          <select name="sectionId" class="tp-select">
+            <option value="">All</option>
+            @foreach(var sec in sections)
+            {
+              <option value="@sec.SectionId" selected="@(sectionId==sec.SectionId?"selected":null)">@sec.SectionName</option>
+            }
+          </select>
+        </div>
+        <div class="tp-field">
+          <label>Class</label>
+          <select name="classId" class="tp-select">
+            <option value="">All Classes</option>
+            @foreach(var cl in classes)
+            {
+              <option value="@cl.ClassId" selected="@(classId==cl.ClassId?"selected":null)">@cl.ClassName</option>
+            }
+          </select>
+        </div>
+        <div class="tp-field">
+          <label>&nbsp;</label>
+          <button type="submit" class="btn-filter">Show Rankings</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  @if (!hasData)
+  {
+    <div class="tp-empty">
+      <div class="ico">🏆</div>
+      <p>No marks data found. Select filters and click <strong>Show Rankings</strong>.</p>
+    </div>
+  }
+  else
+  {
+    <!-- Tabs -->
+    <div class="tp-tabs">
+      <button class="tp-tab active" onclick="showTab('overall',this)"><i class="fas fa-globe"></i> Overall Top 5</button>
+      <button class="tp-tab" onclick="showTab('classwise',this)"><i class="fas fa-school"></i> Class-wise Top 5</button>
+      <button class="tp-tab" onclick="showTab('testwise',this)"><i class="fas fa-clipboard-list"></i> Test-wise Top 5</button>
+      <button class="tp-tab" onclick="showTab('subjectwise',this)"><i class="fas fa-book"></i> Subject-wise Top 5</button>
+    </div>
+
+    <!-- ── Tab 1: Overall ── -->
+    <div id="tab-overall" class="tp-tab-content active">
+      <div class="sec-title"><i class="fas fa-star" style="color:#f59e0b;"></i> Overall Top 5 <span class="sec-badge">All Exams Combined</span></div>
+      @if (!overallTop5.Any())
+      {
+        <div class="tp-empty"><div class="ico">📭</div><p>No data available.</p></div>
+      }
+      else
+      {
+        <div class="top5-grid">
+          @foreach(var s in overallTop5)
+          {
+            string rc  = s.Rank==1?"rank-1":s.Rank==2?"rank-2":s.Rank==3?"rank-3":"";
+            string bc  = "r" + s.Rank;
+            string med = s.Rank==1?"🥇":s.Rank==2?"🥈":s.Rank==3?"🥉":"#"+s.Rank;
+            <div class="top5-card @rc">
+              <div class="rank-badge @bc">@s.Rank</div>
+              <div class="card-name">@s.FullName</div>
+              <div class="card-sub">@(s.ClassName??"") @(s.SectionName!=null?"/ "+s.SectionName:"") @(s.BatchName!=null?"| "+s.BatchName:"")</div>
+              <div class="card-pct">@s.Percentage.ToString("0.0")%</div>
+              <div class="card-marks">@s.TotalObtained.ToString("0") / @s.TotalMax.ToString("0") marks</div>
+              <div class="card-roll">@med &nbsp; @s.AdmissionNo @(s.RollNo!=null?"| Roll: "+s.RollNo:"")</div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- ── Tab 2: Class-wise ── -->
+    <div id="tab-classwise" class="tp-tab-content">
+      <div class="sec-title"><i class="fas fa-school" style="color:#2563eb;"></i> Class-wise Top 5 <span class="sec-badge" style="background:#2563eb;">Per Class</span></div>
+      @if (!classwiseTop5.Any())
+      {
+        <div class="tp-empty"><div class="ico">📭</div><p>No data available.</p></div>
+      }
+      else
+      {
+        foreach(var cls in classwiseTop5.OrderBy(x => x.Key))
+        {
+          <div class="cls-section">
+            <div class="cls-label"><i class="fas fa-chalkboard-teacher"></i> @cls.Key</div>
+            <div class="top5-grid">
+              @foreach(var s in cls.Value)
+              {
+                string rc = s.Rank==1?"rank-1":s.Rank==2?"rank-2":s.Rank==3?"rank-3":"";
+                string bc = "r"+s.Rank;
+                <div class="top5-card @rc">
+                  <div class="rank-badge @bc">@s.Rank</div>
+                  <div class="card-name">@s.FullName</div>
+                  <div class="card-sub">@(s.SectionName??"—") @(s.BatchName!=null?"| "+s.BatchName:"")</div>
+                  <div class="card-pct">@s.Percentage.ToString("0.0")%</div>
+                  <div class="card-marks">@s.TotalObtained.ToString("0") / @s.TotalMax.ToString("0") marks</div>
+                  <div class="card-roll">@s.AdmissionNo @(s.RollNo!=null?"| Roll: "+s.RollNo:"")</div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- ── Tab 3: Test-wise ── -->
+    <div id="tab-testwise" class="tp-tab-content">
+      <div class="sec-title"><i class="fas fa-clipboard-list" style="color:#16a34a;"></i> Test-wise Top 5 <span class="sec-badge" style="background:#16a34a;">Per Exam</span></div>
+      @if (!testwiseTop5.Any())
+      {
+        <div class="tp-empty"><div class="ico">📭</div><p>No data available.</p></div>
+      }
+      else
+      {
+        foreach(var exam in testwiseTop5.OrderBy(x => x.Key))
+        {
+          <div class="tw-section">
+            <div class="tw-exam-label"><i class="fas fa-file-alt"></i> @exam.Key</div>
+            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+            <table class="tw-table">
+              <thead>
+                <tr>
+                  <th>Rank</th><th>Student</th><th>Class / Stream</th>
+                  <th style="text-align:right;">Total</th><th style="text-align:right;">Max</th>
+                  <th style="text-align:right;">%</th><th>Subject-wise Marks</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach(var s in exam.Value)
+                {
+                  string med = s.Rank==1?"🥇":s.Rank==2?"🥈":s.Rank==3?"🥉":"#"+s.Rank;
+                  Dictionary<int,List<TestMark>> byStudent;
+                  List<TestMark> subjList;
+                  if (examSubjectMap.TryGetValue(exam.Key, out byStudent) && byStudent.TryGetValue(s.StudentId, out subjList))
+                      subjList = subjList.OrderBy(x => x.SubjectName).ToList();
+                  else
+                      subjList = new();
+                  <tr>
+                    <td><span class="medal">@med</span></td>
+                    <td><span class="tw-name">@s.FullName</span><span class="tw-adm">@s.AdmissionNo</span></td>
+                    <td style="font-size:12px;">@(s.ClassName??"—") @(s.SectionName!=null?"/ "+s.SectionName:"")</td>
+                    <td style="text-align:right;font-weight:700;color:#15803d;">@s.TotalObtained.ToString("0")</td>
+                    <td style="text-align:right;color:#555;">@s.TotalMax.ToString("0")</td>
+                    <td style="text-align:right;font-weight:800;color:#2563eb;">@s.Percentage.ToString("0.0")%</td>
+                    <td>
+                      @foreach(var sub in subjList)
+                      {
+                        decimal sp = sub.MaxMarks>0 && sub.MarksObtained.HasValue ? Math.Round(sub.MarksObtained.Value*100m/sub.MaxMarks,0) : 0;
+                        <span class="subj-chip"><b>@sub.SubjectName</b>: @(sub.MarksObtained?.ToString("0")??"AB")/@sub.MaxMarks (@sp%)</span>
+                      }
+                      @if (!subjList.Any()) { <span style="color:#ccc;font-size:12px;">—</span> }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- ── Tab 4: Subject-wise ── -->
+    <div id="tab-subjectwise" class="tp-tab-content">
+      <div class="sec-title"><i class="fas fa-book" style="color:#7c3aed;"></i> Subject-wise Top 5 <span class="sec-badge" style="background:#7c3aed;">Per Subject</span></div>
+      @if (!subjectwiseTop5.Any())
+      {
+        <div class="tp-empty"><div class="ico">📭</div><p>No data available.</p></div>
+      }
+      else
+      {
+        foreach(var subj in subjectwiseTop5.OrderBy(x => x.Key))
+        {
+          <div class="tw-section">
+            <div class="tw-subj-label"><i class="fas fa-book"></i> @subj.Key</div>
+            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+            <table class="tw-table">
+              <thead>
+                <tr>
+                  <th>Rank</th><th>Student Name</th><th>Class / Stream</th>
+                  <th>Adm No</th><th style="text-align:right;">Marks</th>
+                  <th style="text-align:right;">Max</th><th style="text-align:right;">%</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach(var s in subj.Value)
+                {
+                  string med     = s.Rank==1?"🥇":s.Rank==2?"🥈":s.Rank==3?"🥉":"#"+s.Rank;
+                  string bgStyle = s.Rank==1?"background:#fffbeb;":"";
+                  <tr style="@bgStyle">
+                    <td><span class="medal">@med</span></td>
+                    <td><span class="tw-name">@s.FullName</span></td>
+                    <td style="font-size:12px;">@(s.ClassName??"—") @(s.SectionName!=null?"/ "+s.SectionName:"")</td>
+                    <td><span class="tw-adm" style="max-width:100px;">@s.AdmissionNo</span></td>
+                    <td style="text-align:right;font-weight:700;color:#15803d;">@s.TotalObtained.ToString("0")</td>
+                    <td style="text-align:right;color:#555;">@s.TotalMax.ToString("0")</td>
+                    <td style="text-align:right;font-weight:800;color:#7c3aed;">@s.Percentage.ToString("0.0")%</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+  }
+</div>
+
+@section Scripts {
+<script>
+function showTab(name, btn) {
+  document.querySelectorAll('.tp-tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tp-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+}

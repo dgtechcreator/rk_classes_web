@@ -66,7 +66,14 @@ public class CommonConnectivity
 
     public static T? G<T>(SqlDataReader r, string col)
     {
-        try { int i = r.GetOrdinal(col); if (r.IsDBNull(i)) return default; return (T)Convert.ChangeType(r.GetValue(i), typeof(T)); }
+        try
+        {
+            int i = r.GetOrdinal(col);
+            if (r.IsDBNull(i)) return default;
+            // Convert.ChangeType does NOT support Nullable<T> — get the underlying type first
+            var target = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+            return (T)Convert.ChangeType(r.GetValue(i), target);
+        }
         catch { return default; }
     }
 }

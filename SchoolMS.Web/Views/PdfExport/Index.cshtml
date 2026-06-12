@@ -1,0 +1,104 @@
+@{
+    ViewData["Title"] = "PDF to Excel Converter";
+}
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">📄 PDF to Excel Converter</h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Convert Import Tax Invoices (PDF) to Excel format with structured data extraction.</p>
+
+                    <!-- Upload Form -->
+                    <form id="pdfForm" method="post" action="/PdfExport/ConvertAndDownload" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="pdfFile" class="form-label">Select PDF File</label>
+                            <div class="input-group">
+                                <input type="file" class="form-control" id="pdfFile" name="pdfFile" accept=".pdf" required>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-download"></i> Convert & Download
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">Only PDF files are supported</small>
+                        </div>
+                    </form>
+
+                    <!-- Features -->
+                    <hr>
+                    <h6>Features:</h6>
+                    <ul class="small">
+                        <li>✅ Extracts invoice header information</li>
+                        <li>✅ Parses container shipping details (14 containers)</li>
+                        <li>✅ Extracts bill items and charges</li>
+                        <li>✅ Calculates and summarizes taxes (SGST, CGST, IGST)</li>
+                        <li>✅ Creates 4 professional Excel sheets with formatting</li>
+                    </ul>
+
+                    <!-- Output Format -->
+                    <hr>
+                    <h6>Output Excel Sheets:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="alert alert-info small mb-2">
+                                <strong>Sheet 1: Invoice Summary</strong><br>
+                                Quick reference of key invoice data
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-info small mb-2">
+                                <strong>Sheet 2: Container Details</strong><br>
+                                Complete shipping container information
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-info small mb-2">
+                                <strong>Sheet 3: Bill Items</strong><br>
+                                Itemized charges breakdown with totals
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-info small mb-2">
+                                <strong>Sheet 4: Tax Summary</strong><br>
+                                Detailed tax calculation details
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('pdfForm').addEventListener('submit', function(e) {
+        const fileInput = document.getElementById('pdfFile');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            e.preventDefault();
+            alert('Please select a PDF file');
+            return false;
+        }
+
+        const file = fileInput.files[0];
+        if (file.size > 10 * 1024 * 1024) { // 10 MB limit
+            e.preventDefault();
+            alert('File size must be less than 10 MB');
+            return false;
+        }
+    });
+</script>
+
+<style>
+    .card {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .card-header {
+        padding: 1.5rem;
+    }
+    .alert {
+        margin-bottom: 0.5rem;
+        padding: 0.75rem;
+    }
+</style>

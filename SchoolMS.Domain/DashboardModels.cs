@@ -12,4 +12,22 @@ public class DashboardStats
     public int     Class2Count{get;set;}
     public int     Class3Count{get;set;}
     public int     TotalStaff{get;set;}
+    public List<ClassStrengthStat> ClassStrengths{get;set;} = new();
+    public List<ClassAllStat> AllClasses{get;set;} = new();
+}
+
+public class ClassStrengthStat
+{
+    public string ClassName{get;set;} = "";
+    public int StudentCount{get;set;}
+    public string Color{get;set;} = "#6d28d9";
+}
+
+public class ClassAllStat
+{
+    public int ClassId{get;set;}
+    public string ClassName{get;set;} = "";
+    public int OrderNo{get;set;}
+    public int StudentCount{get;set;}
+    public bool IsActive{get;set;} = true;
 }

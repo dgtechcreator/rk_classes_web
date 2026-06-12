@@ -1,5 +1,205 @@
 @model SchoolMS.Domain.Student
-@{ ViewData["Title"] = "Student Profile"; }
+@{
+  ViewData["Title"] = "Student Profile";
+  bool isNew = TempData["IsNewStudent"] as bool? ?? false;
+  string studentName = TempData["StudentName"] as string ?? "";
+  string fatherPhone = TempData["FatherPhone"] as string ?? "";
+  string motherPhone = TempData["MotherPhone"] as string ?? "";
+}
+
+@if (isNew && !string.IsNullOrEmpty(studentName))
+{
+  <div id="welcomeModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;">
+    <div style="background:#fff;padding:32px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.2);max-width:420px;width:90%;animation:popupSlide 0.3s ease;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-size:28px;color:#4CAF50;margin-bottom:12px;">✓</div>
+        <div style="font-size:18px;font-weight:800;color:#111;margin-bottom:8px;">Welcome @studentName!</div>
+        <div style="font-size:13px;color:#666;">Student admission completed successfully</div>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button onclick="document.getElementById('welcomeModal').remove()" style="flex:1;background:#f0f0f0;color:#333;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;">
+          OK
+        </button>
+        <button onclick="showMessagePopup()" style="flex:1;background:#25D366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;">
+          💬 Message
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="messageModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:10000;">
+    <div style="background:#fff;padding:32px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.2);max-width:480px;width:90%;animation:popupSlide 0.3s ease;max-height:80vh;overflow-y:auto;">
+      <div style="font-size:14px;line-height:1.8;color:#333;margin-bottom:24px;white-space:pre-wrap;font-family:Arial,sans-serif;">*Dear Student,*
+
+Welcome to R K CLASSES. Wishing you a great learning experience and success in your studies.
+
+*Regards,*
+*R K CLASSES*
+*Kapil Sir*
+*M.Sc.,B.ed*
+*9870375795*
+*8108499214*
+
+.........................................
+
+*प्रिय विद्यार्थी,*
+
+*R K CLASSES* में आपका स्वागत है। आपके उज्ज्वल भविष्य और सफलता की कामना करते हैं।
+
+*सादर,*
+*R K CLASSES*
+*Kapil Sir*
+*M.Sc.,B.ed*
+*9870375795*
+*8108499214*</div>
+
+      <div style="display:flex;gap:10px;">
+        <button onclick="openFatherWhatsApp('@fatherPhone')" style="flex:1;background:#25D366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;">
+          👨 Send to Father
+        </button>
+        <button onclick="openMotherWhatsApp('@motherPhone')" style="flex:1;background:#25D366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;">
+          👩 Send to Mother
+        </button>
+      </div>
+
+      <button onclick="document.getElementById('messageModal').remove();document.getElementById('welcomeModal').remove();" style="width:100%;background:#f0f0f0;color:#333;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;">
+        Close
+      </button>
+    </div>
+  </div>
+
+  <style>
+    @@keyframes popupSlide {
+      from { transform: translateY(-50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
+
+  <script>
+    function showMessagePopup() {
+      document.getElementById('welcomeModal').style.display = 'none';
+      document.getElementById('messageModal').style.display = 'flex';
+    }
+
+    function openFatherWhatsApp(fatherPhone) {
+      fatherPhone = String(fatherPhone || '').trim();
+
+      const combinedMsg = `*Dear Student,*
+
+Welcome to R K CLASSES. Wishing you a great learning experience and success in your studies.
+
+*Regards,*
+*R K CLASSES*
+*Kapil Sir*
+*M.Sc.,B.ed*
+*9870375795*
+*8108499214*
+
+.........................................
+
+*प्रिय विद्यार्थी,*
+
+*R K CLASSES* में आपका स्वागत है। आपके उज्ज्वल भविष्य और सफलता की कामना करते हैं।
+
+*सादर,*
+*R K CLASSES*
+*Kapil Sir*
+*M.Sc.,B.ed*
+*9870375795*
+*8108499214*`;
+
+      if (fatherPhone && fatherPhone !== '') {
+        const fatherNum = fatherPhone.replace(/[^0-9]/g, '');
+        if (fatherNum.length > 0) {
+          window.open('https://wa.me/' + fatherNum + '?text=' + encodeURIComponent(combinedMsg), '_blank');
+        }
+      }
+    }
+
+    function openMotherWhatsApp(motherPhone) {
+      motherPhone = String(motherPhone || '').trim();
+
+      const combinedMsg = `*Dear Student,*
+
+Welcome to R K CLASSES. Wishing you a great learning experience and success in your studies.
+
+*Regards,*
+*R K CLASSES*
+*Kapil Sir*
+*M.Sc.,B.ed*
+*9870375795*
+*8108499214*
+
+.........................................
+
+*प्रिय विद्यार्थी,*
+
+*R K CLASSES* में आपका स्वागत है। आपके उज्ज्वल भविष्य और सफलता की कामना करते हैं।
+
+*सादर,*
+*R K CLASSES*
+*Kapil Sir*
+*M.Sc.,B.ed*
+*9870375795*
+*8108499214*`;
+
+      if (motherPhone && motherPhone !== '') {
+        const motherNum = motherPhone.replace(/[^0-9]/g, '');
+        if (motherNum.length > 0) {
+          window.open('https://wa.me/' + motherNum + '?text=' + encodeURIComponent(combinedMsg), '_blank');
+        }
+      }
+    }
+
+    function openBothWhatsApp(fatherPhone, motherPhone) {
+      fatherPhone = String(fatherPhone || '').trim();
+      motherPhone = String(motherPhone || '').trim();
+
+      const combinedMsg = `*Dear Student,*
+
+Welcome to R K CLASSES. Wishing you a great learning experience and success in your studies.
+
+*Regards,*
+*R K CLASSES*
+*Kapil Sir*
+*M.Sc.,B.ed*
+*9870375795*
+*8108499214*
+
+.........................................
+
+*प्रिय विद्यार्थी,*
+
+*R K CLASSES* में आपका स्वागत है। आपके उज्ज्वल भविष्य और सफलता की कामना करते हैं।
+
+*सादर,*
+*R K CLASSES*
+*Kapil Sir*
+*M.Sc.,B.ed*
+*9870375795*
+*8108499214*`;
+
+      // Open Father's WhatsApp first
+      if (fatherPhone && fatherPhone !== '') {
+        const fatherNum = fatherPhone.replace(/[^0-9]/g, '');
+        if (fatherNum.length > 0) {
+          window.open('https://wa.me/' + fatherNum + '?text=' + encodeURIComponent(combinedMsg), '_blank');
+        }
+      }
+
+      // Open Mother's WhatsApp after small delay
+      setTimeout(() => {
+        if (motherPhone && motherPhone !== '') {
+          const motherNum = motherPhone.replace(/[^0-9]/g, '');
+          if (motherNum.length > 0) {
+            window.open('https://wa.me/' + motherNum + '?text=' + encodeURIComponent(combinedMsg), '_blank');
+          }
+        }
+      }, 300);
+    }
+  </script>
+}
 
 <div class="pg-hdr">
   <div class="pg-row">
@@ -21,7 +221,7 @@
     <div style="font-size:13px;" class="text-mu">@Model.AdmissionNo</div>
     <span class="badge @(Model.Status=="Active"?"b-active":"b-inactive")" style="margin-top:8px;">@Model.Status</span>
     <div style="margin-top:18px;">
-      @foreach(var (lbl,val) in new[]{("Class",Model.ClassName??"—"),("Section",Model.SectionName??"—"),("Batch",Model.BatchName??"—"),("Roll No",Model.RollNo??"—"),("Year",Model.YearName??"—")})
+      @foreach(var (lbl,val) in new[]{("Std",Model.ClassName??"—"),("Medium/Stream",Model.SectionName??"—"),("Batch",Model.BatchName??"—"),("Roll No",Model.RollNo??"—"),("Year",Model.YearName??"—")})
       {<div class="info-row"><span class="info-lbl">@lbl</span><span class="info-val">@val</span></div>}
     </div>
   </div>

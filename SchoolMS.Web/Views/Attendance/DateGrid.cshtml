@@ -37,11 +37,11 @@
 <div class="filter-bar">
   <i class="fas fa-filter" style="color:var(--mu);font-size:13px;"></i>
   <select name="sectionId" class="fs">
-    <option value="">All Sections</option>
+    <option value="">All Medium/Stream</option>
     @foreach(var s in sections){<option value="@s.SectionId" selected=@(sectionId==s.SectionId?"selected":"")>@s.SectionName</option>}
   </select>
   <select name="classId" class="fs">
-    <option value="">— Class —</option>
+    <option value="">— Std —</option>
     @foreach(var c in classes){<option value="@c.ClassId" selected=@(classId==c.ClassId?"selected":"")>@c.ClassName</option>}
   </select>
   <select name="batchId" class="fs">
@@ -63,7 +63,7 @@
 
 @if (classId == null)
 {
-  <div class="card"><div class="empty"><div class="empty-ico">📅</div><h3>Select a Class to View</h3><p>Choose class and date range from filters above.</p></div></div>
+  <div class="card"><div class="empty"><div class="empty-ico">📅</div><h3>Select a Std to View</h3><p>Choose Std and date range from filters above.</p></div></div>
 }
 else if (!Model.Any())
 {

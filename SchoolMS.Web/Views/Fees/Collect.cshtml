@@ -26,9 +26,9 @@
         </select>
       </div>
       <div class="fg">
-        <label>Class *</label>
+        <label>Std *</label>
         <select name="ClassId" id="cClass" class="fs" onchange="fetchFeeAmount()" required>
-          <option value="">— Select Class —</option>
+          <option value="">— Select Std —</option>
           @foreach(var c in Model.Classes){<option value="@c.ClassId">@c.ClassName</option>}
         </select>
       </div>

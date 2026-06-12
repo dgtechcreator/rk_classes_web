@@ -1,0 +1,313 @@
+@model SchoolMS.Domain.Student
+@{ Layout = null; }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Admission Form — @Model.FullName</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 12px; background: #e8e8e8; color: #000; }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 10mm auto;
+      padding: 8mm 10mm 10mm;
+      background: #fff;
+      border: 2px solid #000;
+    }
+
+    /* ── Institute title ── */
+    .inst-title {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 900;
+      color: #c00;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      margin-bottom: 6px;
+    }
+
+    /* ── Header row: logo | banner+addr | photo ── */
+    .hdr-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 6px;
+      border-bottom: 1.5px solid #000;
+      padding-bottom: 6px;
+    }
+    .hdr-logo img { height: 68px; width: auto; display: block; }
+    .hdr-center { flex: 1; text-align: center; }
+    .hdr-center img {
+      height: 50px; max-width: 200px; object-fit: contain;
+      display: block; margin: 0 auto 4px;
+      filter: contrast(1.4) brightness(0.8);
+    }
+    .hdr-addr {
+      font-size: 9px; line-height: 1.55; color: #222; text-align: left;
+    }
+    .hdr-photo {
+      flex-shrink: 0; width: 78px; height: 90px;
+      border: 2px solid #555;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: #aaa; text-align: center; overflow: hidden;
+    }
+    .hdr-photo img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* ── ADMISSION FORM title ── */
+    .form-title {
+      text-align: center;
+      font-size: 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+      text-decoration: underline;
+      letter-spacing: 2px;
+      padding: 4px 0 3px;
+      margin-bottom: 4px;
+    }
+
+    /* ── Form No + Date ── */
+    .form-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12.5px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    /* ── Section header ── */
+    .sec-hdr {
+      display: inline-block;
+      background: #c00;
+      color: #fff;
+      font-weight: 800;
+      font-size: 11.5px;
+      padding: 2px 14px 2px 8px;
+      margin: 7px 0 5px;
+    }
+
+    /* ── Field table ── */
+    .ft { width: 100%; border-collapse: collapse; margin-bottom: 1px; }
+    .ft td { padding: 2px 3px; vertical-align: middle; font-size: 11.5px; line-height: 1.7; }
+    .lbl  { font-weight: 700; white-space: nowrap; }
+    .uline {
+      border-bottom: 1px solid #444;
+      display: inline-block;
+      min-width: 80px;
+      vertical-align: bottom;
+      font-size: 11.5px;
+      line-height: 1.4;
+      padding-bottom: 1px;
+    }
+    .uline-xl  { min-width: 340px; }
+    .uline-lg  { min-width: 130px; }
+    .uline-md  { min-width: 100px; }
+    .uline-sm  { min-width: 65px; }
+
+    /* ── Checkboxes ── */
+    .cb-row { display: inline-flex; gap: 10px; align-items: center; vertical-align: middle; }
+    .cb-item { display: flex; align-items: center; gap: 3px; font-size: 11.5px; }
+    .cb-box {
+      width: 12px; height: 12px; border: 1.5px solid #000;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 900; flex-shrink: 0;
+    }
+
+    /* ── Certification & signatures ── */
+    .cert {
+      font-size: 11px; font-style: italic;
+      margin-top: 10px; border-top: 1px solid #bbb;
+      padding-top: 6px; text-align: center; line-height: 1.8;
+    }
+    .sigs {
+      display: flex; justify-content: space-between; margin-top: 22px;
+    }
+    .sig-block {
+      width: 43%; border-top: 1px solid #000;
+      padding-top: 3px; text-align: center; font-size: 11.5px; font-weight: 700;
+    }
+
+    /* ── Buttons ── */
+    .no-print { width: 210mm; margin: 0 auto 8px; display: flex; gap: 10px; }
+    .no-print button, .no-print a {
+      padding: 8px 20px; font-size: 13px; cursor: pointer;
+      border-radius: 4px; font-weight: 700; text-decoration: none; display: inline-block;
+    }
+    .btn-print { background: #c00; color: #fff; border: none; }
+    .btn-back  { background: #fff; color: #333; border: 1.5px solid #aaa; }
+
+    @@media print {
+      .no-print { display: none !important; }
+      body { background: #fff; }
+      .page { border: none; margin: 0; padding: 5mm 7mm; width: 100%; min-height: unset; }
+      @@page { size: A4 portrait; margin: 8mm; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="no-print">
+  <a class="btn-back" href="javascript:history.back()">&#8592; Back</a>
+  <button class="btn-print" onclick="window.print()">&#128438; Print / Save as PDF</button>
+</div>
+
+<div class="page">
+
+  <!-- ══ INSTITUTE TITLE ══ -->
+  <div class="inst-title">Ramjeet Kalavati Educational Institute</div>
+
+  <!-- ══ HEADER ROW ══ -->
+  <div class="hdr-row">
+    <div class="hdr-logo">
+      <img src="/images/rk-logo.png" alt="RK Logo"/>
+    </div>
+    <div class="hdr-center">
+      <img src="/images/rklogo.png" alt="RK Classes"/>
+      <div class="hdr-addr">
+        <strong>Head Office (Krishna Nagar):</strong> 3/5, Yadav Chawl, Krishna Nagar, Pipe Line, Sakinaka, Mumbai - 400 072.<br/>
+        <strong>Branch 1 (Jari Mari):</strong> R. No. 5, Raja Yadav Chawl, Subhash Nagar, Jari Mari, K - A Road, Mumbai - 400 072.<br/>
+        <strong>Branch 2 (Marol):</strong> Bldg no. 5, A7, Sneh Sagar Cooperative Housing Society, Saqbaug, Marol, Andheri (E), Mumbai - 400 059.<br/>
+        www.myrkclasses.com &nbsp;&#9993;&nbsp; rkclasseskapilsir2002&#64;gmail.com &nbsp;&#9743;&nbsp; +91 9870375795 / +91 8108499214
+      </div>
+    </div>
+    <div class="hdr-photo">
+      @if (!string.IsNullOrEmpty(Model.ProfilePicPath))
+      {
+        <img src="@Model.ProfilePicPath" alt="Photo"/>
+      }
+      else
+      {
+        <span>Paste<br/>Photo<br/>Here</span>
+      }
+    </div>
+  </div>
+
+  <!-- ══ FORM TITLE ══ -->
+  <div class="form-title">Admission Form</div>
+
+  <!-- ══ FORM NO + DATE ══ -->
+  <div class="form-meta">
+    <span>Form No. : &nbsp;<strong>RKC &nbsp; @(Model.AdmissionNo ?? Model.StudentId.ToString())</strong></span>
+    <span>Date : &nbsp;<strong>@(Model.AdmissionDate?.ToString("dd/MM/yyyy") ?? DateTime.Today.ToString("dd/MM/yyyy"))</strong></span>
+  </div>
+
+  <!-- ══ PERSONAL DETAILS ══ -->
+  <div><div class="sec-hdr">Personal Details</div></div>
+
+  <table class="ft">
+    <tr>
+      <td colspan="3">
+        <span class="lbl">1. Full Name in Capital Letters* :</span>&nbsp;
+        <span class="uline uline-xl">@Model.FullName?.ToUpper()</span>
+      </td>
+    </tr>
+    <tr>
+      <td width="40%">
+        <span class="lbl">2. Date Of Birth* :</span>&nbsp;
+        <span class="uline uline-md">@(Model.DateOfBirth?.ToString("dd/MM/yyyy") ?? "")</span>
+      </td>
+      <td width="35%">
+        <span class="lbl">3. Gender* :</span>&nbsp;
+        <span class="cb-row">
+          <span class="cb-item"><span class="cb-box">@(Model.Gender=="Male"?"✓":"")</span>&nbsp;Male</span>
+          <span class="cb-item"><span class="cb-box">@(Model.Gender=="Female"?"✓":"")</span>&nbsp;Female</span>
+          <span class="cb-item"><span class="cb-box">@(Model.Gender=="Other"?"✓":"")</span>&nbsp;Other</span>
+        </span>
+      </td>
+      <td>
+        <span class="lbl">4. Blood Group :</span>&nbsp;
+        <span class="uline uline-sm">@(Model.BloodGroup ?? "")</span>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="lbl">5. Father's Name* :</span>&nbsp;
+        <span class="uline uline-lg">@(Model.FatherName ?? "")</span>
+      </td>
+      <td colspan="2">
+        <span class="lbl">6. Mother's Name* :</span>&nbsp;
+        <span class="uline uline-lg">@(Model.MotherName ?? "")</span>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="lbl">7. Contact No. :</span>&nbsp;
+        <span class="uline uline-md">@(Model.Phone ?? "")</span>
+      </td>
+      <td>
+        <span class="lbl">8. Father's Mobile :</span>&nbsp;
+        <span class="uline uline-md">@(Model.FatherPhone ?? "")</span>
+      </td>
+      <td>
+        <span class="lbl">9. Mother's Mobile :</span>&nbsp;
+        <span class="uline uline-md">@(Model.MotherPhone ?? "")</span>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="3">
+        <span class="lbl">10. Email ID :</span>&nbsp;
+        <span class="uline uline-xl">@(Model.Email ?? "")</span>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="3">
+        <span class="lbl">11. Address :</span>&nbsp;
+        <span class="uline uline-xl">@(Model.Address ?? "")</span>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ ACADEMIC DETAILS ══ -->
+  <div><div class="sec-hdr">Academic Details</div></div>
+
+  <table class="ft">
+    <tr>
+      <td width="50%">
+        <span class="lbl">1. Academic Year :</span>&nbsp;
+        <span class="uline uline-lg">@(Model.YearName ?? "")</span>
+      </td>
+      <td>
+        <span class="lbl">2. Admission Date :</span>&nbsp;
+        <span class="uline uline-lg">@(Model.AdmissionDate?.ToString("dd/MM/yyyy") ?? "")</span>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="lbl">3. Admission to Std.* :</span>&nbsp;
+        <span class="uline uline-md">@(Model.ClassName ?? "")</span>
+      </td>
+      <td>
+        <span class="lbl">4. Medium / Stream :</span>&nbsp;
+        <span class="uline uline-md">@(Model.SectionName ?? "")</span>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <span class="lbl">5. Batch :</span>&nbsp;
+        <span class="uline uline-md">@(Model.BatchName ?? "")</span>
+      </td>
+      <td>
+        <span class="lbl">6. Roll No. :</span>&nbsp;
+        <span class="uline uline-sm">@(Model.RollNo ?? "")</span>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ CERTIFICATION ══ -->
+  <div class="cert">
+    Here , It Is Certified that the above information is correct to the best of my knowledge and belief.<br/>
+    I hereby agree to abide by Rules of the Classes.
+  </div>
+
+  <!-- ══ SIGNATURES ══ -->
+  <div class="sigs">
+    <div class="sig-block">Parent's / Guardian's Sign.</div>
+    <div class="sig-block">Student's Sign.</div>
+  </div>
+
+</div>
+</body>
+</html>

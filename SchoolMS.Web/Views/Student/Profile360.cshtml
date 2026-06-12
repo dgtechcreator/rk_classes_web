@@ -1,0 +1,648 @@
+@using SchoolMS.Domain
+@model Student
+@{
+    ViewData["Title"] = "Student Profile";
+    var classes     = (List<Class>)ViewBag.Classes;
+    var sections    = (List<Section>)ViewBag.Sections;
+    var studentList = (List<Student>)ViewBag.StudentList;
+    int? classId    = ViewBag.ClassId;
+    int? sectionId  = ViewBag.SectionId;
+    int? studentId  = ViewBag.StudentId;
+
+    var att       = ViewBag.Attendance as AttendanceReport;
+    var attDetail = (List<StudentAttendanceDetail>)ViewBag.AttDetail;
+    var marks     = (List<TestMark>)ViewBag.Marks;
+    var fees      = (List<FeePayment>)ViewBag.Fees;
+
+    decimal totObt   = marks.Where(m => m.MarksObtained.HasValue).Sum(m => m.MarksObtained!.Value);
+    decimal totMax   = marks.Where(m => m.MarksObtained.HasValue).Sum(m => (decimal)m.MaxMarks);
+    decimal marksPct = totMax > 0 ? Math.Round(totObt * 100m / totMax, 1) : 0;
+    decimal totalPaid = fees.Sum(f => f.NetAmount);
+
+    // Subject lists for filters
+    var attSubjects  = attDetail.Where(d => !string.IsNullOrEmpty(d.Subject))
+                                .Select(d => d.Subject!).Distinct().OrderBy(s => s).ToList();
+    var markSubjects = marks.Select(m => m.SubjectName ?? "").Where(s => s != "")
+                            .Distinct().OrderBy(s => s).ToList();
+    var markExams    = marks.GroupBy(m => m.ExamName ?? "").Select(g => g.Key)
+                            .Where(e => e != "").OrderBy(e => e).ToList();
+
+    decimal attPct = att != null ? Math.Min(100m, att.AttendancePct) : 0m;
+}
+
+<style>
+body { font-family:'Segoe UI',Arial,sans-serif; background:#f1f5f9; }
+.pr-wrap { color:#222; width:100%; }
+
+/* Filter */
+.pr-filter { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:14px 18px; margin-bottom:14px; display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+.pr-filter label { display:block; font-size:11px; color:#444; font-weight:700; margin-bottom:3px; }
+.pr-select { padding:7px 26px 7px 10px; border:1px solid #ccc; border-radius:6px; font-size:13px; min-width:140px; background:#fff; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23666' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 8px center; cursor:pointer; }
+.pr-select-sm { padding:5px 22px 5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:12px; min-width:120px; background:#fff; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23666' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 6px center; cursor:pointer; }
+
+/* Header */
+.pr-head { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:16px 20px; margin-bottom:12px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+.pr-avatar { width:60px; height:60px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; font-size:24px; overflow:hidden; flex-shrink:0; }
+.pr-avatar img { width:60px; height:60px; object-fit:cover; border-radius:50%; }
+.pr-name { font-size:18px; font-weight:800; color:#111; }
+.pr-info { font-size:12.5px; color:#444; margin-top:3px; }
+.pr-badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:700; background:#dcfce7; color:#16a34a; margin-left:8px; }
+.pr-badge.inactive { background:#fee2e2; color:#dc2626; }
+.pr-actions { display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
+.pr-btn { border:none; border-radius:6px; padding:7px 16px; font-size:12.5px; font-weight:700; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:5px; }
+.pr-btn.edit  { background:#f1f5f9; color:#333; border:1px solid #ddd; }
+.pr-btn.excel { background:#16a34a; color:#fff; }
+.pr-btn.print { background:#2563eb; color:#fff; }
+
+/* Summary strip */
+.pr-strip { display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+.pr-strip-item { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:10px 16px; flex:1; min-width:120px; text-align:center; }
+.pr-strip-item .sv { font-size:20px; font-weight:800; }
+.pr-strip-item .sl { font-size:11px; color:#555; margin-top:2px; }
+.sv-att  { color:#2563eb; } .sv-mrk { color:#16a34a; } .sv-fees { color:#d97706; } .sv-days { color:#7c3aed; }
+
+/* Tabs */
+.pr-tabs { display:flex; border-bottom:2px solid #e2e8f0; margin-bottom:14px; gap:2px; }
+.pr-tab { padding:8px 18px; font-size:13px; font-weight:700; border:none; background:none; color:#444; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; border-radius:6px 6px 0 0; }
+.pr-tab.active { color:#2563eb; border-bottom-color:#2563eb; background:#eff6ff; }
+.pr-tc { display:none; background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:18px 20px; }
+.pr-tc.active { display:block; }
+
+/* Section heading */
+.pr-sh { font-size:13px; font-weight:800; color:#2563eb; border-bottom:1px solid #f0f0f0; padding-bottom:8px; margin:0 0 12px; }
+
+/* Info grid */
+.ig { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px; margin-bottom:18px; }
+.ig-item label { font-size:10.5px; color:#555; font-weight:700; text-transform:uppercase; display:block; }
+.ig-item span  { font-size:13.5px; color:#111; font-weight:600; }
+
+/* Tables */
+.pr-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+.pr-tbl thead th { background:#f8f9fa; padding:8px 12px; text-align:left; font-weight:700; color:#333; white-space:nowrap; border-bottom:2px solid #e2e8f0; }
+.pr-tbl tbody td { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
+.pr-tbl tbody td:nth-child(2) { max-width:120px; } /* Exam/Subject col */
+.pr-tbl tbody tr { border-bottom:1px solid #f4f4f4; }
+.pr-tbl tbody tr:hover { background:#fafafa; }
+.pr-tbl tbody td { padding:8px 12px; }
+.pr-tbl tfoot td { padding:8px 12px; font-weight:800; background:#f8f9fa; }
+.exam-hdr td { background:#eff6ff; color:#2563eb; font-weight:800; font-size:12.5px; padding:6px 12px; }
+
+/* Status pills */
+.s-p { background:#dcfce7; color:#15803d; border-radius:10px; padding:1px 8px; font-size:11px; font-weight:700; }
+.s-a { background:#fee2e2; color:#dc2626; border-radius:10px; padding:1px 8px; font-size:11px; font-weight:700; }
+.s-l { background:#fef3c7; color:#d97706; border-radius:10px; padding:1px 8px; font-size:11px; font-weight:700; }
+
+/* Attendance progress */
+.att-prog-bg { background:#e2e8f0; border-radius:6px; height:12px; margin:8px 0 4px; overflow:hidden; }
+.att-prog-fill { height:100%; border-radius:6px; background:linear-gradient(90deg,#2563eb,#60a5fa); }
+.att-nums { display:flex; gap:16px; margin:10px 0; flex-wrap:wrap; }
+.att-num { text-align:center; min-width:48px; }
+.att-num .n { font-size:22px; font-weight:800; }
+.att-num .l { font-size:11px; color:#555; }
+.n-p { color:#16a34a; } .n-a { color:#dc2626; } .n-l { color:#d97706; } .n-t { color:#6b7280; }
+
+/* Tab filter bar */
+.tab-filter-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; padding:8px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:7px; }
+.tab-filter-bar label { font-size:12px; color:#444; font-weight:600; white-space:nowrap; }
+.filter-count { font-size:11px; color:#555; margin-left:auto; }
+
+/* Table scroll wrapper */
+.tbl-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; width:100%; }
+
+/* Mobile fixes */
+@@media (max-width:768px) {
+  .pr-tc { padding:12px 10px !important; overflow:hidden; }
+
+  /* Filter bar — 2-col grid: Stream+Class side by side, Student full width */
+  .pr-filter { display:grid !important; grid-template-columns:1fr 1fr; gap:8px; padding:10px 12px; }
+  .pr-filter form > div:nth-child(3) { grid-column:1/-1; }  /* Student spans full width */
+  .pr-select { width:100%; min-width:0 !important; }
+
+  .pr-strip { flex-wrap:wrap; gap:6px; }
+  .pr-strip-item { min-width:calc(50% - 3px); flex:1 1 calc(50% - 3px); padding:8px 10px; }
+  .pr-strip-item .sv { font-size:16px; }
+  .pr-head { flex-wrap:wrap; gap:10px; padding:12px; }
+  .pr-actions { margin-left:0; width:100%; justify-content:flex-start; }
+  .att-nums { flex-wrap:wrap; gap:8px; }
+  .att-num { min-width:60px; }
+  .tab-filter-bar { flex-wrap:wrap; gap:6px; padding:8px 10px; }
+  .tab-filter-bar > div { flex:1 1 calc(50% - 6px); min-width:120px; }
+  .filter-count { width:100%; text-align:right; }
+  .pr-tbl thead th, .pr-tbl tbody td, .pr-tbl tfoot td { padding:6px 8px; font-size:12px; }
+  .ig { grid-template-columns:1fr 1fr; }
+
+  /* Tabs — scrollable single row */
+  .pr-tabs {
+    overflow-x:auto;
+    flex-wrap:nowrap !important;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    gap:0;
+  }
+  .pr-tabs::-webkit-scrollbar { display:none; }
+  .pr-tab { padding:8px 12px !important; font-size:12px !important; white-space:nowrap; flex-shrink:0; }
+}
+
+/* Print modal */
+.modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; align-items:center; justify-content:center; }
+.modal-bg.open { display:flex; }
+.modal-box { background:#fff; border-radius:10px; padding:24px 28px; min-width:300px; max-width:400px; }
+.modal-title { font-size:16px; font-weight:800; margin-bottom:16px; }
+.modal-opt { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #f0f0f0; font-size:14px; }
+.modal-opt input { width:16px; height:16px; cursor:pointer; }
+.modal-footer { display:flex; gap:8px; margin-top:16px; justify-content:flex-end; }
+.modal-btn { border:none; border-radius:6px; padding:8px 20px; font-size:13px; font-weight:700; cursor:pointer; }
+.modal-btn.cancel { background:#f1f5f9; color:#333; }
+.modal-btn.go-print { background:#2563eb; color:#fff; }
+.modal-btn.go-excel { background:#16a34a; color:#fff; }
+
+@@media print {
+  .pr-filter,.pr-actions,.pr-tabs,.modal-bg,.tab-filter-bar,button,a.pr-btn,.no-print { display:none !important; }
+  .pr-tc { display:block !important; border:none; padding:0; margin-bottom:20px; }
+  .pr-tc.print-hide { display:none !important; }
+  .pr-head { border:none; padding:0; }
+  body { font-size:12px; background:#fff; }
+  .pr-tbl { font-size:11px; }
+  .pr-tbl tbody tr { display:table-row !important; }
+}
+</style>
+
+<!-- Print/Export Modal -->
+<div class="modal-bg" id="optModal">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle">🖨️ Print Options</div>
+    <p style="font-size:12px;color:#888;margin-bottom:12px;">Select what to include:</p>
+    <div class="modal-opt"><input type="checkbox" id="opt-info" checked> <label for="opt-info">Personal Information</label></div>
+    <div class="modal-opt"><input type="checkbox" id="opt-att" checked> <label for="opt-att">Attendance</label></div>
+    <div class="modal-opt"><input type="checkbox" id="opt-marks" checked> <label for="opt-marks">Test Marks</label></div>
+    <div class="modal-opt"><input type="checkbox" id="opt-fees" checked> <label for="opt-fees">Fee Payments</label></div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn go-excel" id="modalExcelBtn" onclick="doExcel()" style="display:none;">⬇️ Download</button>
+      <button class="modal-btn go-print" id="modalPrintBtn" onclick="doPrint()">🖨️ Print</button>
+    </div>
+  </div>
+</div>
+
+<div class="pr-wrap">
+
+  <!-- Filter -->
+  <div class="pr-filter">
+    <form method="get" action="/Student/Profile360" id="ff" style="display:contents;">
+      <div>
+        <label>Stream</label>
+        <select name="sectionId" class="pr-select" onchange="document.getElementById('ff').submit()">
+          <option value="">All</option>
+          @foreach(var s in sections)
+          { <option value="@s.SectionId" selected="@(sectionId==s.SectionId?"selected":null)">@s.SectionName</option> }
+        </select>
+      </div>
+      <div>
+        <label>Class</label>
+        <select name="classId" class="pr-select" onchange="document.getElementById('ff').submit()">
+          <option value="">Select Class</option>
+          @foreach(var cl in classes)
+          { <option value="@cl.ClassId" selected="@(classId==cl.ClassId?"selected":null)">@cl.ClassName</option> }
+        </select>
+      </div>
+      <div>
+        <label>Student</label>
+        <select name="studentId" class="pr-select" onchange="document.getElementById('ff').submit()">
+          <option value="">Select Student</option>
+          @foreach(var s in studentList)
+          { <option value="@s.StudentId" selected="@(studentId==s.StudentId?"selected":null)">@s.FullName (@s.AdmissionNo)</option> }
+        </select>
+      </div>
+    </form>
+  </div>
+
+  @if (Model == null)
+  {
+    <div style="text-align:center;padding:60px;color:#aaa;background:#fff;border:1px solid #e2e8f0;border-radius:8px;">
+      <div style="font-size:48px;">👤</div>
+      <p style="margin-top:10px;font-size:15px;">Select class and student to view profile.</p>
+    </div>
+  }
+  else
+  {
+    <!-- Header -->
+    <div class="pr-head">
+      <div class="pr-avatar">
+        @if (!string.IsNullOrEmpty(Model.ProfilePicPath))
+        { <img src="@Model.ProfilePicPath" alt="photo"/> }
+        else { <span>👤</span> }
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div class="pr-name">@Model.FullName <span class="pr-badge @(Model.Status=="Active"?"":"inactive")">@Model.Status</span></div>
+        <div class="pr-info">
+          Adm: <b>@Model.AdmissionNo</b> &nbsp;|&nbsp;
+          Roll: <b>@(Model.RollNo??"—")</b> &nbsp;|&nbsp;
+          Class: <b>@(Model.ClassName??"—")@(Model.SectionName!=null?" / "+Model.SectionName:"")</b> &nbsp;|&nbsp;
+          Batch: <b>@(Model.BatchName??"—")</b> &nbsp;|&nbsp;
+          Father: <b>@(Model.FatherName??"—")</b> &nbsp;|&nbsp;
+          Contact: <b>@(Model.FatherPhone??Model.Phone??"—")</b>
+        </div>
+      </div>
+      <div class="pr-actions no-print">
+        <a href="/Student/Edit/@Model.StudentId" class="pr-btn edit">✏️ Edit</a>
+        <button class="pr-btn excel" onclick="openModal('excel')">⬇️ Excel</button>
+        <button class="pr-btn print" onclick="openModal('print')">🖨️ Print</button>
+      </div>
+    </div>
+
+    <!-- Summary strip -->
+    <div class="pr-strip">
+      <div class="pr-strip-item">
+        <div class="sv sv-att">@(att!=null?att.AttendancePct.ToString("0.0"):"0.0")%</div>
+        <div class="sl">Attendance</div>
+      </div>
+      <div class="pr-strip-item">
+        <div class="sv sv-days">@(att?.PresentDays??0)/@(att?.TotalDays??0)</div>
+        <div class="sl">Days Present</div>
+      </div>
+      <div class="pr-strip-item">
+        <div class="sv sv-mrk">@totObt.ToString("0")/@totMax.ToString("0")</div>
+        <div class="sl">Total Marks</div>
+      </div>
+      <div class="pr-strip-item">
+        <div class="sv sv-mrk">@marksPct.ToString("0.0")%</div>
+        <div class="sl">Marks %</div>
+      </div>
+      <div class="pr-strip-item">
+        <div class="sv sv-fees">₹@totalPaid.ToString("N0")</div>
+        <div class="sl">Fees Paid</div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="pr-tabs no-print">
+      <button class="pr-tab active" onclick="showTab('info',this)">👤 Personal</button>
+      <button class="pr-tab" onclick="showTab('att',this)">📅 Attendance</button>
+      <button class="pr-tab" onclick="showTab('marks',this)">📋 Marks</button>
+      <button class="pr-tab" onclick="showTab('fees',this)">💰 Fees</button>
+    </div>
+
+    <!-- ── Personal ── -->
+    <div id="tc-info" class="pr-tc active" data-section="info">
+      <div class="pr-sh">Basic Info</div>
+      <div class="ig">
+        <div class="ig-item"><label>Full Name</label><span>@Model.FullName</span></div>
+        <div class="ig-item"><label>Admission No</label><span>@Model.AdmissionNo</span></div>
+        <div class="ig-item"><label>Roll No</label><span>@(Model.RollNo??"—")</span></div>
+        <div class="ig-item"><label>Date of Birth</label><span>@(Model.DateOfBirth?.ToString("dd MMM yyyy")??"—")</span></div>
+        <div class="ig-item"><label>Gender</label><span>@(Model.Gender??"—")</span></div>
+        <div class="ig-item"><label>Blood Group</label><span>@(Model.BloodGroup??"—")</span></div>
+        <div class="ig-item"><label>Aadhaar No</label><span>@(Model.AadhaarNo??"—")</span></div>
+        <div class="ig-item"><label>Admission Date</label><span>@(Model.AdmissionDate?.ToString("dd MMM yyyy")??"—")</span></div>
+        <div class="ig-item"><label>Nationality</label><span>@(Model.Nationality??"—")</span></div>
+        <div class="ig-item"><label>Religion</label><span>@(Model.Religion??"—")</span></div>
+      </div>
+      <div class="pr-sh">Family &amp; Contact</div>
+      <div class="ig">
+        <div class="ig-item"><label>Father Name</label><span>@(Model.FatherName??"—")</span></div>
+        <div class="ig-item"><label>Father Phone</label><span>@(Model.FatherPhone??"—")</span></div>
+        <div class="ig-item"><label>Father Occupation</label><span>@(Model.FatherOccupation??"—")</span></div>
+        <div class="ig-item"><label>Mother Name</label><span>@(Model.MotherName??"—")</span></div>
+        <div class="ig-item"><label>Mother Phone</label><span>@(Model.MotherPhone??"—")</span></div>
+        <div class="ig-item"><label>Student Phone</label><span>@(Model.Phone??"—")</span></div>
+        <div class="ig-item"><label>Email</label><span>@(Model.Email??"—")</span></div>
+        <div class="ig-item"><label>Address</label><span>@(Model.Address??"—")</span></div>
+        <div class="ig-item"><label>City / State</label><span>@(Model.City??"—")@(Model.State!=null?", "+Model.State:"")</span></div>
+        <div class="ig-item"><label>Previous School</label><span>@(Model.PreviousSchool??"—")</span></div>
+      </div>
+    </div>
+
+    <!-- ── Attendance ── -->
+    <div id="tc-att" class="pr-tc" data-section="att">
+      @if (att == null || att.TotalDays == 0)
+      {
+        <div style="color:#aaa;text-align:center;padding:30px;">No attendance records found.</div>
+      }
+      else
+      {
+        <div class="pr-sh">Summary</div>
+        <div class="att-nums">
+          <div class="att-num"><div class="n n-p">@att.PresentDays</div><div class="l">Present</div></div>
+          <div class="att-num"><div class="n n-a">@att.AbsentDays</div><div class="l">Absent</div></div>
+          <div class="att-num"><div class="n n-l">@att.LateDays</div><div class="l">Late</div></div>
+          <div class="att-num"><div class="n n-t">@att.TotalDays</div><div class="l">Total</div></div>
+          <div class="att-num"><div class="n" style="color:#2563eb;">@att.AttendancePct.ToString("0.0")%</div><div class="l">Attendance %</div></div>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 4px;">
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:10px 18px;text-align:center;min-width:110px;">
+            <div style="font-size:22px;font-weight:900;color:#1d4ed8;">@att.PresentDays</div>
+            <div style="font-size:11px;color:#2563eb;font-weight:700;">LECTURES ATTENDED</div>
+          </div>
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:10px 18px;text-align:center;min-width:110px;">
+            <div style="font-size:22px;font-weight:900;color:#15803d;">@att.TotalDays</div>
+            <div style="font-size:11px;color:#16a34a;font-weight:700;">TOTAL LECTURES</div>
+          </div>
+        </div>
+        <div class="att-prog-bg"><div class="att-prog-fill" style="width:@(attPct.ToString("0.0"))%"></div></div>
+        <p style="font-size:12px;color:@(attPct>=75?"#16a34a":attPct>=60?"#d97706":"#dc2626");font-weight:700;margin:4px 0 16px;">
+          @(attPct>=75?"✅ Good Attendance":attPct>=60?"⚠️ Average — Improve":"❌ Low Attendance")
+        </p>
+
+        @if (attDetail.Any())
+        {
+          <div class="pr-sh">Date-wise Records</div>
+
+          <!-- Attendance filter bar -->
+          <div class="tab-filter-bar no-print">
+            <label>📋 Filter:</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:12px;color:#555;">Subject:</span>
+              <select class="pr-select-sm" id="attSubjSel" onchange="filterAtt()">
+                <option value="">All Subjects</option>
+                @foreach(var subj in attSubjects)
+                { <option value="@subj">@subj</option> }
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:12px;color:#555;">Status:</span>
+              <select class="pr-select-sm" id="attStatusSel" onchange="filterAtt()">
+                <option value="">All Status</option>
+                <option value="Present">Present</option>
+                <option value="Absent">Absent</option>
+                <option value="Late">Late</option>
+              </select>
+            </div>
+            <span class="filter-count" id="attCount">@attDetail.Count records</span>
+          </div>
+
+          <div class="tbl-wrap">
+          <table class="pr-tbl" id="attTbl">
+            <thead>
+              <tr><th>Date</th><th>Day</th><th>Status</th><th>Subject</th><th>Teacher</th><th>Remarks</th></tr>
+            </thead>
+            <tbody>
+              @foreach(var d in attDetail)
+              {
+                string pill = d.Status=="Present"?"s-p":d.Status=="Absent"?"s-a":"s-l";
+                string rowSubj = d.Subject ?? "";
+                <tr data-subject="@rowSubj" data-status="@d.Status">
+                  <td>@d.AttendanceDate.ToString("dd MMM yyyy")</td>
+                  <td style="color:#888;font-size:12px;">@d.AttendanceDate.ToString("ddd")</td>
+                  <td><span class="@pill">@d.Status</span></td>
+                  <td>@(string.IsNullOrEmpty(d.Subject)?"—":d.Subject)</td>
+                  <td>@(string.IsNullOrEmpty(d.SirName)?"—":d.SirName)</td>
+                  <td style="color:#888;font-size:12px;">@(d.Remarks??"")</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- ── Marks ── -->
+    <div id="tc-marks" class="pr-tc" data-section="marks">
+      @if (!marks.Any())
+      {
+        <div style="color:#aaa;text-align:center;padding:30px;">No marks records found.</div>
+      }
+      else
+      {
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:14px;">
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:10px 12px;text-align:center;">
+            <div style="font-size:18px;font-weight:900;color:#15803d;">@totObt.ToString("0") / @totMax.ToString("0")</div>
+            <div style="font-size:11px;color:#16a34a;font-weight:700;">TOTAL MARKS</div>
+          </div>
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:7px;padding:10px 12px;text-align:center;">
+            <div style="font-size:18px;font-weight:900;color:#1d4ed8;">@marksPct.ToString("0.0")%</div>
+            <div style="font-size:11px;color:#2563eb;font-weight:700;">OVERALL %</div>
+          </div>
+          <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:7px;padding:10px 12px;text-align:center;">
+            <div style="font-size:18px;font-weight:900;color:#7c3aed;">@marks.GroupBy(m=>m.ExamName).Count()</div>
+            <div style="font-size:11px;color:#7c3aed;font-weight:700;">TOTAL TESTS HELD</div>
+          </div>
+          <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:7px;padding:10px 12px;text-align:center;">
+            <div style="font-size:18px;font-weight:900;color:#ea580c;">@marks.GroupBy(m=>m.ExamName).Count(g=>g.Any(m=>m.Grade!="AB"))</div>
+            <div style="font-size:11px;color:#ea580c;font-weight:700;">TESTS ATTENDED</div>
+          </div>
+        </div>
+
+        <!-- Marks filter bar -->
+        <div class="tab-filter-bar no-print">
+          <label>📋 Filter:</label>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:12px;color:#555;">Subject:</span>
+            <select class="pr-select-sm" id="marksSubjSel" onchange="filterMarks()">
+              <option value="">All Subjects</option>
+              @foreach(var subj in markSubjects)
+              { <option value="@subj">@subj</option> }
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:12px;color:#555;">Exam:</span>
+            <select class="pr-select-sm" id="marksExamSel" onchange="filterMarks()">
+              <option value="">All Exams</option>
+              @foreach(var ex in markExams)
+              { <option value="@ex">@ex</option> }
+            </select>
+          </div>
+          <span class="filter-count" id="marksCount">@marks.Count subjects</span>
+        </div>
+
+        <div class="tbl-wrap">
+        <table class="pr-tbl" id="marksTbl">
+          <thead>
+            <tr><th>#</th><th>Exam</th><th>Subject</th><th>Date</th><th style="text-align:right;">Obtained</th><th style="text-align:right;">Max</th><th style="text-align:right;">%</th><th>Result</th></tr>
+          </thead>
+          <tbody>
+            @{
+              int sr = 0;
+              foreach(var eg in marks.GroupBy(m=>m.ExamName).OrderByDescending(g=>g.First().TestDate))
+              {
+                string examKey = eg.Key ?? "";
+                foreach(var m in eg.OrderBy(x=>x.SubjectName))
+                {
+                  sr++;
+                  bool ab  = m.Grade=="AB";
+                  decimal p = m.MaxMarks>0&&m.MarksObtained.HasValue ? Math.Round(m.MarksObtained.Value*100m/m.MaxMarks,1):0;
+                  string mSubj = m.SubjectName ?? "";
+                  <tr class="mark-row" data-subject="@mSubj" data-exam="@examKey">
+                    <td style="color:#bbb;font-size:11px;">@sr</td>
+                    <td style="font-weight:700;color:#2563eb;">@examKey</td>
+                    <td style="font-weight:600;">@m.SubjectName</td>
+                    <td style="color:#888;font-size:12px;">@(m.TestDate?.ToString("dd MMM yyyy")??"—")</td>
+                    <td style="text-align:right;font-weight:800;color:#15803d;">@(ab?"AB":m.MarksObtained?.ToString("0")??"—")</td>
+                    <td style="text-align:right;color:#555;">@m.MaxMarks</td>
+                    <td style="text-align:right;font-weight:700;">@(ab?"—":p.ToString("0.0")+"%")</td>
+                    <td>
+                      @if(ab){<span style="color:#888;font-size:12px;">Absent</span>}
+                      else if(p>=35){<span class="s-p">Pass</span>}
+                      else{<span class="s-a">Fail</span>}
+                    </td>
+                  </tr>
+                }
+              }
+            }
+          </tbody>
+        </table>
+        </div>
+      }
+    </div>
+
+    <!-- ── Fees ── -->
+    <div id="tc-fees" class="pr-tc" data-section="fees">
+      @if (!fees.Any())
+      {
+        <div style="color:#aaa;text-align:center;padding:30px;">No fee payments found.</div>
+      }
+      else
+      {
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:14px;">
+          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:10px 12px;text-align:center;">
+            <div style="font-size:18px;font-weight:900;color:#b45309;">₹@totalPaid.ToString("N0")</div>
+            <div style="font-size:11px;color:#d97706;font-weight:700;">TOTAL PAID</div>
+          </div>
+          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:10px 12px;text-align:center;">
+            <div style="font-size:18px;font-weight:900;color:#b45309;">@fees.Count</div>
+            <div style="font-size:11px;color:#d97706;font-weight:700;">RECEIPTS</div>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+        <table class="pr-tbl">
+          <thead>
+            <tr><th>#</th><th>Receipt</th><th>Date</th><th>Fee Type</th><th>Mode</th><th style="text-align:right;">Amount</th><th style="text-align:right;">Discount</th><th style="text-align:right;">Net Paid</th></tr>
+          </thead>
+          <tbody>
+            @{ int fi=0; }
+            @foreach(var f in fees.OrderByDescending(x=>x.PaymentDate))
+            {
+              fi++;
+              <tr>
+                <td style="color:#bbb;font-size:11px;">@fi</td>
+                <td style="font-weight:700;color:#2563eb;white-space:nowrap;"><a href="/Fees/Receipt/@f.PaymentId" style="color:#2563eb;">@f.ReceiptNo</a></td>
+                <td>@f.PaymentDate.ToString("dd MMM yyyy")</td>
+                <td style="color:#666;">@(f.FeeTypeName??"—")</td>
+                <td style="color:#666;">@f.PaymentMode</td>
+                <td style="text-align:right;">₹@f.Amount.ToString("N0")</td>
+                <td style="text-align:right;color:#16a34a;">@(f.Discount>0?"-₹"+f.Discount.ToString("N0"):"—")</td>
+                <td style="text-align:right;font-weight:800;color:#15803d;">₹@f.NetAmount.ToString("N0")</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr><td colspan="7" style="text-align:right;">Total Paid:</td><td style="text-align:right;color:#15803d;">₹@totalPaid.ToString("N0")</td></tr>
+          </tfoot>
+        </table>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+@section Scripts {
+<script>
+var _mode = 'print';
+var _sid  = @(Model?.StudentId ?? 0);
+
+/* ── Tab switching ── */
+function showTab(name, btn) {
+  document.querySelectorAll('.pr-tc').forEach(el => { el.classList.remove('active'); el.style.display=''; });
+  document.querySelectorAll('.pr-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tc-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── Attendance filter ── */
+function filterAtt() {
+  var subj   = document.getElementById('attSubjSel').value;
+  var status = document.getElementById('attStatusSel').value;
+  var rows   = document.querySelectorAll('#attTbl tbody tr');
+  var count  = 0;
+  rows.forEach(function(tr) {
+    var rs = tr.getAttribute('data-subject') || '';
+    var rv = tr.getAttribute('data-status') || '';
+    var ok = (!subj || rs === subj) && (!status || rv === status);
+    tr.style.display = ok ? '' : 'none';
+    if (ok) count++;
+  });
+  var el = document.getElementById('attCount');
+  if (el) el.textContent = count + ' records';
+}
+
+/* ── Marks filter ── */
+function filterMarks() {
+  var subj = document.getElementById('marksSubjSel').value;
+  var exam = document.getElementById('marksExamSel').value;
+  var visCount = 0;
+  document.querySelectorAll('#marksTbl tr.mark-row').forEach(function(tr) {
+    var rs = tr.getAttribute('data-subject') || '';
+    var re = tr.getAttribute('data-exam') || '';
+    var ok = (!subj || rs === subj) && (!exam || re === exam);
+    tr.style.display = ok ? '' : 'none';
+    if (ok) visCount++;
+  });
+  var el = document.getElementById('marksCount');
+  if (el) el.textContent = visCount + ' rows';
+}
+
+/* ── Modal ── */
+function openModal(mode) {
+  _mode = mode;
+  document.getElementById('modalTitle').textContent = mode==='print' ? '🖨️ Print Options' : '⬇️ Excel Options';
+  document.getElementById('modalPrintBtn').style.display = mode==='print' ? '' : 'none';
+  document.getElementById('modalExcelBtn').style.display = mode==='excel' ? '' : 'none';
+  document.getElementById('optModal').classList.add('open');
+}
+function closeModal() { document.getElementById('optModal').classList.remove('open'); }
+
+function doPrint() {
+  closeModal();
+  var secs = getSections();
+  // Use print-hide class (not inline style) so CSS !important is respected
+  document.querySelectorAll('.pr-tc').forEach(function(el) {
+    var s = el.getAttribute('data-section');
+    if (secs.includes(s)) {
+      el.classList.remove('print-hide');
+    } else {
+      el.classList.add('print-hide');
+    }
+  });
+  // Temporarily unhide any filter-hidden rows so they print
+  document.querySelectorAll('#attTbl tbody tr, #marksTbl tbody tr').forEach(function(tr) {
+    tr.setAttribute('data-saved-display', tr.style.display);
+    tr.style.display = '';
+  });
+  setTimeout(function() {
+    window.print();
+    // Restore print-hide
+    document.querySelectorAll('.pr-tc').forEach(function(el) {
+      el.classList.remove('print-hide');
+    });
+    // Restore filter-hidden rows
+    document.querySelectorAll('#attTbl tbody tr, #marksTbl tbody tr').forEach(function(tr) {
+      tr.style.display = tr.getAttribute('data-saved-display') || '';
+    });
+  }, 150);
+}
+
+function doExcel() {
+  closeModal();
+  var sections = getSections().join(',');
+  window.location.href = '/Student/ExportProfile360?studentId=' + _sid + '&sections=' + sections;
+}
+
+function getSections() {
+  var s = [];
+  if (document.getElementById('opt-info').checked)  s.push('info');
+  if (document.getElementById('opt-att').checked)   s.push('att');
+  if (document.getElementById('opt-marks').checked) s.push('marks');
+  if (document.getElementById('opt-fees').checked)  s.push('fees');
+  return s;
+}
+
+// Close modal on background click
+document.getElementById('optModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+}

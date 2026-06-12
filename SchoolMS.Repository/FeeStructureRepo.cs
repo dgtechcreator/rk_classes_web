@@ -41,6 +41,32 @@ public class FeeStructureRepo(CommonConnectivity db)
     public void Delete(int structureId)
         => db.Exec("sp_DeleteFeeStructure", new() { {"@StructureId",structureId} });
 
+    /// <summary>
+    /// Smart lookup: tries 4 levels of matching (year+class+section → year+class →
+    /// name-based class+section → name-based class-only) so fee always shows even
+    /// when stored IDs differ between Students and FeeStructure.
+    /// </summary>
+    public List<FeeStructure> GetAllForStudent(int studentId)
+        => db.Read("sp_GetFeeStructureByStudent",
+            new() { {"@StudentId", studentId} },
+            r => new FeeStructure {
+                StructureId    = G.G<int>(r,"StructureId"),
+                AcademicYearId = G.G<int>(r,"AcademicYearId"),
+                YearName       = G.G<string>(r,"YearName"),
+                ClassId        = G.G<int>(r,"ClassId"),
+                ClassName      = G.G<string>(r,"ClassName"),
+                SectionId      = G.G<int>(r,"SectionId"),
+                SectionName    = G.G<string>(r,"SectionName"),
+                FeeTypeId      = G.G<int>(r,"FeeTypeId"),
+                FeeTypeName    = G.G<string>(r,"FeeTypeName"),
+                Amount         = G.G<decimal>(r,"Amount"),
+                DueDay         = G.G<int>(r,"DueDay"),
+                IsMonthly      = G.G<bool>(r,"IsMonthly"),
+                Remarks        = G.G<string>(r,"Remarks"),
+                CreatedByName  = G.G<string>(r,"CreatedByName"),
+                CreatedAt      = G.G<DateTime>(r,"CreatedAt")
+            });
+
     public List<FeeStructureSummary> GetSummary(int? yearId)
         => db.Read("sp_GetFeeStructureSummary", new() { {"@AcademicYearId",yearId} },
             r => new FeeStructureSummary {

@@ -4,4 +4,7 @@
     <ProjectReference Include="..\SchoolMS.Domain\SchoolMS.Domain.csproj" />
     <ProjectReference Include="..\SchoolMS.Repository\SchoolMS.Repository.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="itext7" Version="8.0.4" />
+  </ItemGroup>
 </Project>

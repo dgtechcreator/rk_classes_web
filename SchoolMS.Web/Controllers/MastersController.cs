@@ -17,9 +17,10 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
         ViewBag.Batches         = svc.GetBatches();
         ViewBag.Subjects        = svc.GetSubjects();
         ViewBag.FeeTypes        = lookup.GetFeeTypes();
-        ViewBag.FeeList         = feeSvc.GetAll(currentYearId, null, null);
-        ViewBag.CurrentYearId   = currentYearId;
-        ViewBag.CurrentYearName = svc.GetYears().FirstOrDefault(y => y.IsCurrent)?.YearName ?? "";
+        ViewBag.FeeList           = feeSvc.GetAll(null, null, null);
+        ViewBag.CurrentYearId     = currentYearId;
+        ViewBag.CurrentYearName   = svc.GetYears().FirstOrDefault(y => y.IsCurrent)?.YearName ?? "";
+        ViewBag.ExpenseCategories = svc.GetExpenseCategories();
         return View();
     }
 
@@ -101,10 +102,10 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
 
     // ── Subject ───────────────────────────────────────────────
     [HttpPost]
-    public IActionResult SaveSubject(int subjectId, string subjectName, string? subjectCode, int classId, int maxMarks = 100, int passMarks = 35, bool isActive = true)
+    public IActionResult SaveSubject(int subjectId, string subjectName, string? subjectCode, int classId = 0, int maxMarks = 100, int passMarks = 35, bool isActive = true)
     {
         try {
-            svc.SaveSubject(new Subject { SubjectId=subjectId, SubjectName=subjectName, SubjectCode=subjectCode, ClassId=classId, MaxMarks=maxMarks, PassMarks=passMarks, IsActive=isActive });
+            svc.SaveSubject(new Subject { SubjectId=subjectId, SubjectName=subjectName, SubjectCode=subjectCode, ClassId=classId==0?(int?)null:classId, MaxMarks=maxMarks, PassMarks=passMarks, IsActive=isActive });
             TempData["Success"] = $"Subject '{subjectName}' saved.";
         } catch (Exception ex) { TempData["Error"] = ex.Message; }
         return RedirectToAction("Index", null, "subjects");
@@ -116,5 +117,24 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
         try { svc.DeleteSubject(id); TempData["Success"] = "Subject deleted."; }
         catch (Exception ex) { TempData["Error"] = ex.Message; }
         return RedirectToAction("Index", null, "subjects");
+    }
+
+    // ── Expense Categories ────────────────────────────────────
+    [HttpPost]
+    public IActionResult SaveExpenseCat(int categoryId, string categoryName, bool isActive = true)
+    {
+        try {
+            svc.SaveExpenseCat(new ExpenseCat { CategoryId=categoryId, CategoryName=categoryName, IsActive=isActive });
+            TempData["Success"] = $"Expense category '{categoryName}' saved.";
+        } catch (Exception ex) { TempData["Error"] = ex.Message; }
+        return RedirectToAction("Index", null, "expcats");
+    }
+
+    [HttpPost]
+    public IActionResult DeleteExpenseCat(int id)
+    {
+        try { svc.DeleteExpenseCat(id); TempData["Success"] = "Expense category deleted."; }
+        catch (Exception ex) { TempData["Error"] = ex.Message; }
+        return RedirectToAction("Index", null, "expcats");
     }
 }

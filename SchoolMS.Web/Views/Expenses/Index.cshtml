@@ -20,7 +20,14 @@
     <option value="">All Months</option>
     @for(int m=1;m<=12;m++){var mn=System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m);<option value="@m" selected=@(Model.MonthFilter==m?"selected":"")>@mn</option>}
   </select>
-  <input type="number" name="year" value="@Model.YearFilter" class="fc" style="width:90px;" placeholder="Year"/>
+  <select name="year" class="fs">
+    <option value="">All Years</option>
+    @foreach(var y in Model.Years)
+    {
+      var startYr = y.YearName?.Length >= 4 ? y.YearName[..4] : "";
+      <option value="@startYr" selected=@(Model.YearFilter!=null && Model.YearFilter.ToString()==startYr?"selected":"")>@y.YearName @(y.IsCurrent?"(Current)":"")</option>
+    }
+  </select>
   <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Filter</button>
   <a href="/Expenses/Index" class="btn btn-outline btn-sm"><i class="fas fa-times"></i></a>
 </div>
