@@ -182,6 +182,28 @@ public class FeesController(FeesService svc, LookupService lookup,
         });
     }
 
+    // ── Summary JSON for Dashboard popup ─────────────────────────
+    [HttpGet]
+    public IActionResult SummaryJson(string? month=null)
+    {
+        var (data, _) = svc.GetAll(1, 100, null, month, null);
+        var result = data.Select(p => new {
+            paymentId = p.PaymentId,
+            receiptNo = p.ReceiptNo,
+            studentName = p.StudentName,
+            admissionNo = p.AdmissionNo,
+            className = p.ClassName,
+            sectionName = p.SectionName,
+            batchName = p.BatchName,
+            netAmount = p.NetAmount,
+            discount = p.Discount,
+            paymentMode = p.PaymentMode,
+            paymentDate = p.PaymentDate.ToString("dd MMM yyyy"),
+            collectorName = p.CollectorName
+        }).ToList();
+        return Json(result);
+    }
+
     public IActionResult Receipt(int id)
     {
         var payment = svc.GetPaymentById(id);

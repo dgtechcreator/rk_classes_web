@@ -68,11 +68,11 @@ body { padding-bottom: 80px; }
     <div class="kpi-val">@Model.NewToday</div>
     <div class="kpi-lbl">New Admissions Today</div>
   </div>
-    <a href="/Fees/Index?search=true" class="kpi indigo" style="cursor:pointer;text-decoration:none;color:inherit;">
+    <div class="kpi indigo" onclick="openFeesPopup()" style="cursor:pointer;">
         <div class="kpi-ico indigo"><i class="fas fa-rupee-sign"></i></div>
         <div class="kpi-val">₹@Model.FeesThisMonth.ToString("N0")</div>
         <div class="kpi-lbl">Fees This Month <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
-    </a>
+    </div>
   <div class="kpi pink">
     <div class="kpi-ico pink"><i class="fas fa-receipt"></i></div>
     <div class="kpi-val">₹@Model.ExpensesThisMonth.ToString("N0")</div>
