@@ -17,7 +17,7 @@ public class ParentService(ParentRepo repo)
             return (false, null, "No account found. Please register first.");
         if (!p.IsActive)
             return (false, null, "Your account has been deactivated. Contact school.");
-        if (p.Password != password)
+        if (p.Password.Trim() != password.Trim())
             return (false, null, "Incorrect password. Please try again.");
 
         repo.UpdateLastLogin(p.ParentId);
@@ -51,4 +51,7 @@ public class ParentService(ParentRepo repo)
 
     // Get children for a parent phone
     public List<Student> GetChildren(string phone) => repo.GetChildren(phone);
+
+    // Get all parent accounts
+    public List<ParentAccount> GetAllParents() => repo.GetAllParents();
 }

@@ -9,9 +9,9 @@ public class AuthService(AuthRepo repo)
     {
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             return (false, null, "Username and password are required.");
-        var u = repo.Validate(username);
+        var u = repo.Validate(username.Trim());
         if (u == null) return (false, null, "Invalid username or password.");
-        if (u.PasswordHash != password) return (false, null, "Invalid username or password.");
+        if (u.PasswordHash.Trim() != password.Trim()) return (false, null, "Invalid username or password.");
         repo.UpdateLogin(u.UserId);
         return (true, u, "Login successful.");
     }
