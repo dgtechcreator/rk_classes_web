@@ -357,8 +357,9 @@ textarea.fc { resize:vertical; min-height:80px; }
 
   /* ─ Topbar ─ */
   .topbar   { left:0; padding:0 12px; gap:8px; }
-  .tb-title { font-size:13px; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .tb-search{ display:none; }
+  .tb-title { font-size:13px; max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tb-search{ display:flex; flex:1; min-width:100px; padding:6px 10px; font-size:12px; }
+  .tb-search input { font-size:12px; }
   .menu-tog { display:flex; }
 
   /* ─ Main ─ */
@@ -528,7 +529,10 @@ textarea.fc { resize:vertical; min-height:80px; }
 @media (max-width:480px) {
   .main     { padding:8px; }
   .topbar   { padding:0 10px; gap:6px; }
-  .tb-title { max-width:130px; font-size:12px; }
+  .tb-title { max-width:70px; font-size:12px; }
+  .tb-search{ display:flex !important; flex:1; min-width:80px; padding:5px 8px; font-size:11px; }
+  .tb-search input { font-size:11px; }
+  .tb-search i { font-size:11px; }
 
   .kpi-grid { grid-template-columns:1fr 1fr; gap:6px; }
   .kpi      { padding:10px 8px; }
