@@ -11,8 +11,6 @@ public class TaskController(TaskService taskSvc, NotificationService notifSvc) :
     [HttpGet]
     public IActionResult Index()
     {
-        if (HttpContext.Session.GetInt32("RoleId") != 1)
-            return RedirectToAction("AccessDenied", "Home");
         int userId = HttpContext.Session.GetUserId() ?? 0;
         var tasks = taskSvc.GetUserTasks(userId);
         return View(tasks);
