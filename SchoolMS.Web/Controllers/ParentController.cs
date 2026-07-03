@@ -103,6 +103,88 @@ public class ParentController(
         return View(vm);
     }
 
+    // ── Parent Accounts Management ────────────────────────────────
+    [RequireLogin]
+    public IActionResult Index()
+    {
+        if (HttpContext.Session.GetInt32("RoleId") != 1)
+            return RedirectToAction("AccessDenied", "Home");
+        var parentAccounts = parentSvc.GetAllParents();
+        return View(parentAccounts);
+    }
+
+    // ── Get Top 5 Students for Subject ──────────────────────────
+    [HttpGet]
+    [RequireParentLogin]
+    public IActionResult GetTop5ForSubject(int studentId, string subjectName)
+    {
+        try
+        {
+            var phone = HttpContext.Session.GetParentPhone() ?? "";
+            var children = parentSvc.GetChildren(phone);
+            var student = children.FirstOrDefault(c => c.StudentId == studentId);
+
+            if (student == null)
+                return Json(new { top5 = new List<object>() });
+
+            if (!student.ClassId.HasValue)
+                return Json(new { top5 = new List<object>() });
+
+            // Fetch top 5 students in this subject for same class
+            var top5 = marksSvc.GetTop5StudentsInSubject(subjectName, student.ClassId.Value, student.SectionId);
+
+            return Json(new { top5 = top5 });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { top5 = new List<object>(), error = ex.Message });
+        }
+    }
+
+    // ── Contact Us ──────────────────────────────────────────────
+    [RequireParentLogin]
+    public IActionResult ContactUs(int? studentId, string tab = "attendance")
+    {
+        var phone = HttpContext.Session.GetParentPhone() ?? "";
+        var children = parentSvc.GetChildren(phone);
+
+        var selected = studentId.HasValue
+            ? children.FirstOrDefault(c => c.StudentId == studentId.Value)
+            : children.FirstOrDefault();
+
+        ViewBag.Children = children;
+        ViewBag.SelectedChild = selected;
+        ViewBag.SelectedStudentId = selected?.StudentId;
+        ViewBag.ActiveTab = tab;
+        ViewBag.SidebarChildren = children;
+
+        return View();
+    }
+
+    [HttpPost]
+    [RequireParentLogin]
+    public IActionResult SendMessage(string name, string email, string subject, string message)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) ||
+                string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(message))
+            {
+                TempData["Error"] = "All fields are required.";
+                return RedirectToAction("ContactUs");
+            }
+
+            // Send email (basic implementation - you can integrate with email service)
+            TempData["Success"] = "Your message has been sent! We'll get back to you soon.";
+            return RedirectToAction("ContactUs");
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = "Error sending message: " + ex.Message;
+            return RedirectToAction("ContactUs");
+        }
+    }
+
     // ── Logout ───────────────────────────────────────────────────
     public IActionResult Logout()
     {

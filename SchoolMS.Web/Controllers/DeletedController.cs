@@ -9,6 +9,8 @@ public class DeletedController(StudentService studentSvc, FacultyService faculty
 {
     public IActionResult Index()
     {
+        if (HttpContext.Session.GetInt32("RoleId") != 1)
+            return RedirectToAction("AccessDenied", "Home");
         var (students, _) = studentSvc.GetAll(1, 10000, null, null, null, null, null, "Inactive");
         var (faculty, _)  = facultySvc.GetAll(null, "Inactive", null, 1, 10000);
         var receipts      = feesSvc.GetDeletedPayments();
