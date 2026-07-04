@@ -40,7 +40,7 @@ public class LookupRepo(CommonConnectivity db)
         var classStrengths = db.Sql(@"
             SELECT c.ClassId, c.ClassName, c.OrderNo, COUNT(DISTINCT s.StudentId) as StudentCount
             FROM Classes c
-            LEFT JOIN Students s ON s.ClassId=c.ClassId AND ISNULL(s.Status,'Active') <> 'Deleted'
+            LEFT JOIN Students s ON s.ClassId=c.ClassId AND s.Status='Active'
             WHERE c.IsActive=1
             GROUP BY c.ClassId, c.ClassName, c.OrderNo
             ORDER BY c.OrderNo",
@@ -60,7 +60,7 @@ public class LookupRepo(CommonConnectivity db)
         stats.AllClasses = db.Sql(@"
             SELECT c.ClassId, c.ClassName, c.OrderNo, c.IsActive, COUNT(DISTINCT s.StudentId) as StudentCount
             FROM Classes c
-            LEFT JOIN Students s ON s.ClassId=c.ClassId AND ISNULL(s.Status,'Active') <> 'Deleted'
+            LEFT JOIN Students s ON s.ClassId=c.ClassId AND s.Status='Active'
             WHERE c.IsActive=1
             GROUP BY c.ClassId, c.ClassName, c.OrderNo, c.IsActive
             ORDER BY c.OrderNo",
