@@ -54,7 +54,14 @@
                 <option value="">— Select Class —</option>
                 @foreach (var c in classes)
                 {
-                    <option value="@c.ClassId">@c.ClassName</option>
+                    if (ViewBag.PreselectedClassId != null && c.ClassId == (int?)ViewBag.PreselectedClassId)
+                    {
+                        <option value="@c.ClassId" selected>@c.ClassName</option>
+                    }
+                    else
+                    {
+                        <option value="@c.ClassId">@c.ClassName</option>
+                    }
                 }
             </select>
         </div>
@@ -207,10 +214,12 @@ function saveBatch() {
     form.submit();
 }
 
-// Load students on page load if any
-window.addEventListener('load', () => {
-    if (@batch.StudentIds.Count > 0) {
-        document.getElementById('selectAllChk').checked = true;
+// Auto-load students when class is pre-selected
+window.addEventListener('load', async () => {
+    const classId = document.getElementById('classId').value;
+    if (classId) {
+        // Class is pre-selected, load students
+        await loadStudents();
         updateCount();
     }
 });

@@ -214,10 +214,23 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
                 TempData["Error"] = "Batch not found.";
                 return RedirectToAction("AttendanceBatches");
             }
+
             ViewBag.Batch = batch;
             ViewBag.Classes = svc.GetClasses();
             ViewBag.Sections = svc.GetSections();
             ViewBag.Batches = svc.GetBatches();
+
+            // Try to find the class of the batch's students
+            if (batch.StudentIds.Any())
+            {
+                var students = studentSvc.GetAll(1, 10000, null, null, null, null, null, "Active").Item1;
+                var firstStudent = students.FirstOrDefault(s => batch.StudentIds.Contains(s.StudentId));
+                if (firstStudent != null)
+                {
+                    ViewBag.PreselectedClassId = firstStudent.ClassId;
+                }
+            }
+
             return View();
         }
         catch (Exception ex)
