@@ -153,9 +153,8 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
     {
         try
         {
-            var currentYearId = lookup.GetCurrentYearId();
             var (students, _) = studentSvc.GetAll(1, 10000, null, classId > 0 ? classId : null,
-                sectionId, batchId, currentYearId, "Active");
+                sectionId, batchId, null, "Active");
             return Json(students.Select(s => new {
                 studentId = s.StudentId,
                 fullName = s.FullName,
