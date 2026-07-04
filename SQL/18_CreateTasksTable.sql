@@ -13,8 +13,8 @@ BEGIN
         CompletedAt DATETIME,
         IsCompleted BIT DEFAULT 0,
         [Status] NVARCHAR(20) DEFAULT 'Pending', -- Pending, Overdue, Completed, Dismissed
-        FOREIGN KEY (StudentId) REFERENCES Students(StudentId),
-        FOREIGN KEY (UserId) REFERENCES Users(UserId)
+        FOREIGN KEY (StudentId) REFERENCES Students(StudentId) ON DELETE SET NULL,
+        FOREIGN KEY (UserId) REFERENCES Users(UserId) ON DELETE SET NULL
     );
 
     CREATE INDEX IX_Tasks_Status ON Tasks([Status]);

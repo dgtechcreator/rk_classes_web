@@ -7,8 +7,8 @@ CREATE PROCEDURE sp_SaveTask
     @TaskId INT,
     @Title NVARCHAR(200),
     @Description NVARCHAR(MAX),
-    @StudentId INT,
-    @UserId INT,
+    @StudentId INT = NULL,
+    @UserId INT = NULL,
     @Priority NVARCHAR(20),
     @Category NVARCHAR(50),
     @DueDate DATETIME,
@@ -16,6 +16,10 @@ CREATE PROCEDURE sp_SaveTask
     @IsCompleted BIT
 AS
 BEGIN
+    -- Convert 0 to NULL for nullable foreign keys
+    SET @StudentId = CASE WHEN @StudentId = 0 THEN NULL ELSE @StudentId END;
+    SET @UserId = CASE WHEN @UserId = 0 THEN NULL ELSE @UserId END;
+
     IF @TaskId = 0 OR @TaskId IS NULL
     BEGIN
         INSERT INTO Tasks (Title, Description, StudentId, UserId, Priority, Category, DueDate, Status, IsCompleted, CreatedAt)
@@ -24,7 +28,7 @@ BEGIN
     ELSE
     BEGIN
         UPDATE Tasks
-        SET Title = @Title, Description = @Description, StudentId = @StudentId, Priority = @Priority,
+        SET Title = @Title, Description = @Description, StudentId = @StudentId, UserId = @UserId, Priority = @Priority,
             Category = @Category, DueDate = @DueDate, Status = @Status, IsCompleted = @IsCompleted,
             CompletedAt = CASE WHEN @IsCompleted = 1 THEN GETDATE() ELSE NULL END
         WHERE TaskId = @TaskId
