@@ -145,6 +145,7 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
         ViewBag.Classes = svc.GetClasses();
         ViewBag.Sections = svc.GetSections();
         ViewBag.Batches = svc.GetBatches();
+        ViewBag.AttendanceBatches = batchSvc.GetAll();
         return View();
     }
 
@@ -185,6 +186,70 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
         {
             return Json(new { success = false, message = ex.Message });
         }
+    }
+
+    [HttpPost]
+    public IActionResult DeleteAttendanceBatch(int batchId)
+    {
+        try
+        {
+            batchSvc.DeleteBatch(batchId);
+            TempData["Success"] = "Attendance batch deleted successfully.";
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        return RedirectToAction("AttendanceBatches");
+    }
+
+    [HttpGet]
+    public IActionResult EditAttendanceBatch(int batchId)
+    {
+        try
+        {
+            var batch = batchSvc.GetById(batchId);
+            if (batch == null)
+            {
+                TempData["Error"] = "Batch not found.";
+                return RedirectToAction("AttendanceBatches");
+            }
+            ViewBag.Batch = batch;
+            ViewBag.Classes = svc.GetClasses();
+            ViewBag.Sections = svc.GetSections();
+            ViewBag.Batches = svc.GetBatches();
+            return View();
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToAction("AttendanceBatches");
+        }
+    }
+
+    [HttpPost]
+    public IActionResult SaveAttendanceBatch(int batchId, string batchName, List<int> studentIds)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(batchName) || !studentIds.Any())
+                throw new Exception("Batch name and students are required.");
+
+            var batch = new AttendanceBatch
+            {
+                BatchId = batchId,
+                BatchName = batchName,
+                StudentIds = studentIds
+            };
+
+            batchSvc.CreateBatch(batchName, studentIds);
+            TempData["Success"] = "Batch updated successfully.";
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+        return RedirectToAction("AttendanceBatches");
     }
 }
 
