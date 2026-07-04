@@ -19,7 +19,9 @@ public class MarksController(MarksService svc, LookupService lookup, MastersServ
         var sections = lookup.GetSections();
         var batches  = lookup.GetBatches();
         var subjects = mastersSvc.GetSubjects();
-        var examList = svc.GetExamList(yearId, classId);
+
+        // Get all exams for the year (no class filter)
+        var examList = svc.GetExamList(yearId, null);
 
         if (subjectId == null && subjects.Count == 1) subjectId = subjects[0].SubjectId;
 
@@ -65,58 +67,100 @@ public class MarksController(MarksService svc, LookupService lookup, MastersServ
         }
     }
 
-    public IActionResult Report(int? yearId, int? classId, int? sectionId, int? batchId,
-        int? subjectId, int? studentId, string? examName, DateTime? testDate)
+    public IActionResult Report(int? yearId)
     {
         yearId ??= lookup.GetCurrentYearId();
-        var years    = lookup.GetYears();
-        var classes  = lookup.GetClasses();
-        var sections = lookup.GetSections();
-        var batches  = lookup.GetBatches();
-        var subjects = mastersSvc.GetSubjects();
-        var examList = svc.GetExamList(yearId, classId);
-        var students = classId.HasValue ? svc.GetStudentsForEntry(classId, sectionId, batchId, yearId) : new List<StudentMarkRow>();
+        var years = lookup.GetYears();
 
-        // Auto-load best exam when class is selected but no exam specified
-        // Prefer exam that actually has mark entries (EntryCount > 0); fallback to first
-        if (classId.HasValue && string.IsNullOrWhiteSpace(examName) && examList.Any())
+        ViewBag.YearId = yearId;
+        ViewBag.Years = years;
+        return View();
+    }
+
+    [HttpGet]
+    public IActionResult GetSubjectsWithTests(int yearId)
+    {
+        try
         {
-            var best = examList.FirstOrDefault(e => e.EntryCount > 0) ?? examList.First();
-            examName = best.ExamName;
-            testDate ??= best.TestDate;
-        }
+            var allTests = svc.GetAllTestsByYear(yearId);
+            var subjects = allTests
+                .GroupBy(t => new { t.SubjectId, t.SubjectName })
+                .Select(g => new {
+                    subjectId = g.Key.SubjectId,
+                    subjectName = g.Key.SubjectName,
+                    testCount = g.Select(t => t.ExamId).Distinct().Count()
+                })
+                .OrderBy(s => s.subjectName)
+                .ToList();
 
-        var data = new List<TestMark>();
-        if (classId.HasValue && !string.IsNullOrWhiteSpace(examName))
+            return Json(subjects);
+        }
+        catch (Exception ex)
         {
-            data = DedupeMarks(svc.GetTestResult(examName, yearId ?? 0, classId, sectionId, batchId, studentId, null));
-            // Filter by subject if selected
-            if (subjectId.HasValue)
-                data = data.Where(m => m.SubjectId == subjectId.Value).ToList();
+            return BadRequest(new { error = ex.Message });
         }
+    }
 
-        // All entries view: every TestMark row for this class/section/year
-        var allMarks = classId.HasValue
-            ? svc.GetAllMarksForClass(classId, sectionId, batchId, yearId)
-            : new List<TestMark>();
+    [HttpGet]
+    public IActionResult GetTestsForSubject(int subjectId, int yearId)
+    {
+        try
+        {
+            var allTests = svc.GetAllTestsByYear(yearId);
+            var tests = allTests
+                .Where(t => t.SubjectId == subjectId)
+                .GroupBy(t => new { t.ExamId, t.ExamName, t.TestDate, t.ClassId, t.ClassName })
+                .Select(g => new {
+                    examId = g.Key.ExamId,
+                    examName = g.Key.ExamName,
+                    testDate = g.Key.TestDate?.ToString("dd MMM yyyy"),
+                    classId = g.Key.ClassId,
+                    className = g.Key.ClassName,
+                    studentCount = g.Select(x => x.StudentId).Distinct().Count()
+                })
+                .OrderByDescending(t => t.testDate)
+                .ToList();
 
-        ViewBag.Years     = years;
-        ViewBag.Classes   = classes;
-        ViewBag.Sections  = sections;
-        ViewBag.Batches   = batches;
-        ViewBag.Subjects  = subjects;
-        ViewBag.ExamList  = examList;
-        ViewBag.Students  = students;
-        ViewBag.AllMarks  = allMarks;
-        ViewBag.YearId    = yearId;
-        ViewBag.ClassId   = classId;
-        ViewBag.SectionId = sectionId;
-        ViewBag.BatchId   = batchId;
-        ViewBag.SubjectId = subjectId;
-        ViewBag.StudentId = studentId;
-        ViewBag.ExamName  = examName ?? "";
-        ViewBag.TestDate  = testDate?.ToString("yyyy-MM-dd") ?? "";
-        return View(data);
+            return Json(tests);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpGet]
+    public IActionResult GetTestMarksDetailed(string examName, int classId, int subjectId, int yearId)
+    {
+        try
+        {
+            var marks = svc.GetTestResult(examName, yearId, classId, null, null, null, null)
+                .Where(m => m.SubjectId == subjectId)
+                .OrderByDescending(m => m.MarksObtained)
+                .ToList();
+
+            return Json(new {
+                marks = marks.Select(m => new {
+                    studentId = m.StudentId,
+                    fullName = m.FullName,
+                    className = m.ClassName,
+                    batchName = m.BatchName,
+                    obtainedMarks = m.MarksObtained,
+                    maxMarks = m.MaxMarks,
+                    grade = m.Grade
+                }).ToList(),
+                testInfo = marks.FirstOrDefault() != null ? new {
+                    examName = marks.First().ExamName,
+                    subjectName = marks.First().SubjectName,
+                    className = marks.First().ClassName,
+                    testDate = marks.First().TestDate?.ToString("dd MMM yyyy")
+                } : null
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     public IActionResult TopStudents(int? yearId, int? classId, int? sectionId)
@@ -284,6 +328,33 @@ public class MarksController(MarksService svc, LookupService lookup, MastersServ
                 ?? g.FirstOrDefault(x => x.Grade == "AB")          // then AB (absent)
                 ?? g.First())                                       // fallback
             .ToList();
+
+    [HttpGet]
+    public IActionResult GetDateWiseTests(string date, int? classId, int? sectionId, int? batchId)
+    {
+        if (!DateTime.TryParse(date, out var selectedDate))
+            return Json(new List<object>());
+
+        var allMarks = svc.GetAllMarksForClass(classId, sectionId, batchId, null);
+        var result = allMarks
+            .Where(m => m.EnteredAt.HasValue && m.EnteredAt.Value.Date == selectedDate.Date)
+            .GroupBy(m => new { m.ExamId, m.ExamName, m.ClassName, m.SectionName, m.BatchName })
+            .Select(g => new {
+                examName = g.Key.ExamName ?? "",
+                className = g.Key.ClassName ?? "",
+                sectionName = g.Key.SectionName ?? "",
+                batchName = g.Key.BatchName ?? "",
+                testDate = selectedDate.ToString("dd MMM yyyy"),
+                entryCount = g.Count(),
+                classId = g.First().ClassId,
+                sectionId = g.First().SectionId,
+                batchId = g.First().BatchId
+            })
+            .Distinct()
+            .ToList();
+
+        return Json(result);
+    }
 }
 
 public class MarksSaveReq

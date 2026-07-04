@@ -83,7 +83,8 @@
     {
     <table>
       <thead>
-        <tr><th>Photo</th><th>Admission No</th><th>Student Name</th><th>Std</th><th>Admission Date</th><th>Medium/Stream</th><th>Batch</th><th>Father</th><th>Father Contact</th><th>Mother Contact</th><th>Status</th><th>Added By</th><th></th></tr>
+        <tr><th>Photo</th><th>Admission No</th><th>Student Name</th><th>Std</th><th>Admission Date</th><th>Medium/Stream</th><th>Batch</th><th>Father</th><th>Father Contact</th><th>Mother Contact</th><th>Status</th><th>Added By</th><th></th>
+        </tr>
       </thead>
       <tbody>
       @foreach (var s in Model.Students)
@@ -111,16 +112,22 @@
                 <i class="fas fa-phone"></i>
               </button>
               <div id="call-@s.StudentId" class="contact-dropdown" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:100;min-width:160px;">
+                @if (!string.IsNullOrEmpty(s.Phone))
+                {
+                  <a href="tel:@s.Phone" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
+                    📞 Student: @s.Phone
+                  </a>
+                }
                 @if (!string.IsNullOrEmpty(s.FatherPhone))
                 {
                   <a href="tel:@s.FatherPhone" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
                     📞 Father: @s.FatherPhone
                   </a>
                 }
-                @if (!string.IsNullOrEmpty(s.Phone))
+                @if (!string.IsNullOrEmpty(s.MotherPhone))
                 {
-                  <a href="tel:@s.Phone" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
-                    📞 Mother/Student: @s.Phone
+                  <a href="tel:@s.MotherPhone" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
+                    📞 Mother: @s.MotherPhone
                   </a>
                 }
               </div>
@@ -132,16 +139,22 @@
                 <i class="fab fa-whatsapp"></i>
               </button>
               <div id="whatsapp-@s.StudentId" class="contact-dropdown" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:100;min-width:160px;">
+                @if (!string.IsNullOrEmpty(s.Phone))
+                {
+                  <a href="https://wa.me/@(s.Phone.Replace("+", "").Replace(" ", "").Replace("-", ""))?text=Hello" target="_blank" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#25D366;font-size:13px;font-weight:600;">
+                    💬 Student
+                  </a>
+                }
                 @if (!string.IsNullOrEmpty(s.FatherPhone))
                 {
                   <a href="https://wa.me/@(s.FatherPhone.Replace("+", "").Replace(" ", "").Replace("-", ""))?text=Hello" target="_blank" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#25D366;font-size:13px;font-weight:600;">
                     💬 Father
                   </a>
                 }
-                @if (!string.IsNullOrEmpty(s.Phone))
+                @if (!string.IsNullOrEmpty(s.MotherPhone))
                 {
-                  <a href="https://wa.me/@(s.Phone.Replace("+", "").Replace(" ", "").Replace("-", ""))?text=Hello" target="_blank" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#25D366;font-size:13px;font-weight:600;">
-                    💬 Mother/Student
+                  <a href="https://wa.me/@(s.MotherPhone.Replace("+", "").Replace(" ", "").Replace("-", ""))?text=Hello" target="_blank" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#25D366;font-size:13px;font-weight:600;">
+                    💬 Mother
                   </a>
                 }
               </div>

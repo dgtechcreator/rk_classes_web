@@ -95,7 +95,7 @@ public class FeesRepo(CommonConnectivity db)
             TotalCollected = G.G<decimal>(r, "TotalCollected"),
             TotalDiscount = G.G<decimal>(r, "TotalDiscount"),
             Balance = G.G<decimal>(r, "Balance")
-        });
+        }).Cast<dynamic>().ToList();
     }
 
     static FeePayment MapFee(SqlDataReader r) => new() {

@@ -26,6 +26,7 @@ CREATE PROCEDURE sp_SaveFeePayment
   @Month          NVARCHAR(20)  = NULL,
   @Remarks        NVARCHAR(300) = NULL,
   @CollectedBy    INT           = NULL,
+  @DueDate        DATE          = NULL,
   @NewPaymentId   INT OUTPUT
 AS
 BEGIN
@@ -37,14 +38,14 @@ BEGIN
 
   INSERT INTO FeePayments
       (ReceiptNo, StudentId, FeeTypeId, Amount, Discount, LateFine, NetAmount,
-       PaymentDate, PaymentMode, TransactionRef, AcademicYearId, Month, Remarks, CollectedBy)
+       PaymentDate, PaymentMode, TransactionRef, AcademicYearId, Month, Remarks, CollectedBy, DueDate)
   VALUES
       (@RNo, @StudentId,
        NULLIF(@FeeTypeId, 0),
        @Amount, @Discount, @LateFine,
        @Amount - @Discount + @LateFine,
        @PaymentDate, @PaymentMode, @TransactionRef,
-       @AcademicYearId, @Month, @Remarks, @CollectedBy);
+       @AcademicYearId, @Month, @Remarks, @CollectedBy, @DueDate);
 
   SET @NewPaymentId = SCOPE_IDENTITY();
 END

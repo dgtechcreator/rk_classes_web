@@ -13,12 +13,15 @@ public class AttendanceRepo(CommonConnectivity db)
         r => new AttendanceRecord {
             StudentId=G.G<int>(r,"StudentId"), FullName=G.G<string>(r,"FullName")??"",
             AdmissionNo=G.G<string>(r,"AdmissionNo")??"", RollNo=G.G<string>(r,"RollNo"),
-            ClassName=G.G<string>(r,"ClassName"), SectionName=G.G<string>(r,"SectionName"),
-            BatchName=G.G<string>(r,"BatchName"), ProfilePicPath=G.G<string>(r,"ProfilePicPath"),
+            ClassId=G.G<int?>(r,"ClassId"), ClassName=G.G<string>(r,"ClassName"),
+            SectionId=G.G<int?>(r,"SectionId"), SectionName=G.G<string>(r,"SectionName"),
+            BatchId=G.G<int?>(r,"BatchId"), BatchName=G.G<string>(r,"BatchName"),
+            ProfilePicPath=G.G<string>(r,"ProfilePicPath"),
             AttendanceStatus=G.G<string>(r,"AttendanceStatus")??"Present",
             AttendanceId=G.G<int?>(r,"AttendanceId"), Remarks=G.G<string>(r,"Remarks"),
             Subject=G.G<string>(r,"Subject"), SirName=G.G<string>(r,"SirName"),
-            StartTime=G.G<TimeSpan?>(r,"StartTime"), EndTime=G.G<TimeSpan?>(r,"EndTime")
+            StartTime=G.G<TimeSpan?>(r,"StartTime"), EndTime=G.G<TimeSpan?>(r,"EndTime"),
+            Phone=G.G<string>(r,"Phone"), FatherPhone=G.G<string>(r,"FatherPhone"), MotherPhone=G.G<string>(r,"MotherPhone")
         });
     public void Save(int sid, DateTime date, string status, int? cls, int? sec, int? bat,
         string? remarks, int by, string? subject, string? sirName, TimeSpan? startTime, TimeSpan? endTime)
@@ -134,4 +137,32 @@ public class AttendanceRepo(CommonConnectivity db)
             AttendancePct= G.G<decimal>(r,"AttendancePct"),
             CreatedByName= G.G<string>(r,"CreatedByName")
         });
+
+    public List<(int StudentId, string FullName, string AdmissionNo, string Phone, string FatherPhone, string MotherPhone, string Medium, string ClassName, string SectionName, string BatchName)> GetAbsentStudentsToday()
+    {
+        var today = DateTime.Today.ToString("yyyy-MM-dd");
+        return db.Sql($@"
+            SELECT s.StudentId, s.FullName, s.AdmissionNo, s.Phone, s.FatherPhone, s.MotherPhone, sec.SectionName as Medium,
+                   c.ClassName, sec.SectionName, b.BatchName
+            FROM Attendance a
+            JOIN Students s ON s.StudentId = a.StudentId
+            LEFT JOIN Classes c ON c.ClassId = a.ClassId
+            LEFT JOIN Sections sec ON sec.SectionId = a.SectionId
+            LEFT JOIN Batches b ON b.BatchId = a.BatchId
+            WHERE CAST(a.AttendanceDate AS DATE) = '{today}'
+              AND a.Status = 'Absent'
+            ORDER BY s.FullName",
+            r => (
+                G.G<int>(r, "StudentId"),
+                G.G<string>(r, "FullName") ?? "",
+                G.G<string>(r, "AdmissionNo") ?? "",
+                G.G<string>(r, "Phone") ?? "",
+                G.G<string>(r, "FatherPhone") ?? "",
+                G.G<string>(r, "MotherPhone") ?? "",
+                G.G<string>(r, "Medium") ?? "",
+                G.G<string>(r, "ClassName") ?? "",
+                G.G<string>(r, "SectionName") ?? "",
+                G.G<string>(r, "BatchName") ?? ""
+            )).ToList();
+    }
 }

@@ -1,10 +1,39 @@
 @model List<SchoolMS.Domain.AppUser>
-@{ ViewData["Title"] = "User Management"; }
+@{
+  ViewData["Title"] = "User Management";
+  int roleId = Context.Session.GetInt32("RoleId") ?? 0;
+}
+
+<style>
+@@media (max-width: 768px) {
+  .pg-row { flex-direction: column !important; gap: 14px !important; }
+  .pg-row > div:first-child { width: 100% !important; }
+  .pg-row .df { width: 100% !important; flex-direction: column !important; }
+  .pg-row .df .btn { width: 100% !important; padding: 10px 14px !important; }
+  table th { padding: 9px 8px !important; font-size: 11px !important; }
+  table td { padding: 9px 8px !important; font-size: 12px !important; }
+  table th:nth-child(n+4), table td:nth-child(n+4) { display: none !important; }
+  .badge { font-size: 10px !important; padding: 4px 8px !important; }
+}
+
+@@media (max-width: 480px) {
+  table { font-size: 11px !important; }
+  table th, table td { padding: 7px 6px !important; }
+  .btn-sm { padding: 6px 10px !important; font-size: 11px !important; }
+  .df.g8 { gap: 6px !important; }
+}
+</style>
 
 <div class="pg-hdr">
   <div class="pg-row">
     <div><h1>👥 User Management</h1><p>Manage system users and access permissions</p></div>
-    <a href="/Users/Create" class="btn btn-primary"><i class="fas fa-user-plus"></i> Add User</a>
+    <div class="df g8">
+      @if (roleId == 1)
+      {
+        <a href="/Users/AssignRights" class="btn btn-outline"><i class="fas fa-key"></i> Assign Rights</a>
+      }
+      <a href="/Users/Create" class="btn btn-primary"><i class="fas fa-user-plus"></i> Add User</a>
+    </div>
   </div>
 </div>
 
@@ -49,7 +78,7 @@
               @if (u.UserId != 1)
               {
                 <form method="post" action="/Users/ToggleActive/@u.UserId">
-                  <button type="submit" class="btn @(u.IsActive?"btn-warning":"btn-success") btn-sm"
+                  <button type="submit" class="btn @(u.IsActive?"btn-warning":"btn-success") btn-sm"    
                           title="@(u.IsActive?"Deactivate":"Activate")">
                     <i class="fas @(u.IsActive?"fa-ban":"fa-check")"></i>
                   </button>

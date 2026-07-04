@@ -108,3 +108,17 @@ public class RequireParentLoginAttribute : ActionFilterAttribute
         }
     }
 }
+
+public class RequireAdminOrParentAttribute : ActionFilterAttribute
+{
+    public override void OnActionExecuting(ActionExecutingContext ctx)
+    {
+        var userId = ctx.HttpContext.Session.GetInt32("UserId");
+        var parentId = ctx.HttpContext.Session.GetInt32("ParentId");
+
+        if (userId == null && parentId == null)
+        {
+            ctx.Result = new RedirectToActionResult("Login", "Parent", null);
+        }
+    }
+}

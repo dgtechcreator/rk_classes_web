@@ -1,7 +1,24 @@
 @model SchoolMS.Web.ViewModels.FeesListVM
 @{ ViewData["Title"] = "Fees Summary"; }
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+<style>
+@@media (max-width: 768px) {
+  .filter-bar { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  .filter-bar input, .filter-bar select { min-width: unset !important; width: 100% !important; }
+  .filter-bar .btn { grid-column: span 2 !important; width: 100% !important; }
+  table th:nth-child(n+4), table td:nth-child(n+4) { font-size: 12px !important; padding: 9px 8px !important; }
+}
+
+@@media (max-width: 480px) {
+  .filter-bar { grid-template-columns: 1fr !important; }
+  .filter-bar .btn { grid-column: span 1 !important; }
+  table { font-size: 11px !important; }
+  table th, table td { padding: 8px 6px !important; }
+  .btn-sm { padding: 5px 10px !important; font-size: 11px !important; }
+}
+</style>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
   <h1 style="font-size:22px;font-weight:800;">💰 Fees Summary</h1>
   <a href="/Fees/Index" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back to Fees</a>
 </div>
@@ -17,10 +34,9 @@
 
 @if (Model.Payments.Any())
 {
-  var tot = Model.Payments.Sum(p => p.NetAmount);
   <div style="display:flex;gap:12px;margin-bottom:16px;">
-    <div class="card" style="flex:1;padding:14px 18px;"><div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Total Collected</div><div style="font-size:22px;font-weight:800;color:var(--ok);">₹@tot.ToString("N0")</div></div>
-    <div class="card" style="flex:1;padding:14px 18px;"><div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Transactions</div><div style="font-size:22px;font-weight:800;color:var(--p);">@Model.Payments.Count</div></div>
+    <div class="card" style="flex:1;padding:14px 18px;"><div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Total Collected</div><div style="font-size:22px;font-weight:800;color:var(--ok);">₹@Model.GrandTotalAmount.ToString("N0")</div></div>
+    <div class="card" style="flex:1;padding:14px 18px;"><div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Transactions</div><div style="font-size:22px;font-weight:800;color:var(--p);">@Model.Total</div></div>
   </div>
 }
 
@@ -43,14 +59,15 @@
           <td class="text-mu" style="font-size:13px;">@(p.Month??"—")</td>
           <td><div style="font-weight:800;color:var(--ok);">₹@p.NetAmount.ToString("N0")</div>@if(p.Discount>0){<div style="font-size:11px;" class="text-mu">Disc: ₹@p.Discount</div>}</td>
           <td><span class="badge @(p.PaymentMode=="Cash"?"b-cash":"b-online")">@p.PaymentMode</span></td>
-          <td style="font-size:12px;" class="text-mu">@p.PaymentDate.ToString("dd MMM yy")</td>
+          <td style="font-size:12px;white-space:nowrap;" class="text-mu">@p.PaymentDate.ToString("dd MMM yy")</td>
           <td style="font-size:12.5px;">@p.CollectorName</td>
-          <td style="display:flex;gap:6px;align-items:center;">
-            <a href="/Fees/Receipt/@p.PaymentId" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-print"></i> Receipt</a>
-            <form method="post" action="/Fees/DeletePayment/@p.PaymentId" style="margin:0;"
+          <td style="white-space:nowrap;">
+            <a href="/Fees/Receipt/@p.PaymentId" target="_blank" class="btn btn-sm" style="background:#f3f0ff;color:var(--p);border:none;margin-right:6px;"><i class="fas fa-print"></i> Receipt</a>
+            <a href="/Fees/Pay/@p.StudentId?paymentId=@p.PaymentId" class="btn btn-sm" style="background:#dbeafe;color:#2563eb;border:none;margin-right:6px;" title="Edit Payment"><i class="fas fa-edit"></i> Edit</a>
+            <form method="post" action="/Fees/DeletePayment/@p.PaymentId" style="margin:0;display:inline;"
                   onsubmit="return confirm('Delete receipt @p.ReceiptNo? It can be restored from Deleted Records.')">
               @Html.AntiForgeryToken()
-              <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;" title="Delete Receipt">
+              <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:none;" title="Delete Receipt">
                 <i class="fas fa-trash"></i>
               </button>
             </form>

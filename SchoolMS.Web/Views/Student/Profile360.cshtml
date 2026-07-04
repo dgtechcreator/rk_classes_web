@@ -18,6 +18,10 @@
     decimal totMax   = marks.Where(m => m.MarksObtained.HasValue).Sum(m => (decimal)m.MaxMarks);
     decimal marksPct = totMax > 0 ? Math.Round(totObt * 100m / totMax, 1) : 0;
     decimal totalPaid = fees.Sum(f => f.NetAmount);
+    decimal totalActualFees = (decimal)(ViewBag.TotalActualFees ?? 0m);
+    decimal totalDiscount = (decimal)(ViewBag.TotalDiscount ?? 0m);
+    decimal feesAfterDiscount = (decimal)(ViewBag.FeesAfterDiscount ?? 0m);
+    decimal balanceDue = (decimal)(ViewBag.BalanceDue ?? 0m);
 
     // Subject lists for filters
     var attSubjects  = attDetail.Where(d => !string.IsNullOrEmpty(d.Subject))
@@ -31,7 +35,7 @@
 }
 
 <style>
-body { font-family:'Segoe UI',Arial,sans-serif; background:#f1f5f9; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:#ffffff; }
 .pr-wrap { color:#222; width:100%; }
 
 /* Filter */
@@ -45,7 +49,7 @@ body { font-family:'Segoe UI',Arial,sans-serif; background:#f1f5f9; }
   background-repeat:no-repeat; background-position:right 6px center; cursor:pointer; }
 
 /* Header */
-.pr-head { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:16px 20px; margin-bottom:12px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+.pr-head { background:#dbeafe; border:1px solid #93c5fd; border-radius:8px; padding:16px 20px; margin-bottom:12px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
 .pr-avatar { width:60px; height:60px; border-radius:50%; background:#e2e8f0; display:flex; align-items:center; justify-content:center; font-size:24px; overflow:hidden; flex-shrink:0; }
 .pr-avatar img { width:60px; height:60px; object-fit:cover; border-radius:50%; }
 .pr-name { font-size:18px; font-weight:800; color:#111; }
@@ -497,13 +501,25 @@ body { font-family:'Segoe UI',Arial,sans-serif; background:#f1f5f9; }
       }
       else
       {
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:14px;">
-          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:10px 12px;text-align:center;">
-            <div style="font-size:18px;font-weight:900;color:#b45309;">₹@totalPaid.ToString("N0")</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:14px;">
+          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:12px;text-align:center;">
+            <div style="font-size:16px;font-weight:900;color:#b45309;">₹@totalPaid.ToString("N0")</div>
             <div style="font-size:11px;color:#d97706;font-weight:700;">TOTAL PAID</div>
           </div>
-          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:10px 12px;text-align:center;">
-            <div style="font-size:18px;font-weight:900;color:#b45309;">@fees.Count</div>
+          <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:7px;padding:12px;text-align:center;">
+            <div style="font-size:16px;font-weight:900;color:#d97706;">₹@feesAfterDiscount.ToString("N0")</div>
+            <div style="font-size:11px;color:#b45309;font-weight:700;">FEES AFTER DISCOUNT</div>
+          </div>
+          <div style="background:@(balanceDue>0?"#fee2e2":"#dcfce7");border:1px solid @(balanceDue>0?"#fecaca":"#bbf7d0");border-radius:7px;padding:12px;text-align:center;">
+            <div style="font-size:16px;font-weight:900;color:@(balanceDue>0?"#dc2626":"#16a34a");">₹@balanceDue.ToString("N0")</div>
+            <div style="font-size:11px;color:@(balanceDue>0?"#b91c1c":"#15803d");font-weight:700;">@(balanceDue>0?"BALANCE":"CLEARED")</div>
+          </div>
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:12px;text-align:center;">
+            <div style="font-size:16px;font-weight:900;color:#16a34a;">₹@totalDiscount.ToString("N0")</div>
+            <div style="font-size:11px;color:#15803d;font-weight:700;">DISCOUNT</div>
+          </div>
+          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:12px;text-align:center;">
+            <div style="font-size:16px;font-weight:900;color:#b45309;">@fees.Count</div>
             <div style="font-size:11px;color:#d97706;font-weight:700;">RECEIPTS</div>
           </div>
         </div>

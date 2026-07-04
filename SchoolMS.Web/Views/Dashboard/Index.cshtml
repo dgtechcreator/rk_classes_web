@@ -1,163 +1,278 @@
 @model SchoolMS.Domain.DashboardStats
-@{ ViewData["Title"] = "Dashboard"; }
+@{
+    ViewData["Title"] = "Dashboard";
+}
 
 <style>
-body { padding-bottom: 80px; }
-.contact-footer {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  background: #f3f4f6;
-  border-top: 1px solid #e5e7eb;
-  padding: 9px 20px;
-  box-shadow: none;
-  z-index: 50;
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-}
-.contact-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11.5px;
-  font-weight: 500;
-  color: #555;
-}
-.contact-item i {
-  color: #2563eb;
-  font-size: 14px;
-}
-.contact-divider {
-  color: #ddd;
-  font-weight: 300;
-}
+    body {
+        padding-bottom: 80px;
+    }
+
+    .contact-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #f3f4f6;
+        border-top: 1px solid #e5e7eb;
+        padding: 9px 20px;
+        box-shadow: none;
+        z-index: 50;
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .contact-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11.5px;
+        font-weight: 500;
+        color: #555;
+    }
+
+        .contact-item i {
+            color: #2563eb;
+            font-size: 14px;
+        }
+
+    .contact-divider {
+        color: #ddd;
+        font-weight: 300;
+    }
+
+    @@media (max-width: 768px) {
+        .pg-row {
+            flex-direction: column !important;
+            gap: 12px !important;
+        }
+
+            .pg-row > div:first-child {
+                width: 100% !important;
+            }
+
+            .pg-row .df {
+                width: 100% !important;
+                flex-direction: column !important;
+            }
+
+                .pg-row .df .btn {
+                    width: 100% !important;
+                    padding: 10px 14px !important;
+                }
+
+        .kpi-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+        }
+
+        .g2 {
+            grid-template-columns: 1fr !important;
+        }
+
+        .contact-footer {
+            padding: 8px 10px !important;
+            gap: 10px !important;
+        }
+
+        .contact-item {
+            font-size: 10px !important;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        body {
+            padding-bottom: 100px !important;
+        }
+
+        .kpi-grid {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+        }
+
+        .kpi-val {
+            font-size: 20px !important;
+        }
+
+        .kpi-lbl {
+            font-size: 10px !important;
+        }
+
+        .contact-footer {
+            flex-direction: column !important;
+            gap: 6px !important;
+            padding: 6px 8px !important;
+        }
+
+        .contact-divider {
+            display: none !important;
+        }
+    }
 </style>
 
 <div class="pg-hdr">
-  <div class="pg-row">
-    <div>
-      <h1>📊 Dashboard</h1>
-      <p>Good day, @Context.Session.GetString("FullName") — RK Classes — Academic Year 2025–2026</p>
+    <div class="pg-row">
+        <div>
+            <h1>📊 Dashboard</h1>
+            <p>Good day, @Context.Session.GetString("FullName") — RK Classes — Academic Year @ViewBag.CurrentYearName</p>
+        </div>
+        <div class="df g8">
+            <a href="/Student/Create" class="btn btn-primary"><i class="fas fa-user-plus"></i> New Student</a>
+            <a href="/Fees/Collect" class="btn btn-outline"><i class="fas fa-rupee-sign"></i> Collect Fee</a>
+        </div>
     </div>
-    <div class="df g8">
-      <a href="/Student/Create" class="btn btn-primary"><i class="fas fa-user-plus"></i> New Student</a>
-      <a href="/Fees/Collect" class="btn btn-outline"><i class="fas fa-rupee-sign"></i> Collect Fee</a>
-    </div>
-  </div>
 </div>
 
 <div class="kpi-grid">
-  <div class="kpi purple">
-    <div class="kpi-ico purple"><i class="fas fa-users"></i></div>
-    <div class="kpi-val">@Model.TotalStudents</div>
-    <div class="kpi-lbl">Total Students</div>
-  </div>
-  <div class="kpi green">
-    <div class="kpi-ico green"><i class="fas fa-check-circle"></i></div>
-    <div class="kpi-val">@Model.PresentToday</div>
-    <div class="kpi-lbl">Present Today</div>
-  </div>
-  <div class="kpi red">
-    <div class="kpi-ico red"><i class="fas fa-times-circle"></i></div>
-    <div class="kpi-val">@Model.AbsentToday</div>
-    <div class="kpi-lbl">Absent Today</div>
-  </div>
-  <div class="kpi amber">
-    <div class="kpi-ico amber"><i class="fas fa-user-plus"></i></div>
-    <div class="kpi-val">@Model.NewToday</div>
-    <div class="kpi-lbl">New Admissions Today</div>
-  </div>
+    <div class="kpi purple">
+        <div class="kpi-ico purple"><i class="fas fa-users"></i></div>
+        <div class="kpi-val">@Model.TotalStudents</div>
+        <div class="kpi-lbl">Total Students</div>
+    </div>
+    <div class="kpi green">
+        <div class="kpi-ico green"><i class="fas fa-check-circle"></i></div>
+        <div class="kpi-val">@Model.PresentToday</div>
+        <div class="kpi-lbl">Present Today</div>
+    </div>
+    <div class="kpi red" onclick="openAbsentPopup()" style="cursor:pointer;">
+        <div class="kpi-ico red"><i class="fas fa-times-circle"></i></div>
+        <div class="kpi-val">@Model.AbsentToday</div>
+        <div class="kpi-lbl">Absent Today <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
+    </div>
+    <div class="kpi amber">
+        <div class="kpi-ico amber"><i class="fas fa-user-plus"></i></div>
+        <div class="kpi-val">@Model.NewToday</div>
+        <div class="kpi-lbl">New Admissions Today</div>
+    </div>
     <div class="kpi indigo" onclick="openFeesPopup()" style="cursor:pointer;">
         <div class="kpi-ico indigo"><i class="fas fa-rupee-sign"></i></div>
         <div class="kpi-val">₹@Model.FeesThisMonth.ToString("N0")</div>
         <div class="kpi-lbl">Fees This Month <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
     </div>
-  <div class="kpi pink">
-    <div class="kpi-ico pink"><i class="fas fa-receipt"></i></div>
-    <div class="kpi-val">₹@Model.ExpensesThisMonth.ToString("N0")</div>
-    <div class="kpi-lbl">Expenses This Month</div>
-  </div>
-  <div class="kpi teal">
-    <div class="kpi-ico teal"><i class="fas fa-chalkboard-teacher"></i></div>
-    <div class="kpi-val">@Model.TotalStaff</div>
-    <div class="kpi-lbl">Staff Members</div>
-  </div>
+    <div class="kpi pink">
+        <div class="kpi-ico pink"><i class="fas fa-receipt"></i></div>
+        <div class="kpi-val">₹@Model.ExpensesThisMonth.ToString("N0")</div>
+        <div class="kpi-lbl">Expenses This Month</div>
+    </div>
+    <div class="kpi teal">
+        <div class="kpi-ico teal"><i class="fas fa-chalkboard-teacher"></i></div>
+        <div class="kpi-val">@Model.TotalStaff</div>
+        <div class="kpi-lbl">Staff Members</div>
+    </div>
 </div>
 
 <div class="g2" style="align-items:start;">
-  <div class="card">
-    <div class="card-hdr">
-      <span class="card-ttl"><i class="fas fa-chart-pie" style="color:var(--p);margin-right:7px;"></i>Std-wise Strength</span>
-    </div>
-    @{
-      var colors = new[] { "#6d28d9", "#db2777", "#2563eb", "#059669", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899" };
-      int tot = Math.Max(1, Model.AllClasses.Sum(c => c.StudentCount));
-    }
-    @if (!Model.AllClasses.Any())
-    {
-      <div style="text-align:center;padding:32px;color:var(--mu);">No standards added yet</div>
-    }
-    else
-    {
-      @foreach (var (cls, idx) in Model.AllClasses.Select((c, i) => (c, i)))
-      {
-        int pct = tot > 0 ? cls.StudentCount * 100 / tot : 0;
-        string clr = colors[idx % colors.Length];
-        <div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--bdr);">
-          <div style="width:40px;height:40px;border-radius:10px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:@clr;flex-shrink:0;">@cls.StudentCount</div>
-          <div style="flex:1;">
-            <div style="font-size:13px;font-weight:700;margin-bottom:5px;">@cls.ClassName @(cls.IsActive?"":"(Inactive)")</div>
-            <div style="height:6px;background:#f3f0ff;border-radius:3px;">
-              <div style="height:6px;border-radius:3px;background:@clr;width:@pct%;"></div>
-            </div>
-          </div>
-          <span style="font-size:12px;color:var(--mu);font-weight:600;">@pct%</span>
+    <div class="card">
+        <div class="card-hdr">
+            <span class="card-ttl"><i class="fas fa-chart-pie" style="color:var(--p);margin-right:7px;"></i>Std-wise Strength</span>
         </div>
-      }
-    }
-  </div>
+        @{
+            var colors = new[] { "#6d28d9", "#db2777", "#2563eb", "#059669", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899" };
+            int tot = Math.Max(1, Model.AllClasses.Sum(c => c.StudentCount));
+        }
+        @if (!Model.AllClasses.Any())
+        {
+            <div style="text-align:center;padding:32px;color:var(--mu);">No standards added yet</div>
+        }
+        else
+        {
+            @foreach (var (cls, idx) in Model.AllClasses.Select((c, i) => (c, i)))
+            {
+                int pct = tot > 0 ? cls.StudentCount * 100 / tot : 0;
+                string clr = colors[idx % colors.Length];
+                <div onclick="openClassStudentsPopup(@cls.ClassId)" style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--bdr);cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='#f9f8ff'" onmouseout="this.style.background='transparent'">
+                    <div style="width:40px;height:40px;border-radius:10px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:@clr;flex-shrink:0;">@cls.StudentCount</div>
+                    <div style="flex:1;">
+                        <div style="font-size:13px;font-weight:700;margin-bottom:5px;">@cls.ClassName @(cls.IsActive ? "" : "(Inactive)")</div>
+                        <div style="height:6px;background:#f3f0ff;border-radius:3px;">
+                            <div style="height:6px;border-radius:3px;background:@clr;width:@pct%;"></div>
+                        </div>
+                    </div>
+                    <span style="font-size:12px;color:var(--mu);font-weight:600;">@pct%</span>
+                </div>
+            }
+        }
+    </div>
 
-  <div class="card">
+    <div class="card">
+        <div class="card-hdr">
+            <span class="card-ttl"><i class="fas fa-bolt" style="color:var(--p);margin-right:7px;"></i>Quick Actions</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+            @{
+                var qas = new[] {
+                        ("fas fa-user-graduate","View All Students","/Student/Index"),
+                        ("fas fa-calendar-check","Mark Attendance","/Attendance/Index"),
+                        ("fas fa-marker","Enter Test Marks","/Marks/Index"),
+                        ("fas fa-rupee-sign","Collect Fee","/Fees/Collect"),
+                        ("fas fa-receipt","Record Expense","/Expenses/Create")
+                        };
+            }
+            @foreach (var (ic, lbl, url) in qas)
+            {
+                <a href="@url" class="btn btn-outline" style="justify-content:flex-start;padding:10px 14px;">
+                    <span style="width:28px;height:28px;border-radius:8px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--p);flex-shrink:0;">
+                        <i class="@ic"></i>
+                    </span>
+                    @lbl
+                    <i class="fas fa-chevron-right" style="margin-left:auto;font-size:11px;color:var(--mu2);"></i>
+                </a>
+            }
+        </div>
+    </div>
+
+</div>
+
+<!-- Overall Fees Summary -->
+<div class="card" style="margin-top:20px;">
     <div class="card-hdr">
-      <span class="card-ttl"><i class="fas fa-bolt" style="color:var(--p);margin-right:7px;"></i>Quick Actions</span>
+        <span class="card-ttl"><i class="fas fa-money-bill-wave" style="color:var(--p);margin-right:7px;"></i>Overall Fees Summary</span>
     </div>
-    <div style="display:flex;flex-direction:column;gap:9px;">
-      @{
-        var qas = new[] {
-          ("fas fa-user-graduate","View All Students","/Student/Index"),
-          ("fas fa-calendar-check","Mark Attendance","/Attendance/Index"),
-          ("fas fa-marker","Enter Test Marks","/Marks/Index"),
-          ("fas fa-rupee-sign","Collect Fee","/Fees/Collect"),
-          ("fas fa-receipt","Record Expense","/Expenses/Create")
-        };
-      }
-      @foreach (var (ic, lbl, url) in qas)
-      {
-        <a href="@url" class="btn btn-outline" style="justify-content:flex-start;padding:10px 14px;">
-          <span style="width:28px;height:28px;border-radius:8px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--p);flex-shrink:0;">
-            <i class="@ic"></i>
-          </span>
-          @lbl
-          <i class="fas fa-chevron-right" style="margin-left:auto;font-size:11px;color:var(--mu2);"></i>
-        </a>
-      }
-    </div>
-  </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;padding:20px;">
+        <!-- Total Fees -->
+        <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:8px;padding:16px;color:#fff;">
+            <div style="font-size:12px;font-weight:600;opacity:0.9;margin-bottom:6px;">Total Fees Owed</div>
+            <div style="font-size:24px;font-weight:800;">₹@Model.TotalFeesOverall.ToString("N0")</div>
+            <div style="font-size:11px;opacity:0.8;margin-top:6px;">All active students</div>
+        </div>
 
+        <!-- Total Collected -->
+        <div style="background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);border-radius:8px;padding:16px;color:#fff;">
+            <div style="font-size:12px;font-weight:600;opacity:0.9;margin-bottom:6px;">Total Collected</div>
+            <div style="font-size:24px;font-weight:800;">₹@Model.TotalCollectedOverall.ToString("N0")</div>
+            <div style="font-size:11px;opacity:0.8;margin-top:6px;">Actual payments</div>
+        </div>
+
+        <!-- Total Discount -->
+        <div style="background:linear-gradient(135deg,#4facfe 0%,#00f2fe 100%);border-radius:8px;padding:16px;color:#fff;">
+            <div style="font-size:12px;font-weight:600;opacity:0.9;margin-bottom:6px;">Total Discount</div>
+            <div style="font-size:24px;font-weight:800;">₹@Model.TotalDiscountOverall.ToString("N0")</div>
+            <div style="font-size:11px;opacity:0.8;margin-top:6px;">Concessions given</div>
+        </div>
+
+        <!-- Balance -->
+        <div style="background:linear-gradient(135deg,#43e97b 0%,#38f9d7 100%);border-radius:8px;padding:16px;color:#fff;">
+            <div style="font-size:12px;font-weight:600;opacity:0.9;margin-bottom:6px;">Balance Due</div>
+            <div style="font-size:24px;font-weight:800;">₹@Model.BalanceOverall.ToString("N0")</div>
+            <div style="font-size:11px;opacity:0.8;margin-top:6px;">Remaining to collect</div>
+        </div>
+    </div>
 </div>
 
 <!-- Fixed Contact Footer -->
 <div class="contact-footer" style="flex-wrap:nowrap;overflow-x:auto;">
-  <div class="contact-item" style="white-space:nowrap;">
-    <i class="fas fa-phone"></i>
-    <span><strong>Phone:</strong> 9870375795 / 8108499214</span>
-  </div>
-  <div class="contact-divider">|</div>
-  <div class="contact-item" style="white-space:nowrap;">
-    <i class="fas fa-envelope"></i>
-    <span><strong>Email:</strong> rkclasseskapilsir2002@gmail.com</span>
-  </div>
+    <div class="contact-item" style="white-space:nowrap;">
+        <i class="fas fa-phone"></i>
+        <span><strong>Phone:</strong> 9870375795 / 8108499214</span>
+    </div>
+    <div class="contact-divider">|</div>
+    <div class="contact-item" style="white-space:nowrap;">
+        <i class="fas fa-envelope"></i>
+        <span><strong>Email:</strong> rkclasseskapilsir2002@gmail.com</span>
+    </div>
 </div>
 
 
@@ -211,103 +326,479 @@ body { padding-bottom: 80px; }
 
     </div>
 </div>
+
+<!-- Absent Students Popup -->
+<div id="absentModal" onclick="handleAbsentModalClick(event)"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,0.45);z-index:9999;
+            justify-content:center;align-items:center;">
+
+    <div style="background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);
+              width:90%;max-width:920px;height:80vh;display:flex;flex-direction:column;
+              position:relative;">
+
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:16px 20px;border-bottom:1px solid #e5e7eb;background:#f8fafc;
+                border-radius:12px 12px 0 0;flex-shrink:0;">
+            <div>
+                <div style="font-size:16px;font-weight:800;color:#111;">
+                    <i class="fas fa-times-circle" style="color:#dc2626;margin-right:8px;"></i>
+                    Absent Students Today
+                </div>
+                <div style="font-size:12px;color:#888;margin-top:2px;">Click Call or WhatsApp to contact</div>
+            </div>
+            <button onclick="closeAbsentModal()"
+                    style="background:#fee2e2;color:#b91c1c;border:none;border-radius:8px;
+                     padding:8px 14px;cursor:pointer;font-weight:700;font-size:13px;">
+                <i class="fas fa-times"></i> Close
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div id="absentBody" style="overflow-y:auto;padding:16px 20px;flex:1;min-height:0;">
+            <div style="text-align:center;padding:40px;color:#888;">
+                <i class="fas fa-spinner fa-spin" style="font-size:24px;"></i>
+                <div style="margin-top:10px;">Loading absent students...</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Class Students Popup -->
+<div id="classStudentsModal" onclick="handleClassModalClick(event)"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,0.45);z-index:9999;
+            justify-content:center;align-items:center;">
+
+    <div style="background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);
+              width:90%;max-width:920px;height:80vh;display:flex;flex-direction:column;
+              position:relative;">
+
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:16px 20px;border-bottom:1px solid #e5e7eb;background:#f8fafc;
+                border-radius:12px 12px 0 0;flex-shrink:0;">
+            <div>
+                <div style="font-size:16px;font-weight:800;color:#111;" id="classModalTitle">
+                    <i class="fas fa-users" style="color:#6d28d9;margin-right:8px;"></i>
+                    Class Students
+                </div>
+                <div style="font-size:12px;color:#888;margin-top:2px;">Click Call or Message to contact</div>
+            </div>
+            <button onclick="closeClassModal()"
+                    style="background:#fee2e2;color:#b91c1c;border:none;border-radius:8px;
+                     padding:8px 14px;cursor:pointer;font-weight:700;font-size:13px;">
+                <i class="fas fa-times"></i> Close
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div id="classStudentsBody" style="overflow-y:auto;padding:16px 20px;flex:1;min-height:0;">
+            <div style="text-align:center;padding:40px;color:#888;">
+                <i class="fas fa-spinner fa-spin" style="font-size:24px;"></i>
+                <div style="margin-top:10px;">Loading students...</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- DASHBOARD - JAVASCRIPT CALL FIX -->
 <script>
-    function openFeesPopup() {
-      const modal = document.getElementById('feesModal');
-      modal.style.display = 'flex';
+        // ===== PHONE NUMBER SANITIZER =====
+        function sanitizePhone(phone) {
+          if (!phone) return '';
+          // Remove all non-digit characters: spaces, hyphens, parentheses, +, etc.
+          return phone.replace(/[^0-9]/g, '');
+        }
 
-      const months = ['January','February','March','April','May','June',
-                      'July','August','September','October','November','December'];
-      const now = new Date();
-      const monthName = months[now.getMonth()];
-      document.getElementById('feesPopupSubtitle').textContent = monthName + ' ' + now.getFullYear();
+        // ===== MAKE PHONE CALL - WORKING VERSION =====
+        function callStudent(phone) {
+          const cleanPhone = sanitizePhone(phone);
 
-      // Fetch this month's fees using month number for accurate date filtering
-      fetch('/Fees/SummaryJson?monthNum=' + (now.getMonth() + 1))
-        .then(r => r.json())
-        .then(data => {
-          renderFeesPopup(data);
-        })
-        .catch(() => {
-          document.getElementById('feesPopupBody').innerHTML =
-            '<div style="text-align:center;padding:40px;color:#dc2626;">Failed to load. <a href="/Fees/Summary">Open Full Page</a></div>';
+          if (!cleanPhone || cleanPhone.length < 10) {
+            alert('Invalid phone number');
+            return;
+          }
+
+          // Format: add 91 if Indian 10-digit number
+          const telNumber = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+
+          // Call using tel: protocol with ONLY digits
+          window.location.href = `tel:+${telNumber}`;
+
+          // Close menus after calling
+          setTimeout(() => {
+            document.querySelectorAll('[id^="callmenu_"]').forEach(m => m.style.display = 'none');
+          }, 300);
+        }
+
+        function openFeesPopup() {
+          const modal = document.getElementById('feesModal');
+          modal.style.display = 'flex';
+
+          const months = ['January','February','March','April','May','June',
+                          'July','August','September','October','November','December'];
+          const now = new Date();
+          const monthName = months[now.getMonth()];
+          document.getElementById('feesPopupSubtitle').textContent = monthName + ' ' + now.getFullYear();
+
+          fetch('/Fees/SummaryJson?monthNum=' + (now.getMonth() + 1))
+            .then(r => r.json())
+            .then(data => {
+              renderFeesPopup(data);
+            })
+            .catch(() => {
+              document.getElementById('feesPopupBody').innerHTML =
+                '<div style="text-align:center;padding:40px;color:#dc2626;">Failed to load. <a href="/Fees/Summary">Open Full Page</a></div>';
+            });
+        }
+
+        function handleModalClick(e) {
+          if (e.target === document.getElementById('feesModal')) closeFeesPopup();
+        }
+
+        function closeFeesPopup() {
+          document.getElementById('feesModal').style.display = 'none';
+        }
+
+        function renderFeesPopup(payments) {
+          if (!payments || payments.length === 0) {
+            document.getElementById('feesPopupBody').innerHTML =
+              '<div style="text-align:center;padding:40px;color:#888;">No payments this month.</div>';
+            document.getElementById('feesPopupTotal').textContent = '';
+            return;
+          }
+
+          const total = payments.reduce((s, p) => s + p.netAmount, 0);
+          document.getElementById('feesPopupTotal').textContent =
+            'Total: ₹' + total.toLocaleString('en-IN');
+
+          let html = `<div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:850px;">
+              <thead>
+                <tr style="background:#f8f9fa;border-bottom:2px solid #dee2e6;">
+                  <th style="padding:8px 10px;text-align:left;color:#555;">#</th>
+                  <th style="padding:8px 10px;text-align:left;color:#555;">Receipt No</th>
+                  <th style="padding:8px 10px;text-align:left;color:#555;">Student</th>
+                  <th style="padding:8px 10px;text-align:left;color:#555;">Std / Medium</th>
+                  <th style="padding:8px 10px;text-align:left;color:#555;">Batch</th>
+                  <th style="padding:8px 10px;text-align:right;color:#555;">Paid</th>
+                  <th style="padding:8px 10px;text-align:left;color:#555;">Mode</th>
+                  <th style="padding:8px 10px;text-align:left;color:#555;">Date</th>
+                  <th style="padding:8px 10px;text-align:left;color:#555;">Added By</th>
+                  <th style="padding:8px 10px;text-align:center;color:#555;">Action</th>
+                </tr>
+              </thead>
+              <tbody>`;
+
+          payments.forEach((p, i) => {
+            html += `<tr style="border-bottom:1px solid #f0f0f0;">
+              <td style="padding:8px 10px;color:#888;">${i+1}</td>
+              <td style="padding:8px 10px;">
+                <a href="/Fees/Receipt/${p.paymentId}" target="_blank"
+                   style="color:#2563eb;font-weight:600;font-size:12px;">
+                  ${p.receiptNo}
+                </a>
+              </td>
+              <td style="padding:8px 10px;">
+                <div style="font-weight:700;">${p.studentName ?? '—'}</div>
+                <div style="font-size:11px;color:#888;">${p.admissionNo ?? ''}</div>
+              </td>
+              <td style="padding:8px 10px;font-size:12px;">${p.className ?? '—'} / ${p.sectionName ?? '—'}</td>
+              <td style="padding:8px 10px;font-size:12px;">${p.batchName ?? '—'}</td>
+              <td style="padding:8px 10px;text-align:right;font-weight:800;color:#15803d;">
+                ₹${p.netAmount.toLocaleString('en-IN')}
+                ${p.discount > 0 ? '<div style="font-size:11px;color:#dc2626;">Disc: ₹'+p.discount+'</div>' : ''}
+              </td>
+              <td style="padding:8px 10px;">
+                <span style="background:${p.paymentMode==='Cash'?'#dcfce7':'#dbeafe'};
+                             color:${p.paymentMode==='Cash'?'#15803d':'#1d4ed8'};
+                             padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">
+                  ${p.paymentMode}
+                </span>
+              </td>
+              <td style="padding:8px 10px;font-size:12px;color:#888;">${p.paymentDate}</td>
+              <td style="padding:8px 10px;font-size:12px;">${p.collectorName ?? '—'}</td>
+              <td style="padding:8px 10px;text-align:center;">
+                <a href="/Fees/Receipt/${p.paymentId}" target="_blank"
+                   style="display:inline-flex;align-items:center;gap:4px;background:#dc2626;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;font-size:12px;font-weight:600;cursor:pointer;">
+                  <i class="fas fa-receipt"></i> Receipt
+                </a>
+              </td>
+            </tr>`;
+          });
+
+          html += '</tbody></table></div>';
+          document.getElementById('feesPopupBody').innerHTML = html;
+        }
+
+        // ===== ABSENT STUDENTS POPUP =====
+        function openAbsentPopup() {
+          const modal = document.getElementById('absentModal');
+          modal.style.display = 'flex';
+
+          fetch('/Dashboard/GetAbsentStudents')
+            .then(r => r.json())
+            .then(data => {
+              if (data.length === 0) {
+                document.getElementById('absentBody').innerHTML = '<div style="padding:40px;text-align:center;color:#999;"><i class="fas fa-smile" style="font-size:48px;margin-bottom:12px;display:block;"></i>No absent students today!</div>';
+                return;
+              }
+
+              const absenceMessage = `*Dear Parent,*
+
+    This is to inform you that your ward was absent from today's classes. Kindly inform us of the reason for the absence.
+
+    *Regards,*
+    *R K CLASSES*
+    *Kapil Sir*
+    *M. Sc., B. Ed*
+    *9870375795*
+    *8108499214*
+
+    ......….................................
+
+    *प्रिय अभिभावक,*
+
+    यह सूचित किया जाता है कि आपका वार्ड आज की कक्षाओं में अनुपस्थित था। कृपया अनुपस्थिति का कारण हमें बताने की कृपा करें।
+
+    *सादर,*
+    *R K CLASSES*
+    *Kapil Sir*
+    *M. Sc., B. Ed*
+    *9870375795*
+    *8108499214*`;
+
+              // Clear old WhatsApp modals
+              document.querySelectorAll('[id^="whatsappmsg_"]').forEach(m => m.remove());
+
+              let html = `<div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                  <thead>
+                    <tr style="background:#f3f4f6;">
+                      <th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Student</th>
+                      <th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Class</th>
+                      <th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Medium</th>
+                      <th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Student Phone</th>
+                      <th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Father Phone</th>
+                      <th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Mother Phone</th>
+                      <th style="padding:12px;text-align:center;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>`;
+
+              data.forEach(s => {
+                const callMenuId = 'callmenu_' + Math.random().toString(36).substr(2, 9);
+                const whatsappModalId = 'whatsappmsg_' + Math.random().toString(36).substr(2, 9);
+
+                html += `<tr style="border-bottom:1px solid #e5e7eb;">
+                  <td style="padding:12px;"><div style="font-weight:600;font-size:13px;">${s.fullName}</div><div style="font-size:11px;color:#666;margin-top:2px;">${s.admissionNo}</div></td>
+                  <td style="padding:12px;font-size:13px;">${s.className} - ${s.batchName}</td>
+                  <td style="padding:12px;font-size:13px;">${s.medium || '—'}</td>
+                  <td style="padding:12px;font-size:13px;">${s.phone || '—'}</td>
+                  <td style="padding:12px;font-size:13px;">${s.fatherPhone || '—'}</td>
+                  <td style="padding:12px;font-size:13px;">${s.motherPhone || '—'}</td>
+                  <td style="padding:12px;text-align:center;position:relative;">
+                    <div style="display:flex;gap:6px;align-items:center;justify-content:center;">
+                      <button onclick="toggleCallMenu('${callMenuId}')" style="background:#2563eb;color:#fff;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px;"><i class="fas fa-phone"></i></button>
+                      <button onclick="openWhatsappModal('${whatsappModalId}')" style="background:#25d366;color:#fff;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px;"><i class="fab fa-whatsapp"></i></button>
+                    </div>
+                    <div id="${callMenuId}" style="display:none;position:absolute;left:-180px;top:-10px;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10001;min-width:180px;padding:4px 0;">
+                      ${s.phone ? `<div onclick="callStudent('${s.phone}')" style="padding:6px 10px;cursor:pointer;font-size:11px;color:#333;border-bottom:1px solid #f5f5f5;"><i class="fas fa-phone" style="color:#dc2626;margin-right:6px;font-size:10px;"></i>Student: ${s.phone}</div>` : ''}
+                      ${s.fatherPhone ? `<div onclick="callStudent('${s.fatherPhone}')" style="padding:6px 10px;cursor:pointer;font-size:11px;color:#333;border-bottom:1px solid #f5f5f5;"><i class="fas fa-phone" style="color:#dc2626;margin-right:6px;font-size:10px;"></i>Father: ${s.fatherPhone}</div>` : ''}
+                      ${s.motherPhone ? `<div onclick="callStudent('${s.motherPhone}')" style="padding:6px 10px;cursor:pointer;font-size:11px;color:#333;"><i class="fas fa-phone" style="color:#dc2626;margin-right:6px;font-size:10px;"></i>Mother: ${s.motherPhone}</div>` : ''}
+                    </div>
+                  </td>
+                </tr>`;
+
+                // WhatsApp modal
+                const wModal = document.createElement('div');
+                wModal.id = whatsappModalId;
+                wModal.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;justify-content:center;align-items:center;';
+                wModal.innerHTML = `
+                  <div style="background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);width:90%;max-width:500px;padding:24px;max-height:80vh;overflow-y:auto;">
+                    <div style="font-size:14px;color:#666;margin-bottom:16px;line-height:1.5;"><strong>Send message to parents of ${s.fullName}?</strong></div>
+                    <div style="background:#f3f4f6;border-radius:8px;padding:16px;margin-bottom:20px;font-size:12px;color:#333;text-align:left;line-height:1.7;white-space:pre-wrap;font-family:Arial,sans-serif;">${absenceMessage}</div>
+                    <div style="display:flex;gap:10px;margin-bottom:10px;">
+                      ${s.fatherPhone ? `<button onclick="sendWhatsappDirect('${s.fatherPhone}', '${whatsappModalId}')" style="flex:1;background:#25d366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;"><i class="fab fa-whatsapp"></i> Send to Father</button>` : ''}
+                      ${s.motherPhone ? `<button onclick="sendWhatsappDirect('${s.motherPhone}', '${whatsappModalId}')" style="flex:1;background:#25d366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;"><i class="fab fa-whatsapp"></i> Send to Mother</button>` : ''}
+                    </div>
+                    <button onclick="closeWhatsappModal('${whatsappModalId}')" style="width:100%;background:#e5e7eb;color:#333;border:none;padding:10px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;">Close</button>
+                  </div>`;
+                document.body.appendChild(wModal);
+              });
+
+              html += '</tbody></table></div>';
+              document.getElementById('absentBody').innerHTML = html;
+            });
+        }
+
+        function closeAbsentModal() {
+          document.getElementById('absentModal').style.display = 'none';
+        }
+
+        function handleAbsentModalClick(event) {
+          const modal = document.getElementById('absentModal');
+          if (event.target === modal) {
+            closeAbsentModal();
+          }
+        }
+
+        function toggleCallMenu(menuId) {
+          const menu = document.getElementById(menuId);
+          const allMenus = document.querySelectorAll('[id^="callmenu_"]');
+
+          allMenus.forEach(m => {
+            if (m.id !== menuId) m.style.display = 'none';
+          });
+
+          menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function openWhatsappModal(modalId) {
+          document.getElementById(modalId).style.display = 'flex';
+        }
+
+        function closeWhatsappModal(modalId) {
+          document.getElementById(modalId).style.display = 'none';
+        }
+
+        function sendWhatsappDirect(phone, modalId) {
+          const absenceMessage = `*Dear Parent,*
+
+    This is to inform you that your ward was absent from today's classes. Kindly inform us of the reason for the absence.
+
+    *Regards,*
+    *R K CLASSES*
+    *Kapil Sir*
+    *M. Sc., B. Ed*
+    *9870375795*
+    *8108499214*
+
+    ......….................................
+
+    *प्रिय अभिभावक,*
+
+    यह सूचित किया जाता है कि आपका वार्ड आज की कक्षाओं में अनुपस्थित था। कृपया अनुपस्थिति का कारण हमें बताने की कृपा करें।
+
+    *सादर,*
+    *R K CLASSES*
+    *Kapil Sir*
+    *M. Sc., B. Ed*
+    *9870375795*
+    *8108499214*`;
+
+          const cleanPhone = sanitizePhone(phone);
+          const telNumber = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+          window.open(`https://wa.me/${telNumber}?text=${encodeURIComponent(absenceMessage)}`, '_blank');
+          closeWhatsappModal(modalId);
+        }
+
+        document.addEventListener('click', (e) => {
+          if (!e.target.closest('button') && !e.target.closest('[id^="callmenu_"]')) {
+            document.querySelectorAll('[id^="callmenu_"]').forEach(m => m.style.display = 'none');
+          }
         });
-    }
 
-    function handleModalClick(e) {
-      if (e.target === document.getElementById('feesModal')) closeFeesPopup();
-    }
+        document.addEventListener('keydown', e => {
+          if (e.key === 'Escape') {
+            closeFeesPopup();
+            closeAbsentModal();
+            closeClassModal();
+          }
+        });
 
-    function closeFeesPopup() {
-      document.getElementById('feesModal').style.display = 'none';
-    }
+        // Class Students Popup Functions
+        function openClassStudentsPopup(classId) {
+          const modal = document.getElementById('classStudentsModal');
+          modal.style.display = 'flex';
 
-    function renderFeesPopup(payments) {
-      if (!payments || payments.length === 0) {
-        document.getElementById('feesPopupBody').innerHTML =
-          '<div style="text-align:center;padding:40px;color:#888;">No payments this month.</div>';
-        document.getElementById('feesPopupTotal').textContent = '';
-        return;
-      }
+          fetch('/Student/GetClassStudents?classId=' + classId)
+            .then(r => r.json())
+            .then(data => {
+              if (data.error) {
+                console.error('API Error:', data.error);
+                document.getElementById('classStudentsBody').innerHTML =
+                  '<div style="text-align:center;padding:40px;color:#dc2626;">Error: ' + data.error + '</div>';
+                return;
+              }
+              document.getElementById('classModalTitle').innerHTML =
+                '<i class="fas fa-users" style="color:#6d28d9;margin-right:8px;"></i>' + (data.className || 'Class') + ' Students';
+              renderClassStudents(data.students);
+            })
+            .catch((err) => {
+              console.error('Fetch Error:', err);
+              document.getElementById('classStudentsBody').innerHTML =
+                '<div style="text-align:center;padding:40px;color:#dc2626;">Failed to load students: ' + err.message + '</div>';
+            });
+        }
 
-      const total = payments.reduce((s, p) => s + p.netAmount, 0);
-      document.getElementById('feesPopupTotal').textContent =
-        'Total: ₹' + total.toLocaleString('en-IN');
+        function closeClassModal() {
+          document.getElementById('classStudentsModal').style.display = 'none';
+        }
 
-      let html = `<div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:750px;">
-          <thead>
-            <tr style="background:#f8f9fa;border-bottom:2px solid #dee2e6;">
-              <th style="padding:8px 10px;text-align:left;color:#555;">#</th>
-              <th style="padding:8px 10px;text-align:left;color:#555;">Receipt No</th>
-              <th style="padding:8px 10px;text-align:left;color:#555;">Student</th>
-              <th style="padding:8px 10px;text-align:left;color:#555;">Std / Medium</th>
-              <th style="padding:8px 10px;text-align:left;color:#555;">Batch</th>
-              <th style="padding:8px 10px;text-align:right;color:#555;">Paid</th>
-              <th style="padding:8px 10px;text-align:left;color:#555;">Mode</th>
-              <th style="padding:8px 10px;text-align:left;color:#555;">Date</th>
-              <th style="padding:8px 10px;text-align:left;color:#555;">Added By</th>
-            </tr>
-          </thead>
-          <tbody>`;
+        function handleClassModalClick(event) {
+          const modal = document.getElementById('classStudentsModal');
+          if (event.target === modal) {
+            closeClassModal();
+          }
+        }
 
-      payments.forEach((p, i) => {
-        html += `<tr style="border-bottom:1px solid #f0f0f0;">
-          <td style="padding:8px 10px;color:#888;">${i+1}</td>
-          <td style="padding:8px 10px;">
-            <a href="/Fees/Receipt/${p.paymentId}" target="_blank"
-               style="color:#2563eb;font-weight:600;font-size:12px;">
-              ${p.receiptNo}
-            </a>
-          </td>
-          <td style="padding:8px 10px;">
-            <div style="font-weight:700;">${p.studentName ?? '—'}</div>
-            <div style="font-size:11px;color:#888;">${p.admissionNo ?? ''}</div>
-          </td>
-          <td style="padding:8px 10px;font-size:12px;">${p.className ?? '—'} / ${p.sectionName ?? '—'}</td>
-          <td style="padding:8px 10px;font-size:12px;">${p.batchName ?? '—'}</td>
-          <td style="padding:8px 10px;text-align:right;font-weight:800;color:#15803d;">
-            ₹${p.netAmount.toLocaleString('en-IN')}
-            ${p.discount > 0 ? '<div style="font-size:11px;color:#dc2626;">Disc: ₹'+p.discount+'</div>' : ''}
-          </td>
-          <td style="padding:8px 10px;">
-            <span style="background:${p.paymentMode==='Cash'?'#dcfce7':'#dbeafe'};
-                         color:${p.paymentMode==='Cash'?'#15803d':'#1d4ed8'};
-                         padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">
-              ${p.paymentMode}
-            </span>
-          </td>
-          <td style="padding:8px 10px;font-size:12px;color:#888;">${p.paymentDate}</td>
-          <td style="padding:8px 10px;font-size:12px;">${p.collectorName ?? '—'}</td>
-        </tr>`;
-      });
+        function renderClassStudents(students) {
+          if (!students || students.length === 0) {
+            document.getElementById('classStudentsBody').innerHTML =
+              '<div style="text-align:center;padding:40px;color:#888;">No students in this class.</div>';
+            return;
+          }
 
-      html += '</tbody></table></div>';
-      document.getElementById('feesPopupBody').innerHTML = html;
-    }
+          let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f3f4f6;"><th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Student</th><th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Medium/Stream</th><th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Batch</th><th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Father Contact</th><th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Mother Contact</th><th style="padding:12px;text-align:center;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Action</th></tr></thead><tbody>';
 
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') closeFeesPopup();
-    });
+          students.forEach(s => {
+            const callMenuId = 'class-call_' + Math.random().toString(36).substr(2, 9);
+            html += `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:12px;"><div style="font-weight:600;font-size:13px;">${s.fullName}</div><div style="font-size:11px;color:#666;margin-top:2px;">${s.admissionNo}</div></td><td style="padding:12px;font-size:13px;">${s.sectionName || '—'}</td><td style="padding:12px;font-size:13px;">${s.batchName || '—'}</td><td style="padding:12px;font-size:13px;">${s.fatherPhone || '—'}</td><td style="padding:12px;font-size:13px;">${s.motherPhone || '—'}</td><td style="padding:12px;text-align:center;display:flex;gap:6px;justify-content:center;align-items:center;position:relative;">
+              <button onclick="toggleCallMenu('${callMenuId}')" style="background:#2563eb;color:#fff;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px;position:relative;"><i class="fas fa-phone"></i>
+                <div id="${callMenuId}" style="display:none;position:absolute;left:-180px;top:-10px;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10001;min-width:180px;padding:4px 0;">
+                  ${s.fatherPhone ? `<div onclick="callStudent('${s.fatherPhone}')" style="padding:6px 10px;cursor:pointer;font-size:11px;color:#333;border-bottom:1px solid #f5f5f5;"><i class="fas fa-phone" style="color:#dc2626;margin-right:6px;font-size:10px;"></i>Father: ${s.fatherPhone}</div>` : ''}
+                  ${s.motherPhone ? `<div onclick="callStudent('${s.motherPhone}')" style="padding:6px 10px;cursor:pointer;font-size:11px;color:#333;"><i class="fas fa-phone" style="color:#dc2626;margin-right:6px;font-size:10px;"></i>Mother: ${s.motherPhone}</div>` : ''}
+                </div>
+              </button>
+              <button onclick="showAbsenceModalClass('${s.fullName}', '${s.fatherPhone}', '${s.motherPhone}')" style="background:#25d366;color:#fff;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px;"><i class="fab fa-whatsapp"></i></button>
+            </td></tr>`;
+          });
+
+          html += '</tbody></table></div>';
+          document.getElementById('classStudentsBody').innerHTML = html;
+        }
+            
+        function showAbsenceModalClass(name, fatherPhone, motherPhone) {
+          const modal = document.createElement('div');
+          modal.id = 'absenceModal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+          modal.innerHTML = `
+            <div style="background:#fff;border-radius:8px;padding:24px;max-width:450px;width:90%;">
+              <h3 style="margin:0 0 6px 0;color:#1f2937;font-size:18px;font-weight:700;">Send Message</h3>
+              <p style="margin:0 0 16px 0;color:#666;font-size:13px;">Contact via WhatsApp</p>
+              <div style="margin-top:20px;display:flex;gap:12px;justify-content:center;">
+                ${fatherPhone ? `<button onclick="sendViaWhatsAppClass('${fatherPhone}')" style="background:#25d366;color:#fff;border:none;padding:12px 20px;border-radius:6px;cursor:pointer;font-weight:700;flex:1;font-size:14px;">👨‍👦 Send to Father</button>` : ''}
+                ${motherPhone ? `<button onclick="sendViaWhatsAppClass('${motherPhone}')" style="background:#25d366;color:#fff;border:none;padding:12px 20px;border-radius:6px;cursor:pointer;font-weight:700;flex:1;font-size:14px;">👩‍👧 Send to Mother</button>` : ''}
+              </div>
+              <div style="margin-top:12px;text-align:center;">
+                <button onclick="document.getElementById('absenceModal').remove()" style="background:#f3f4f6;color:#374151;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;">Close</button>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(modal);
+          modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
+        }
+
+        function sendViaWhatsAppClass(phone) {
+          if (!phone) { alert('Phone number not available'); return; }
+          const url = 'https://wa.me/' + phone.replace(/\D/g,'');
+          window.open(url, '_blank');
+          document.getElementById('absenceModal').remove();
+        }
 </script>
 

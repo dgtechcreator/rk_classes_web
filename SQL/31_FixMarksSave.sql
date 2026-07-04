@@ -281,8 +281,7 @@ AS BEGIN
     LEFT JOIN Classes       c  ON c.ClassId   = e.ClassId
     LEFT JOIN AcademicYears ay ON ay.YearId   = e.AcademicYearId
     LEFT JOIN TestMarks     tm ON tm.ExamId   = e.ExamId
-    WHERE  e.IsActive = 1
-      AND (@ClassId IS NULL OR e.ClassId = @ClassId)
+    WHERE  (@ClassId IS NULL OR e.ClassId = @ClassId)
     GROUP BY e.ExamId, e.ExamName, e.AcademicYearId, e.ClassId, e.TestDate, c.ClassName, ay.YearName
     ORDER BY e.ExamId DESC;
 END

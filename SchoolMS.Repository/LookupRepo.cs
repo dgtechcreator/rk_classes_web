@@ -72,6 +72,28 @@ public class LookupRepo(CommonConnectivity db)
                 IsActive = G.G<bool>(r,"IsActive")
             });
 
+        // Calculate overall fees summary - Direct from database
+        var feesSummary = db.Sql(@"
+            SELECT
+                ISNULL(SUM(fs.Amount), 0) as TotalFees,
+                ISNULL((SELECT SUM(NetAmount) FROM FeePayments WHERE IsDeleted=0), 0) as TotalCollected,
+                ISNULL((SELECT SUM(Discount) FROM FeePayments WHERE IsDeleted=0), 0) as TotalDiscount
+            FROM FeeStructure fs
+            WHERE fs.IsActive=1",
+            r => new {
+                TotalFees = G.G<decimal>(r,"TotalFees"),
+                TotalCollected = G.G<decimal>(r,"TotalCollected"),
+                TotalDiscount = G.G<decimal>(r,"TotalDiscount")
+            }).FirstOrDefault();
+
+        if (feesSummary != null)
+        {
+            stats.TotalFeesOverall = feesSummary.TotalFees;
+            stats.TotalCollectedOverall = feesSummary.TotalCollected;
+            stats.TotalDiscountOverall = feesSummary.TotalDiscount;
+            stats.BalanceOverall = Math.Max(0, stats.TotalFeesOverall - stats.TotalCollectedOverall - stats.TotalDiscountOverall);
+        }
+
         return stats;
     }
     public List<Student> GetStudentDropdown() => db.Sql("SELECT StudentId,FullName,AdmissionNo,ClassId FROM Students WHERE Status='Active' ORDER BY FullName",

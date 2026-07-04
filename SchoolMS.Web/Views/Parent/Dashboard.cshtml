@@ -13,6 +13,13 @@
       .GroupBy(m => new { m.ExamId, m.ExamName, Date = m.TestDate })
       .OrderByDescending(g => g.Key.Date)
       .ToList();
+
+  // Pre-compute fees alert variables
+  var showWarning = sel != null && Model.Balance > 0;
+  var showSuccess = sel != null && !showWarning && Model.TotalPaid > 0;
+
+  // Pre-compute class fees summary
+  var classFeesSummary = (ViewBag.ClassFeesSummary ?? new List<dynamic>()) as List<dynamic> ?? new();
 }
 
 <style>
@@ -393,13 +400,13 @@ else
       </div>
     </div>
 
-    @if (Model.Balance > 0)
-    {<div class="alert-warn"><i class="fas fa-exclamation-triangle"></i> Balance of ₹@Model.Balance.ToString("N0") is due. Please contact the school.</div>}
-    else if (Model.TotalPaid > 0)
-    {<div class="alert-ok"><i class="fas fa-check-circle"></i> All fees paid. No balance due.</div>}
-
-    @{
-        var classFeesSummary = ViewBag.ClassFeesSummary as List<dynamic> ?? new();
+    @if (showWarning)
+    {
+      <div class="alert-warn"><i class="fas fa-exclamation-triangle"></i> Balance of ₹@Model.Balance.ToString("N0") is due. Please contact the school.</div>
+    }
+    else if (showSuccess)
+    {
+      <div class="alert-ok"><i class="fas fa-check-circle"></i> All fees paid. No balance due.</div>
     }
 
     @if (classFeesSummary.Any())

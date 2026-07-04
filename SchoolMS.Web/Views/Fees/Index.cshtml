@@ -315,31 +315,39 @@
               <td style="font-size:13px;color:#666;white-space:nowrap;">@dueeDateStr</td>
               <td class="clickable-cell" style="font-size:13px;">@addedBy</td>
               <td onclick="event.stopPropagation()" style="white-space:nowrap;">
-                <button class="btn btn-outline btn-sm btn-icon" title="Call" onclick="toggleDropdownFees(event, 'call-fees-@s.StudentId')">
-                  <i class="fas fa-phone"></i>
-                </button>
                 @{
                   var phones = studentPhones.ContainsKey(s.StudentId) ? studentPhones[s.StudentId] : ("", "");
                   var fatherPhone = phones.Item1;
                   var motherPhone = phones.Item2;
                 }
-                <div id="call-fees-@s.StudentId" class="contact-dropdown" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:100;min-width:160px;">
-                  @if (!string.IsNullOrEmpty(fatherPhone))
-                  {
-                    <a href="tel:@fatherPhone" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
-                      📞 Father: @fatherPhone
-                    </a>
-                  }
-                  @if (!string.IsNullOrEmpty(motherPhone))
-                  {
-                    <a href="tel:@motherPhone" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
-                      📞 Mother: @motherPhone
-                    </a>
-                  }
+                <!-- Call Button -->
+                <div style="display:inline-block;position:relative;">
+                  <button class="btn btn-outline btn-sm btn-icon" title="Call" onclick="toggleDropdownFees(event, 'call-fees-@s.StudentId')">
+                    <i class="fas fa-phone"></i>
+                  </button>
+                  <div id="call-fees-@s.StudentId" class="contact-dropdown" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:100;min-width:160px;">
+                    @if (!string.IsNullOrEmpty(fatherPhone))
+                    {
+                      <a href="tel:@fatherPhone" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
+                        📞 Father: @fatherPhone
+                      </a>
+                    }
+                    @if (!string.IsNullOrEmpty(motherPhone))
+                    {
+                      <a href="tel:@motherPhone" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
+                        📞 Mother: @motherPhone
+                      </a>
+                    }
+                  </div>
                 </div>
-                <button class="btn btn-outline btn-sm btn-icon" title="WhatsApp - Fee Reminder" onclick="sendFeeReminder(@s.StudentId, '@fatherPhone', '@motherPhone')" style="color:#25D366;">
-                  <i class="fab fa-whatsapp"></i>
-                </button>
+
+                <!-- WhatsApp Button -->
+                <div style="display:inline-block;position:relative;">
+                  <button class="btn btn-outline btn-sm btn-icon" title="WhatsApp - Fee Reminder" onclick="sendFeeReminder(@s.StudentId, '@fatherPhone', '@motherPhone')" style="color:#25D366;">
+                    <i class="fab fa-whatsapp"></i>
+                  </button>
+                </div>
+
                 <a href="/Fees/Pay/@s.StudentId" class="btn-pay" style="padding:6px 12px;font-size:12px;">💳 Pay</a>
               </td>
             </tr>
@@ -358,204 +366,202 @@
 @section Scripts {
 <script>
 // Global functions for fee buttons
-window.toggleDropdownFees = function(e, id) {
-  e.preventDefault();
-  e.stopPropagation();
-  const dropdown = document.getElementById(id);
+        // Global functions for fee buttons
+        window.toggleDropdownFees = function (e, id) {
+            e.preventDefault();
+            e.stopPropagation();
 
-  document.querySelectorAll('.contact-dropdown').forEach(el => {
-    if (el.id !== id) el.style.display = 'none';
-  });
+            const dropdown = document.getElementById(id);
 
-  dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
-};
+            document.querySelectorAll('.contact-dropdown').forEach(el => {
+                if (el.id !== id) el.style.display = 'none';
+            });
 
-window.sendFeeReminder = function(studentId, fatherPhone, motherPhone) {
-  console.log('Fee reminder for student:', studentId);
-  showFeeReminderPopup(studentId, fatherPhone, motherPhone);
-};
+            dropdown.style.display =
+                dropdown.style.display === 'block' ? 'none' : 'block';
+        };
 
-let allRows = [];
-let currentPage = 1;
-let pageSize = 50;
+        window.sendFeeReminder = function (studentId, fatherPhone, motherPhone) {
+            showFeeReminderPopup(studentId, fatherPhone, motherPhone);
+        };
 
-function init() {
-  allRows = Array.from(document.querySelectorAll('#studentTbody tr'));
-  renderPage();
-}
+        // Show fee reminder popup
+        function showFeeReminderPopup(studentId, fatherPhone, motherPhone) {
 
-function filterTable(q) {
-  q = q.toLowerCase();
-  allRows.forEach(r => {
-    r._visible = !q || r.textContent.toLowerCase().includes(q);
-  });
-  currentPage = 1;
-  renderPage();
-}
+                    var feeMsg = `*Subject: Classes Fee Payment Reminder*
 
-function changePageSize(val) {
-  pageSize = parseInt(val);
-  currentPage = 1;
-  renderPage();
-}
+        *Dear Parents,*
 
-function renderPage() {
-  const visible = allRows.filter(r => r._visible !== false);
-  const total   = visible.length;
-  const pages   = Math.max(1, Math.ceil(total / pageSize));
-  if (currentPage > pages) currentPage = pages;
+        We hope you are doing well.
 
-  allRows.forEach(r => r.style.display = 'none');
-  const start = (currentPage - 1) * pageSize;
-  visible.slice(start, start + pageSize).forEach(r => r.style.display = '');
+        This is a gentle reminder that the due date for your child's classes fees is *10th July 2026*. Kindly make the payment on time to avoid any late charges.
 
-  // Pagination
-  const pg = document.getElementById('pagination');
-  pg.innerHTML = '';
-  const prev = document.createElement('button');
-  prev.className = 'pg-arrow'; prev.textContent = '◄';
-  prev.onclick = () => { if(currentPage>1){currentPage--;renderPage();} };
-  pg.appendChild(prev);
-  for (let i = 1; i <= pages; i++) {
-    const b = document.createElement('button');
-    b.className = 'pg-num' + (i===currentPage?' active':'');
-    b.textContent = i;
-    b.onclick = (x=>()=>{currentPage=x;renderPage();})(i);
-    pg.appendChild(b);
-  }
-  const next = document.createElement('button');
-  next.className = 'pg-arrow'; next.textContent = '►';
-  next.onclick = () => { if(currentPage<pages){currentPage++;renderPage();} };
-  pg.appendChild(next);
-}
+        Thank you for your cooperation.
 
-// Toggle call dropdown
+        *Best regards,*
+        *Kapil Sir*
+        *RK CLASSES*
+        *Phone: 9870375795 / 8108499214*
 
-// Show fee reminder popup
-function showFeeReminderPopup(studentId, fatherPhone, motherPhone) {
-  var modal = document.createElement('div');
-  modal.id = 'feeReminderModal-' + studentId;
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+        ────────────────────
 
-  var feeMsg = `*Subject: Classes Fee Payment Reminder*
+        *प्रिय अभिभावक,*
 
-*Dear Parents,*
+        आशा है कि आप एवं आपका परिवार स्वस्थ एवं सुखी होंगे।
 
-We hope you are doing well.
+        यह आपको विनम्रतापूर्वक स्मरण कराने हेतु सूचित किया जाता है कि आपके बच्चे की क्लासेस की फीस जमा करने की *अंतिम तिथि 10 जुलाई 2026 है।*
 
-This is a gentle reminder that the due date for your child's classes fees is the *10th july 2026*. Kindly make the payment on time to avoid any late charges.
+        कृपया विलंब शुल्क से बचने तथा शैक्षणिक गतिविधियों के सुचारु संचालन हेतु निर्धारित तिथि तक फीस का भुगतान सुनिश्चित करें।
 
-Thank you for your cooperation.
+        आपके सहयोग एवं विश्वास के लिए धन्यवाद।
 
-*Best regards,*
-*Kapil Sir*
-*RK CLASSES*
-*📞 9870375795 / 8108499214*
------------------------------------
+        *सादर,*
+        *कपिल सर*
+        *आर के क्लासेस*
+        *फोन: 9870375795 / 8108499214*`;
 
-*प्रिय अभिभावक,*
 
-आशा है कि आप एवं आपका परिवार स्वस्थ एवं सुखी होंगे।
+            var modal = document.createElement('div');
+            modal.id = 'feeReminderModal-' + studentId;
+            modal.style.cssText =
+                'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
 
-यह आपको विनम्रतापूर्वक स्मरण कराने हेतु सूचित किया जाता है कि आपके बच्चे की क्लासेस की फीस जमा करने की *अंतिम तिथि 10 जुलाई 2026 है।*
+            var modalDiv = document.createElement('div');
+            modalDiv.style.cssText =
+                'background:#fff;padding:24px;border-radius:12px;max-width:500px;width:90%;max-height:80vh;overflow:auto;';
 
-कृपया विलंब शुल्क से बचने तथा शैक्षणिक गतिविधियों के सुचारु संचालन हेतु निर्धारित तिथि तक फीस का भुगतान सुनिश्चित करें।
+            var msgDiv = document.createElement('div');
+            msgDiv.style.cssText =
+                'font-size:12px;line-height:1.6;margin-bottom:20px;white-space:pre-wrap;';
+            msgDiv.innerHTML = feeMsg.replace(/\n/g, '<br>');
 
-आपके सहयोग एवं विश्वास के लिए धन्यवाद।
+            var buttonsDiv = document.createElement('div');
+            buttonsDiv.style.cssText =
+                'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;';
 
-*सादर,*
-*कपिल सर*
-*आर के क्लासेस*
-*📞 9870375795 / 8108499214*
+            var fatherBtn = document.createElement('button');
+            fatherBtn.innerHTML = '👨 Father';
+            fatherBtn.style.cssText =
+                'background:#25D366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;';
+            fatherBtn.onclick = function () {
+                sendToFeeParent(studentId, fatherPhone);
+            };
 
-  var msgDisplay = feeMsg.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+            var motherBtn = document.createElement('button');
+            motherBtn.innerHTML = '👩 Mother';
+            motherBtn.style.cssText =
+                'background:#25D366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;';
+            motherBtn.onclick = function () {
+                sendToFeeParent(studentId, motherPhone);
+            };
 
-  var modalDiv = document.createElement('div');
-  modalDiv.style.cssText = 'background:#fff;padding:24px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.2);max-width:480px;width:90%;max-height:80vh;overflow-y:auto;';
+            var closeBtn = document.createElement('button');
+            closeBtn.innerHTML = 'Close';
+            closeBtn.style.cssText =
+                'width:100%;padding:12px;border:none;border-radius:6px;cursor:pointer;';
+            closeBtn.onclick = function () {
+                modal.remove();
+            };
 
-  var msgDiv = document.createElement('div');
-  msgDiv.style.cssText = 'font-size:12px;line-height:1.6;color:#333;margin-bottom:20px;white-space:pre-wrap;font-family:Arial,sans-serif;';
-  msgDiv.innerHTML = msgDisplay;
+            buttonsDiv.appendChild(fatherBtn);
+            buttonsDiv.appendChild(motherBtn);
 
-  var buttonsDiv = document.createElement('div');
-  buttonsDiv.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;';
+            modalDiv.appendChild(msgDiv);
+            modalDiv.appendChild(buttonsDiv);
+            modalDiv.appendChild(closeBtn);
 
-  var fatherBtn = document.createElement('button');
-  fatherBtn.textContent = '👨 Father';
-  fatherBtn.style.cssText = 'background:#25D366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;';
-  fatherBtn.onclick = function() { sendToFeeParent(studentId, fatherPhone); };
+            modal.appendChild(modalDiv);
+            document.body.appendChild(modal);
+        }
 
-  var motherBtn = document.createElement('button');
-  motherBtn.textContent = '👩 Mother';
-  motherBtn.style.cssText = 'background:#25D366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px;';
-  motherBtn.onclick = function() { sendToFeeParent(studentId, motherPhone); };
+        // Send WhatsApp message
+        function sendToFeeParent(studentId, parentPhone) {
 
-  buttonsDiv.appendChild(fatherBtn);
-  buttonsDiv.appendChild(motherBtn);
+                   var feeMsg = `*Subject: Classes Fee Payment Reminder*
 
-  var closeBtn = document.createElement('button');
-  closeBtn.textContent = 'Close';
-  closeBtn.style.cssText = 'width:100%;background:#f0f0f0;color:#333;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:600;';
-  closeBtn.onclick = function() { modal.remove(); };
+        *Dear Parents,*
 
-  modalDiv.appendChild(msgDiv);
-  modalDiv.appendChild(buttonsDiv);
-  modalDiv.appendChild(closeBtn);
-  modal.appendChild(modalDiv);
-  document.body.appendChild(modal);
-}
+        We hope you are doing well.
 
-// Send to individual parent
-function sendToFeeParent(studentId, parentPhone) {
-  var feeMsg = `*Subject: Classes Fee Payment Reminder*
+        This is a gentle reminder that the due date for your child's classes fees is *10th July 2026*. Kindly make the payment on time to avoid any late charges.
 
-*Dear Parents,*
+        Thank you for your cooperation.
 
-We hope you are doing well.
+        *Best regards,*
+        *Kapil Sir*
+        *RK CLASSES*
+        *Phone: 9870375795 / 8108499214*
 
-This is a gentle reminder that the due date for your child's class fees is the 10th of every month. Kindly make the payment on time to avoid any late charges.
+        ────────────────────
 
-For any questions or further information, please feel free to contact us at 9870375795 / 8108499214.
+        *प्रिय अभिभावक,*
 
-Thank you for your cooperation.
+        आशा है कि आप एवं आपका परिवार स्वस्थ एवं सुखी होंगे।
 
-Best regards,
+        यह आपको विनम्रतापूर्वक स्मरण कराने हेतु सूचित किया जाता है कि आपके बच्चे की क्लासेस की फीस जमा करने की *अंतिम तिथि 10 जुलाई 2026 है।*
 
-Kapil Yadav
-R K CLASSES
+        कृपया विलंब शुल्क से बचने तथा शैक्षणिक गतिविधियों के सुचारु संचालन हेतु निर्धारित तिथि तक फीस का भुगतान सुनिश्चित करें।
 
------------------------------------
+        आपके सहयोग एवं विश्वास के लिए धन्यवाद।
 
-*विषय: क्लासेस फीस भुगतान अनुस्मारक*
+        *सादर,*
+        *कपिल सर*
+        *आर के क्लासेस*
+        *फोन: 9870375795 / 8108499214*`;
 
-*प्रिय अभिभावक,*
+            if (!parentPhone) {
+                alert('Phone number not available');
+                return;
+            }
 
-आशा है आप सकुशल होंगे। यह एक विनम्र सूचना है कि आपके बच्चे की क्लासेस की फीस की अंतिम तारीख 10 तारीख है। कृपया किसी भी विलंब शुल्क से बचने के लिए समय पर भुगतान करें।
+            var parentNum = parentPhone.replace(/[^0-9]/g, '');
 
-किसी भी प्रश्न या जानकारी के लिए हमसे 9870375795 /8108499214 पर संपर्क करने में संकोच न करें।
+            if (parentNum.length > 0) {
 
-आपके सहयोग के लिए धन्यवाद।
+                window.open(
+                    'https://wa.me/' +
+                    parentNum +
+                    '?text=' +
+                    encodeURIComponent(feeMsg),
+                    '_blank'
+                );
 
-सादर,
-कपिल यादव
-आर के क्लासेस`;
+                var modal = document.getElementById(
+                    'feeReminderModal-' + studentId
+                );
 
-  if (parentPhone && parentPhone.trim() !== '') {
-    var parentNum = parentPhone.replace(/[^0-9]/g, '');
-    if (parentNum.length > 0) {
-      window.open('https://wa.me/' + parentNum + '?text=' + encodeURIComponent(feeMsg), '_blank');
-      var modal = document.getElementById('feeReminderModal-' + studentId);
-      if (modal) modal.remove();
+                if (modal) {
+                    modal.remove();
+                }
+            }
+        }
+
+        // Close dropdowns on outside click
+        document.addEventListener('click', function () {
+            document.querySelectorAll('.contact-dropdown').forEach(el => {
+                el.style.display = 'none';
+            });
+        });
+
+// Filter table by student name or admission number
+function filterTable(searchValue) {
+  const table = document.querySelector('table tbody');
+  if (!table) return;
+
+  const rows = table.querySelectorAll('tr');
+  const searchTerm = searchValue.toLowerCase();
+
+  rows.forEach(row => {
+    const studentName = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+    const admissionNo = row.querySelector('td:nth-child(1)')?.textContent.toLowerCase() || '';
+
+    if (studentName.includes(searchTerm) || admissionNo.includes(searchTerm)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
     }
-  }
-}
-
-// Close dropdowns on outside click
-document.addEventListener('click', () => {
-  document.querySelectorAll('.contact-dropdown').forEach(el => {
-    el.style.display = 'none';
   });
-});
+}
 
 // Open student fees/payment page using event delegation
 document.addEventListener('click', function(e) {

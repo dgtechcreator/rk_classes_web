@@ -1,0 +1,186 @@
+@{
+  Layout = "_ParentLayout";
+  ViewData["Title"] = "Contact Us";
+
+  var selId = ViewBag.SelectedStudentId ?? 0;
+  var activeTab = ViewBag.ActiveTab ?? "attendance";
+}
+
+<style>
+.contact-container { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+.contact-header {
+  background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%);
+  color: #fff;
+  padding: 30px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+.contact-header h1 { margin: 0 0 8px 0; font-size: 24px; font-weight: 800; }
+.contact-header p { margin: 0; font-size: 13px; opacity: 0.9; }
+
+.contact-content { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.contact-info { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; }
+.contact-form { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; }
+
+.info-item { margin-bottom: 24px; }
+.info-item:last-child { margin-bottom: 0; }
+.info-label { font-size: 12px; font-weight: 800; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.info-value { font-size: 16px; font-weight: 700; color: #1f2937; margin-bottom: 4px; }
+.info-desc { font-size: 13px; color: #666; }
+
+.form-group { margin-bottom: 18px; }
+.form-group:last-child { margin-bottom: 0; }
+.form-label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: #333; }
+.form-input, .form-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+.form-input:focus, .form-textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+.form-textarea { resize: vertical; min-height: 120px; }
+
+.btn-submit {
+  width: 100%;
+  padding: 12px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-submit:hover { background: #1d4ed8; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+
+.contact-icon { font-size: 24px; margin-bottom: 8px; }
+.contact-icon-phone { color: #2563eb; }
+.contact-icon-email { color: #059669; }
+.contact-icon-location { color: #dc2626; }
+
+.alert { padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; font-weight: 600; }
+.alert-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.alert-error { background: #fff5f5; color: #dc2626; border: 1px solid #fecaca; }
+
+@@media (max-width: 768px) {
+  .contact-container { padding: 0 12px; }
+  .contact-content { grid-template-columns: 1fr; gap: 16px; }
+  .contact-header { padding: 20px 16px; margin-bottom: 16px; border-radius: 8px; }
+  .contact-header h1 { font-size: 20px; margin-bottom: 6px; }
+  .contact-header p { font-size: 12px; }
+  .contact-info { padding: 16px; border-radius: 8px; }
+  .contact-form { padding: 16px; border-radius: 8px; }
+  .form-input, .form-textarea { padding: 9px 10px; font-size: 13px; }
+  .btn-submit { padding: 10px; font-size: 13px; }
+  .info-item { margin-bottom: 16px; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; margin-bottom: 5px; }
+}
+</style>
+
+<div class="contact-container">
+  <div class="contact-header">
+    <h1>📞 Contact Us</h1>
+    <p>Get in touch with RK Classes for any queries or support</p>
+  </div>
+
+  @if (TempData["Success"] != null)
+  {
+    <div class="alert alert-success">
+      <i class="fas fa-check-circle"></i> @TempData["Success"]
+    </div>
+  }
+
+  @if (TempData["Error"] != null)
+  {
+    <div class="alert alert-error">
+      <i class="fas fa-exclamation-circle"></i> @TempData["Error"]
+    </div>
+  }
+
+  <div class="contact-content">
+    <!-- Contact Information -->
+    <div class="contact-info">
+      <h2 style="font-size: 16px; font-weight: 800; margin-bottom: 20px; color: #1f2937;">Contact Information</h2>
+
+      <div class="info-item">
+        <div class="contact-icon contact-icon-email">
+          <i class="fas fa-envelope"></i>
+        </div>
+        <div class="info-label">Email</div>
+        <div class="info-value">
+          <a href="mailto:rkclasseskapilsir2002@gmail.com" style="color: #2563eb; text-decoration: none;">
+            rkclasseskapilsir2002@gmail.com
+          </a>
+        </div>
+        <div class="info-desc">We'll respond to your email within 24 hours</div>
+      </div>
+
+      <div class="info-item">
+        <div class="contact-icon contact-icon-phone">
+          <i class="fas fa-phone"></i>
+        </div>
+        <div class="info-label">Phone</div>
+        <div class="info-value">
+          <a href="tel:9870375795" style="color: #2563eb; text-decoration: none; display: block; margin-bottom: 6px;">
+            9870375795
+          </a>
+          <a href="tel:8108499214" style="color: #2563eb; text-decoration: none;">
+            8108499214
+          </a>
+        </div>
+        <div class="info-desc">Available Mon-Sat, 10 AM - 6 PM</div>
+      </div>
+
+      <div class="info-item">
+        <div class="contact-icon contact-icon-location">
+          <i class="fas fa-map-marker-alt"></i>
+        </div>
+        <div class="info-label">Location</div>
+        <div class="info-value">RK Classes, Sakinaka</div>
+        <div class="info-desc">Mumbai, India</div>
+      </div>
+    </div>
+
+    <!-- Contact Form -->
+    <div class="contact-form">
+      <h2 style="font-size: 16px; font-weight: 800; margin-bottom: 20px; color: #1f2937;">Send us a Message</h2>
+
+      <form method="post" action="/Parent/SendMessage">
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input type="text" name="name" class="form-input" placeholder="Your name" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Email Address *</label>
+          <input type="email" name="email" class="form-input" placeholder="your@email.com" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Subject *</label>
+          <input type="text" name="subject" class="form-input" placeholder="Message subject" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Message *</label>
+          <textarea name="message" class="form-textarea" placeholder="Write your message here..." required></textarea>
+        </div>
+
+        <button type="submit" class="btn-submit">
+          <i class="fas fa-paper-plane"></i> Send Message
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

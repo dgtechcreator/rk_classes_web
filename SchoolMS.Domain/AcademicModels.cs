@@ -94,4 +94,6 @@ public class Exam
     public string?  YearName{get;set;}
     public DateTime? TestDate{get;set;}
     public int      EntryCount{get;set;}
+    public int?     SubjectId{get;set;}
+    public int?     MaxMarks{get;set;}
 }

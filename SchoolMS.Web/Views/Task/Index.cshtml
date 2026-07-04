@@ -1,0 +1,171 @@
+@model List<SchoolMS.Domain.TaskItem>
+@{
+    ViewData["Title"] = "Tasks & Reminders";
+}
+
+<style>
+.task-card { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin-bottom:12px; }
+.task-card.pending { border-left:4px solid #f59e0b; }
+.task-card.overdue { border-left:4px solid #dc2626; }
+.task-card.completed { border-left:4px solid #16a34a; opacity:0.6; }
+.task-priority { display:inline-block; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:700; margin-right:8px; }
+.task-priority.high { background:#fee2e2; color:#dc2626; }
+.task-priority.medium { background:#fef3c7; color:#d97706; }
+.task-priority.low { background:#dcfce7; color:#16a34a; }
+</style>
+
+<div style="padding:20px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <h1 style="font-size:24px;font-weight:800;">📋 Tasks & Reminders</h1>
+    <button onclick="showAddTaskModal()" class="btn btn-primary"><i class="fas fa-plus"></i> Add Task</button>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:20px;">
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:20px;font-weight:900;color:#d97706;">@Model.Count</div>
+      <div style="font-size:12px;color:#b45309;margin-top:4px;">Total Tasks</div>
+    </div>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:20px;font-weight:900;color:#dc2626;">@Model.Count(t => t.Status == "Pending")</div>
+      <div style="font-size:12px;color:#b91c1c;margin-top:4px;">Pending</div>
+    </div>
+    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:20px;font-weight:900;color:#dc2626;">@Model.Count(t => t.Status == "Overdue")</div>
+      <div style="font-size:12px;color:#b91c1c;margin-top:4px;">Overdue</div>
+    </div>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;text-align:center;">
+      <div style="font-size:20px;font-weight:900;color:#16a34a;">@Model.Count(t => t.IsCompleted)</div>
+      <div style="font-size:12px;color:#15803d;margin-top:4px;">Completed</div>
+    </div>
+  </div>
+
+  @foreach(var task in Model.OrderBy(t => t.DueDate))
+  {
+    var statusClass = task.Status.ToLower();
+    <div class="task-card @statusClass">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
+        <div>
+          <span class="task-priority @task.Priority.ToLower()">@task.Priority</span>
+          <span style="font-size:11px;background:#f0f0f0;padding:3px 8px;border-radius:4px;color:#666;">@task.Category</span>
+        </div>
+        <div>
+          @if (!task.IsCompleted)
+          {
+            <button onclick="completeTask(@task.TaskId)" style="background:#16a34a;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;margin-right:6px;font-size:12px;font-weight:700;">
+              ✓ Complete
+            </button>
+          }
+          <button onclick="deleteTask(@task.TaskId)" style="background:#fee2e2;color:#dc2626;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;">
+            🗑 Delete
+          </button>
+        </div>
+      </div>
+      <div style="font-size:15px;font-weight:700;color:#111;margin-bottom:6px;">@task.Title</div>
+      <div style="font-size:13px;color:#666;margin-bottom:8px;">@task.Description</div>
+      <div style="display:flex;gap:16px;font-size:12px;color:#999;">
+        <div>📅 Due: <strong>@task.DueDate.ToString("dd MMM yyyy")</strong></div>
+        @if (task.StudentName != null)
+        {
+          <div>👤 @task.StudentName (@task.AdmissionNo)</div>
+        }
+      </div>
+    </div>
+  }
+
+  @if (!Model.Any())
+  {
+    <div style="text-align:center;padding:40px;color:#999;">
+      <div style="font-size:48px;margin-bottom:12px;">📋</div>
+      <div style="font-size:16px;font-weight:700;">No tasks yet</div>
+      <button onclick="showAddTaskModal()" class="btn btn-primary" style="margin-top:16px;">Create your first task</button>
+    </div>
+  }
+</div>
+
+<!-- Add Task Modal -->
+<div id="addTaskModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:24px;width:90%;max-width:500px;max-height:90vh;overflow-y:auto;">
+    <h2 style="margin-bottom:20px;font-weight:800;">Create New Task</h2>
+    <form onsubmit="saveTask(event)">
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-weight:700;margin-bottom:6px;">Task Title</label>
+        <input type="text" id="taskTitle" required style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;"/>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-weight:700;margin-bottom:6px;">Description</label>
+        <textarea id="taskDesc" rows="3" style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;"></textarea>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-weight:700;margin-bottom:6px;">Due Date</label>
+        <input type="date" id="taskDue" required style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;"/>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" onclick="closeAddTaskModal()" style="background:#e5e7eb;color:#374151;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:700;">Cancel</button>
+        <button type="submit" style="background:#2563eb;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:700;">Create Task</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function showAddTaskModal() {
+  document.getElementById('addTaskModal').style.display = 'flex';
+}
+
+function closeAddTaskModal() {
+  document.getElementById('addTaskModal').style.display = 'none';
+}
+
+function saveTask(e) {
+  e.preventDefault();
+  const data = {
+    title: document.getElementById('taskTitle').value,
+    description: document.getElementById('taskDesc').value,
+    dueDate: document.getElementById('taskDue').value
+  };
+
+  fetch('/Task/CreateTask', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(data)
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.success) {
+      closeAddTaskModal();
+      alert('✓ Task created!');
+      location.reload();
+    } else {
+      alert('Error: ' + res.message);
+    }
+  });
+}
+
+function completeTask(taskId) {
+  if (confirm('Mark this task as complete?')) {
+    fetch('/Task/CompleteTask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'taskId=' + taskId
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        alert('✓ Task completed!');
+        location.reload();
+      }
+    });
+  }
+}
+
+function deleteTask(taskId) {
+  if (confirm('Delete this task?')) {
+    fetch('/Task/DeleteTask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'taskId=' + taskId
+    })
+    .then(() => location.reload());
+  }
+}
+</script>

@@ -363,7 +363,6 @@ body::before {
         </div>
         <div class="remember-row">
           <label><input type="checkbox" name="RememberMe"/> Remember me</label>
-          <a href="#" class="forgot">Forgot password?</a>
         </div>
         <button type="submit" class="login-btn" id="loginBtn">
           <span>LOGIN</span>
@@ -380,10 +379,6 @@ body::before {
         </a>
       </div>
 
-      <!-- Download App Button -->
-      <div style="text-align:center;margin-top:14px;">
-        <button id="installBtn" style="padding:10px 20px;background:#cc0000;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;transition:background .2s;"><i class="fas fa-download"></i> Download App</button>
-      </div>
 
     </div>
 
@@ -391,45 +386,6 @@ body::before {
 </div>
 
 <script>
-let deferredPrompt;
-const installBtn = document.getElementById('installBtn');
-
-// Only run if button exists
-if (installBtn) {
-  // Listen for install prompt
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    // Show button when app can be installed
-    installBtn.style.display = 'inline-block';
-  });
-
-  // When user clicks Download App button
-  installBtn.addEventListener('click', async () => {
-    if (deferredPrompt) {
-      // Show the install prompt
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log(`User response: ${outcome}`);
-
-      if (outcome === 'accepted') {
-        // App was installed, hide button
-        installBtn.style.display = 'none';
-      }
-
-      deferredPrompt = null;
-    }
-  });
-
-  // When app is successfully installed
-  window.addEventListener('appinstalled', () => {
-    console.log('PWA installed successfully!');
-    // Hide the button after installation
-    installBtn.style.display = 'none';
-    // Keep user on login page - they can now login
-  });
-}
-
 function togglePwd() {
   var f = document.getElementById('pwdField');
   var i = document.getElementById('eyeIcon');

@@ -19,4 +19,7 @@ public class AttendanceService(AttendanceRepo repo)
     public (List<AttendanceRecord> students, List<DateAttendanceEntry> att) GetDateGrid(
         int? cls, int? sec, int? bat, DateTime from, DateTime to)
         => repo.GetDateGrid(cls, sec, bat, from, to);
+
+    public List<(int StudentId, string FullName, string AdmissionNo, string Phone, string FatherPhone, string MotherPhone, string Medium, string ClassName, string SectionName, string BatchName)> GetAbsentStudentsToday()
+        => repo.GetAbsentStudentsToday();
 }

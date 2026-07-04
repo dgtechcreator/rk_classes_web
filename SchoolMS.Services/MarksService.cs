@@ -23,4 +23,8 @@ public class MarksService(MarksRepo repo)
         => repo.GetSubjectWiseRankings(yearId, classId, sectionId);
     public List<Exam> GetExamList(int? yearId, int? classId)
         => repo.GetExamList(yearId, classId);
+    public List<TestMark> GetAllTestsByYear(int yearId)
+        => repo.GetAllTestsByYear(yearId);
+    public List<dynamic> GetTop5StudentsInSubject(string subjectName, int? classId, int? sectionId)
+        => repo.GetTop5StudentsInSubject(subjectName, classId, sectionId);
 }

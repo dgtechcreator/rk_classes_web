@@ -233,6 +233,7 @@ function printPortrait() {
   if (s) s.textContent = '';
   window.print();
 }
+
 function printLandscape() {
   var at = String.fromCharCode(64);
   var rule = at + 'media print{' + at + 'page{size:A5 landscape;margin:5mm 8mm;}}';
@@ -242,6 +243,7 @@ function printLandscape() {
   window.print();
   setTimeout(function(){ s.textContent = ''; }, 1500);
 }
+
 </script>
 </body>
 </html>

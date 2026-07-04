@@ -12,6 +12,10 @@ public class DashboardStats
     public int     Class2Count{get;set;}
     public int     Class3Count{get;set;}
     public int     TotalStaff{get;set;}
+    public decimal TotalFeesOverall{get;set;}
+    public decimal TotalCollectedOverall{get;set;}
+    public decimal TotalDiscountOverall{get;set;}
+    public decimal BalanceOverall{get;set;}
     public List<ClassStrengthStat> ClassStrengths{get;set;} = new();
     public List<ClassAllStat> AllClasses{get;set;} = new();
 }

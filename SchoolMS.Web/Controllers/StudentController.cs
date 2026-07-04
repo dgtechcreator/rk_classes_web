@@ -350,6 +350,21 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
             fees      = feesSvc.GetStudentHistory(studentId.Value);
         }
 
+        // Get total actual fees for the student
+        var feeStructures = student != null && student.ClassId.HasValue
+            ? feeSvc.GetAll(student.AcademicYearId, student.ClassId, student.SectionId)
+            : new List<SchoolMS.Domain.FeeStructure>();
+        if (!feeStructures.Any() && student != null && student.ClassId.HasValue)
+            feeStructures = feeSvc.GetAll(null, student.ClassId, student.SectionId);
+        if (!feeStructures.Any() && student != null && student.ClassId.HasValue)
+            feeStructures = feeSvc.GetAll(null, student.ClassId, null);
+
+        decimal totalActualFees = feeStructures.Sum(f => f.Amount);
+        decimal totalPaidFees = fees.Sum(f => f.NetAmount);
+        decimal totalDiscount = fees.Sum(f => f.Discount);
+        decimal feesAfterDiscount = totalActualFees - totalDiscount;
+        decimal balanceDue = Math.Max(0, totalActualFees - totalDiscount - totalPaidFees);
+
         ViewBag.Classes     = classes;
         ViewBag.Sections    = sections;
         ViewBag.StudentList = studentList;
@@ -360,7 +375,75 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
         ViewBag.AttDetail   = attDetail;
         ViewBag.Marks       = marks;
         ViewBag.Fees        = fees;
+        ViewBag.TotalActualFees = totalActualFees;
+        ViewBag.TotalPaidFees = totalPaidFees;
+        ViewBag.TotalDiscount = totalDiscount;
+        ViewBag.FeesAfterDiscount = feesAfterDiscount;
+        ViewBag.BalanceDue = balanceDue;
         return View(student);
+    }
+
+    [HttpGet]
+    public IActionResult QuickSearch(string q)
+    {
+        if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+            return Json(new List<object>());
+
+        var yearId = lookup.GetCurrentYearId();
+        var (students, _) = svc.GetAll(1, 50, q, null, null, null, yearId, "Active");
+
+        var classes = lookup.GetClasses();
+        var sections = lookup.GetSections();
+
+        var results = students
+            .Select(s => new {
+                studentId = s.StudentId,
+                classId = s.ClassId,
+                sectionId = s.SectionId,
+                fullName = s.FullName,
+                admissionNo = s.AdmissionNo,
+                className = classes.FirstOrDefault(c => c.ClassId == s.ClassId)?.ClassName ?? "",
+                sectionName = sections.FirstOrDefault(sec => sec.SectionId == s.SectionId)?.SectionName ?? ""
+            })
+            .ToList();
+
+        return Json(results);
+    }
+
+    [HttpGet]
+    public IActionResult GetClassStudents(int classId)
+    {
+        try
+        {
+            var yearId = lookup.GetCurrentYearId();
+            var (students, _) = svc.GetAll(1, 999999, null, classId, null, null, yearId, null);
+
+            var batches = lookup.GetBatches();
+            var sections = lookup.GetSections();
+            var classes = lookup.GetClasses();
+            var className = classes.FirstOrDefault(c => c.ClassId == classId)?.ClassName ?? "";
+
+            var results = new {
+                className = className,
+                students = students
+                    .Select(s => new {
+                        studentId = s.StudentId,
+                        fullName = s.FullName,
+                        admissionNo = s.AdmissionNo,
+                        fatherPhone = s.FatherPhone ?? "",
+                        motherPhone = s.MotherPhone ?? "",
+                        batchName = batches.FirstOrDefault(b => b.BatchId == s.BatchId)?.BatchName ?? "",
+                        sectionName = sections.FirstOrDefault(sec => sec.SectionId == s.SectionId)?.SectionName ?? ""
+                    })
+                    .ToList()
+            };
+
+            return Json(results);
+        }
+        catch (Exception ex)
+        {
+            return Json(new { error = ex.Message, className = "", students = new List<object>() });
+        }
     }
 
     static string Csv(string? v)

@@ -198,26 +198,33 @@
               var fatherPhone = phones != null && phones.ContainsKey(r.StudentId) ? phones[r.StudentId].Item1 : "";
               var motherPhone = phones != null && phones.ContainsKey(r.StudentId) ? phones[r.StudentId].Item2 : "";
             }
-            <button class="btn btn-outline btn-sm btn-icon" title="Call" onclick="toggleDropdown(event, 'call-att-@r.StudentId')">
-              <i class="fas fa-phone"></i>
-            </button>
-            <div id="call-att-@r.StudentId" class="contact-dropdown" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:100;min-width:160px;">
-              @if (!string.IsNullOrEmpty(fatherPhone))
-              {
-                <a href="tel:@fatherPhone" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
-                  📞 Father: @fatherPhone
-                </a>
-              }
-              @if (!string.IsNullOrEmpty(motherPhone))
-              {
-                <a href="tel:@motherPhone" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#333;font-size:13px;font-weight:600;">
-                  📞 Mother: @motherPhone
-                </a>
-              }
+            <!-- Call Button -->
+            <div style="display:inline-block;position:relative;">
+              <button class="btn btn-outline btn-sm btn-icon" title="Call" onclick="toggleDropdown(event, 'call-att-@r.StudentId')">
+                <i class="fas fa-phone"></i>
+              </button>
+              <div id="call-att-@r.StudentId" class="contact-dropdown" style="display:none;position:absolute;left:-180px;top:-10px;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10001;min-width:180px;padding:4px 0;">
+                @if (!string.IsNullOrEmpty(fatherPhone))
+                {
+                  <a href="tel:@fatherPhone" class="contact-option" style="display:block;padding:6px 10px;border-bottom:1px solid #f5f5f5;text-decoration:none;color:#333;font-size:11px;font-weight:600;">
+                    <i class="fas fa-phone" style="color:#dc2626;margin-right:6px;font-size:10px;"></i>Father: @fatherPhone
+                  </a>
+                }
+                @if (!string.IsNullOrEmpty(motherPhone))
+                {
+                  <a href="tel:@motherPhone" class="contact-option" style="display:block;padding:6px 10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;">
+                    <i class="fas fa-phone" style="color:#dc2626;margin-right:6px;font-size:10px;"></i>Mother: @motherPhone
+                  </a>
+                }
+              </div>
             </div>
-            <button class="btn btn-outline btn-sm btn-icon" title="WhatsApp - Absence Notification" onclick="sendAbsenceMessageBuiltIn(@r.StudentId, '@fatherPhone', '@motherPhone')" style="color:#25D366;">
-              <i class="fab fa-whatsapp"></i>
-            </button>
+
+            <!-- WhatsApp Button -->
+            <div style="display:inline-block;position:relative;">
+              <button class="btn btn-outline btn-sm btn-icon" title="WhatsApp - Absence Notification" onclick="sendAbsenceMessageBuiltIn(@r.StudentId, '@fatherPhone', '@motherPhone')" style="color:#25D366;">
+                <i class="fab fa-whatsapp"></i>
+              </button>
+            </div>
           </td>
         </tr>
       }
@@ -279,6 +286,14 @@
     </div>
   </form>
 
+  <!-- Attendance Badges for Selected Date -->
+  <div id="dateAttendanceBadges" style="margin-top:16px;margin-bottom:16px;display:none;">
+    <div style="font-size:12px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;">
+      <i class="fas fa-calendar-check"></i> Classes with Attendance
+    </div>
+    <div id="badgesContainer" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+  </div>
+
   <div class="card" style="padding:0;margin-top:12px;">
     <div class="tbl-wrap">
       <table id="dateWiseTable">
@@ -325,14 +340,79 @@ function loadDateWise() {
     .then(data => {
       var tbody = document.getElementById('dateWiseTbody');
       var empty = document.getElementById('dateWiseEmpty');
+      var badgesDiv = document.getElementById('dateAttendanceBadges');
+      var badgesContainer = document.getElementById('badgesContainer');
       tbody.innerHTML = '';
+      badgesContainer.innerHTML = '';
 
       if (data.length === 0) {
         empty.style.display = 'block';
+        badgesDiv.style.display = 'none';
         return;
       }
 
       empty.style.display = 'none';
+
+      // Group by class/section/batch and show badges
+      var groupedByClass = {};
+      data.forEach(item => {
+        var key = item.className + '|' + (item.sectionName || '') + '|' + (item.batchName || '');
+        if (!groupedByClass[key]) {
+          groupedByClass[key] = {
+            className: item.className,
+            sectionName: item.sectionName,
+            batchName: item.batchName,
+            count: 0
+          };
+        }
+        groupedByClass[key].count++;
+      });
+
+      // Display badges for each class - only show classes that have records on this date
+      var uniqueClasses = new Set();
+      data.forEach(item => {
+        uniqueClasses.add(item.className + '|' + (item.sectionName || '') + '|' + (item.batchName || ''));
+      });
+
+      if (uniqueClasses.size > 0) {
+        Object.values(groupedByClass).forEach(group => {
+          var key = group.className + '|' + (group.sectionName || '') + '|' + (group.batchName || '');
+          if (uniqueClasses.has(key)) {
+            var badge = document.createElement('div');
+            var displayName = (group.className + ' ' + (group.sectionName || '') + ' ' + (group.batchName || '')).trim().toUpperCase();
+            badge.style.cssText = 'display:inline-flex;align-items:center;gap:8px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:25px;padding:8px 14px;font-size:12px;font-weight:700;color:#1e40af;cursor:pointer;white-space:nowrap;transition:all 0.2s;';
+            badge.innerHTML = '<i class="fas fa-calendar-check"></i><span>' + displayName + '</span><span style="background:#bfdbfe;color:#1e40af;border-radius:12px;padding:2px 8px;font-size:11px;font-weight:800;">' + group.count + '</span>';
+
+            badge.onclick = function(e) {
+              e.stopPropagation();
+              document.getElementById('dwClassId').value = '';
+              document.getElementById('dwSectionId').value = '';
+              document.getElementById('dwBatchId').value = '';
+
+              var filteredData = data.filter(item =>
+                (item.className + '|' + (item.sectionName || '') + '|' + (item.batchName || '')) === key
+              );
+
+              tbody.innerHTML = '';
+              filteredData.forEach((item, idx) => {
+                var statusBadge = 'b-present';
+                if (item.status === 'Absent') statusBadge = 'b-absent';
+                else if (item.status === 'Late') statusBadge = 'b-late';
+
+                var row = '<tr><td>' + (idx + 1) + '</td><td><strong>' + item.studentName + '</strong><br/><span style="font-size:11px;color:#888;">' + item.admissionNo + '</span></td><td>' + item.className + '</td><td><span class="badge b-purple">' + (item.sectionName || '—') + '</span></td><td>' + item.batchName + '</td><td style="text-align:center;"><span class="badge ' + statusBadge + '">' + item.status + '</span></td><td>' + (item.subject || '—') + '</td><td>' + (item.teacher || '—') + '</td></tr>';
+                tbody.insertAdjacentHTML('beforeend', row);
+              });
+            };
+
+            badge.onmouseover = function() { this.style.background='#dbeafe'; this.style.boxShadow='0 4px 12px rgba(30,64,175,0.2)'; };
+            badge.onmouseout = function() { this.style.background='#eff6ff'; this.style.boxShadow='none'; };
+            badgesContainer.appendChild(badge);
+          }
+        });
+        badgesDiv.style.display = 'block';
+      } else {
+        badgesDiv.style.display = 'none';
+      }
       data.forEach((item, idx) => {
         var statusBadge = 'b-present';
         if (item.status === 'Absent') statusBadge = 'b-absent';
@@ -347,11 +427,14 @@ function loadDateWise() {
           <td style="text-align:center;"><span class="badge ${statusBadge}">${item.status}</span></td>
           <td>${item.subject || '—'}</td>
           <td>${item.teacher || '—'}</td>
-          <td style="white-space:nowrap;">
-            <button class="btn btn-outline btn-sm btn-icon" title="Call" onclick="toggleDropdownDateWise(event, 'call-dw-${idx}', '${item.studentId || ''}')" style="padding:4px 8px;">
+          <td style="white-space:nowrap;position:relative;">
+            <button class="btn btn-outline btn-sm btn-icon" title="Call" onclick="toggleDropdown(event, 'call-dw-${idx}')" style="padding:4px 8px;">
               <i class="fas fa-phone"></i>
             </button>
-            <div id="call-dw-${idx}" class="contact-dropdown" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:100;min-width:160px;"></div>
+            <div id="call-dw-${idx}" class="contact-dropdown" style="display:none;position:absolute;left:-180px;top:-10px;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10001;min-width:180px;padding:4px 0;">
+              ${item.fatherPhone ? `<a href="tel:${item.fatherPhone}" style="display:block;padding:6px 10px;border-bottom:1px solid #f5f5f5;text-decoration:none;color:#333;font-size:11px;font-weight:600;"><i class="fas fa-phone" style="color:#dc2626;margin-right:6px;font-size:10px;"></i>Father: ${item.fatherPhone}</a>` : ''}
+              ${item.motherPhone ? `<a href="tel:${item.motherPhone}" style="display:block;padding:6px 10px;text-decoration:none;color:#333;font-size:11px;font-weight:600;"><i class="fas fa-phone" style="color:#dc2626;margin-right:6px;font-size:10px;"></i>Mother: ${item.motherPhone}</a>` : ''}
+            </div>
             <button class="btn btn-outline btn-sm btn-icon" title="WhatsApp" onclick="sendAbsenceMessageDW(event, '${item.studentId || ''}')" style="color:#25D366;padding:4px 8px;">
               <i class="fab fa-whatsapp"></i>
             </button>
@@ -406,37 +489,26 @@ function toggleSection(section) {
   }
 }
 
-// Load student contact info for attendance report
+// Close dropdowns when clicking outside
+document.addEventListener('click', () => {
+  document.querySelectorAll('.contact-dropdown').forEach(el => {
+    el.style.display = 'none';
+  });
+});
+
+// Toggle Call dropdown
 function toggleDropdown(e, id) {
   e.preventDefault();
   e.stopPropagation();
   var dropdown = document.getElementById(id);
-  var studentId = dropdown.getAttribute('data-student-id');
 
   // Close all other dropdowns
   document.querySelectorAll('.contact-dropdown').forEach(el => {
     if (el.id !== id) el.style.display = 'none';
   });
 
-  if (dropdown.style.display === 'block') {
-    dropdown.style.display = 'none';
-    return;
-  }
-
-  // Load contact info
-  fetch('/Attendance/GetStudentContact?studentId=' + studentId)
-    .then(response => response.json())
-    .then(data => {
-      dropdown.innerHTML = '';
-      if (data.fatherPhone) {
-        dropdown.innerHTML += `<a href="tel:${data.fatherPhone}" class="contact-option" style="display:block;padding:10px 14px;border-bottom:1px solid #eee;text-decoration:none;color:#333;font-size:13px;font-weight:600;">📞 Father: ${data.fatherPhone}</a>`;
-      }
-      if (data.studentPhone) {
-        dropdown.innerHTML += `<a href="tel:${data.studentPhone}" class="contact-option" style="display:block;padding:10px 14px;text-decoration:none;color:#333;font-size:13px;font-weight:600;">📞 Student: ${data.studentPhone}</a>`;
-      }
-      dropdown.style.display = 'block';
-    })
-    .catch(err => console.error('Error:', err));
+  // Toggle current dropdown
+  dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
 }
 
 // Send absence notification message (with pre-loaded phone numbers)

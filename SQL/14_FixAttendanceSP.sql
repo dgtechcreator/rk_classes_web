@@ -44,7 +44,10 @@ AS BEGIN
         a.Subject,
         a.SirName,
         a.StartTime,
-        a.EndTime
+        a.EndTime,
+        s.Phone,
+        s.FatherPhone,
+        s.MotherPhone
     FROM Students s
     LEFT JOIN Classes   c   ON c.ClassId     = s.ClassId
     LEFT JOIN Sections  sec ON sec.SectionId = s.SectionId

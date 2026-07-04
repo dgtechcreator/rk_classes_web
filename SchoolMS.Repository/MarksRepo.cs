@@ -60,11 +60,11 @@ public class MarksRepo(CommonConnectivity db)
         // Finds marks for ALL active exams with this name (handles duplicate-exam case too).
         // Only returns rows that have actual marks OR are absent (Grade='AB') — no null-junk rows.
         const string sql = @"
-            SELECT tm.StudentId, tm.MarksObtained, tm.MaxMarks, tm.Grade,
+            SELECT tm.StudentId, tm.MarksObtained, tm.MaxMarks, tm.Grade, tm.EnteredAt,
                    s.FullName, s.AdmissionNo, s.RollNo,
                    sub.SubjectName, sub.SubjectCode, sub.SubjectId,
                    e.ExamName, e.ExamId, e.TestDate,
-                   c.ClassName, sec2.SectionName, b.BatchName, ay.YearName
+                   c.ClassId, c.ClassName, sec2.SectionId, sec2.SectionName, b.BatchId, b.BatchName, ay.YearName
             FROM   TestMarks tm
             INNER JOIN Students      s    ON s.StudentId    = tm.StudentId
             INNER JOIN Subjects      sub  ON sub.SubjectId  = tm.SubjectId
@@ -99,6 +99,10 @@ public class MarksRepo(CommonConnectivity db)
                 RollNo        = G.G<string>(r,"RollNo"),
                 ExamName      = G.G<string>(r,"ExamName"),
                 TestDate      = G.G<DateTime?>(r,"TestDate"),
+                EnteredAt     = G.G<DateTime?>(r,"EnteredAt"),
+                ClassId       = G.G<int?>(r,"ClassId"),
+                SectionId     = G.G<int?>(r,"SectionId"),
+                BatchId       = G.G<int?>(r,"BatchId"),
                 SubjectId     = G.G<int>(r,"SubjectId"),
                 SubjectName   = G.G<string>(r,"SubjectName"),
                 SubjectCode   = G.G<string>(r,"SubjectCode"),
@@ -117,11 +121,11 @@ public class MarksRepo(CommonConnectivity db)
     public List<TestMark> GetAllMarksForClass(int? cls, int? sec, int? bat, int? yearId)
     {
         const string sql = @"
-            SELECT tm.MarkId, tm.StudentId, tm.MarksObtained, tm.MaxMarks, tm.Grade, tm.EnteredBy,
+            SELECT tm.MarkId, tm.StudentId, tm.MarksObtained, tm.MaxMarks, tm.Grade, tm.EnteredBy, tm.EnteredAt,
                    s.FullName, s.AdmissionNo, s.RollNo,
                    sub.SubjectName, sub.SubjectCode, sub.SubjectId,
                    e.ExamName, e.ExamId, e.TestDate,
-                   c.ClassName, sec2.SectionName, b.BatchName, ay.YearName,
+                   c.ClassId, c.ClassName, sec2.SectionId, sec2.SectionName, b.BatchId, b.BatchName, ay.YearName,
                    u.FullName AS EnteredByName
             FROM   TestMarks tm
             INNER JOIN Students      s    ON s.StudentId    = tm.StudentId
@@ -158,6 +162,10 @@ public class MarksRepo(CommonConnectivity db)
                 ExamId        = G.G<int>(r,"ExamId"),
                 ExamName      = G.G<string>(r,"ExamName"),
                 TestDate      = G.G<DateTime?>(r,"TestDate"),
+                EnteredAt     = G.G<DateTime?>(r,"EnteredAt"),
+                ClassId       = G.G<int?>(r,"ClassId"),
+                SectionId     = G.G<int?>(r,"SectionId"),
+                BatchId       = G.G<int?>(r,"BatchId"),
                 SubjectId     = G.G<int>(r,"SubjectId"),
                 SubjectName   = G.G<string>(r,"SubjectName"),
                 SubjectCode   = G.G<string>(r,"SubjectCode"),
@@ -349,4 +357,78 @@ public class MarksRepo(CommonConnectivity db)
                 YearName       = G.G<string>(r,"YearName"),
                 EntryCount     = G.G<int>(r,"EntryCount")
             });
+
+    public List<TestMark> GetAllTestsByYear(int yearId)
+    {
+        const string sql = @"
+            SELECT tm.StudentId, tm.MarksObtained, tm.MaxMarks, tm.Grade, tm.EnteredAt,
+                   s.FullName, s.AdmissionNo, s.RollNo,
+                   sub.SubjectName, sub.SubjectCode, sub.SubjectId,
+                   e.ExamName, e.ExamId, e.TestDate,
+                   c.ClassId, c.ClassName, sec.SectionId, sec.SectionName, b.BatchId, b.BatchName, ay.YearName
+            FROM   TestMarks tm
+            INNER JOIN Students      s    ON s.StudentId    = tm.StudentId
+            INNER JOIN Subjects      sub  ON sub.SubjectId  = tm.SubjectId
+            INNER JOIN Exams         e    ON e.ExamId       = tm.ExamId
+            INNER JOIN Classes       c    ON c.ClassId      = s.ClassId
+            INNER JOIN AcademicYears ay   ON ay.YearId      = e.AcademicYearId
+            LEFT  JOIN Sections      sec  ON sec.SectionId  = s.SectionId
+            LEFT  JOIN Batches       b    ON b.BatchId      = s.BatchId
+            WHERE  e.AcademicYearId = @YearId
+            ORDER BY sub.SubjectName, e.ExamName, s.RollNo";
+
+        var list = new List<TestMark>();
+        using var c = db.Open();
+        using var cmd = new SqlCommand(sql, c);
+        cmd.Parameters.AddWithValue("@YearId", yearId);
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+            list.Add(new TestMark {
+                StudentId     = G.G<int>(r,"StudentId"),
+                FullName      = G.G<string>(r,"FullName")??"",
+                AdmissionNo   = G.G<string>(r,"AdmissionNo")??"",
+                RollNo        = G.G<string>(r,"RollNo"),
+                ExamName      = G.G<string>(r,"ExamName"),
+                ExamId        = G.G<int>(r,"ExamId"),
+                SubjectName   = G.G<string>(r,"SubjectName")??"",
+                SubjectCode   = G.G<string>(r,"SubjectCode"),
+                SubjectId     = G.G<int>(r,"SubjectId"),
+                MarksObtained = G.G<decimal?>(r,"MarksObtained"),
+                MaxMarks      = G.G<int>(r,"MaxMarks"),
+                Grade         = G.G<string>(r,"Grade"),
+                TestDate      = G.G<DateTime?>(r,"TestDate"),
+                ClassName     = G.G<string>(r,"ClassName"),
+                ClassId       = G.G<int>(r,"ClassId"),
+                SectionName   = G.G<string>(r,"SectionName"),
+                SectionId     = G.G<int?>(r,"SectionId"),
+                BatchName     = G.G<string>(r,"BatchName"),
+                BatchId       = G.G<int?>(r,"BatchId"),
+                YearName      = G.G<string>(r,"YearName")
+            });
+        return list;
+    }
+
+    public List<dynamic> GetTop5StudentsInSubject(string subjectName, int? classId, int? sectionId)
+    {
+        if (!classId.HasValue) return new List<dynamic>();
+
+        var allMarks = GetAllMarksForClass(classId, sectionId, null, null);
+
+        var top5 = allMarks
+            .Where(m => m.SubjectName == subjectName && m.MarksObtained.HasValue && m.MarksObtained > 0)
+            .GroupBy(m => new { m.StudentId, m.FullName, m.ClassName })
+            .Select(g => new {
+                FullName = g.Key.FullName,
+                ClassName = g.Key.ClassName,
+                MarksObtained = g.Max(x => x.MarksObtained),
+                MaxMarks = g.First().MaxMarks,
+                Grade = g.OrderByDescending(x => x.MarksObtained).First().Grade
+            })
+            .OrderByDescending(x => x.MarksObtained)
+            .Take(5)
+            .Cast<dynamic>()
+            .ToList();
+
+        return top5;
+    }
 }

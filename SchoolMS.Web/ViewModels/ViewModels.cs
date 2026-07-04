@@ -39,6 +39,22 @@ public class AttendanceVM
     public List<Batch>   Batches{get;set;}=new();
     public List<Subject> Subjects{get;set;}=new();
     public List<Faculty> Teachers{get;set;}=new();
+    public int TotalPresent{get;set;}
+    public int TotalAbsent{get;set;}
+    public int TotalMarked{get;set;}
+    public List<ClassAttendanceSummary> ClassSummaries{get;set;}=new();
+    public List<dynamic> AllSessions{get;set;}=new();
+}
+
+public class ClassAttendanceSummary
+{
+    public int ClassId{get;set;}
+    public string ClassName{get;set;}="";
+    public string? SectionName{get;set;}
+    public string? BatchName{get;set;}
+    public int Present{get;set;}
+    public int Absent{get;set;}
+    public int Total{get;set;}
 }
 
 public class MarksVM
@@ -56,6 +72,7 @@ public class FeesListVM
     public int Total{get;set;} public int Page{get;set;}=1; public int PageSize{get;set;}=15;
     public string? Search{get;set;} public string? MonthFilter{get;set;} public int? FeeTypeFilter{get;set;}
     public List<FeeType> FeeTypes{get;set;}=new();
+    public decimal GrandTotalAmount{get;set;} = 0;
     public int TotalPages => Math.Max(1,(int)Math.Ceiling((double)Total/PageSize));
 }
 
@@ -89,6 +106,7 @@ public class FeePayVM
     public string PaymentMode{get;set;}="Cash";
     public string? TransactionRef{get;set;}
     public string? Remarks{get;set;}
+    public int? EditPaymentId{get;set;}
     // Fee heads breakdown
     public List<SchoolMS.Domain.FeeStructure> FeeStructures{get;set;}=new();
     // Previous payments for this student

@@ -16,8 +16,5 @@ public class FeesService(FeesRepo repo)
     public List<FeePayment> GetDeletedPayments() => repo.GetDeletedPayments();
 
     public List<dynamic> GetClassFeesSummary(int classId, int? sectionId)
-    {
-        var fees = repo.GetClassFeesSummary(classId, sectionId);
-        return fees;
-    }
+        => repo.GetClassFeesSummary(classId, sectionId);
 }

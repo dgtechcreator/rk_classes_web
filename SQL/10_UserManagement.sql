@@ -159,7 +159,7 @@ CREATE PROCEDURE sp_GetUserPermissions @UserId INT AS BEGIN
     SELECT m.ModuleKey, up.CanView, up.CanEdit
     FROM UserPermissions up
     INNER JOIN Modules m ON m.ModuleId=up.ModuleId
-    WHERE up.UserId=@UserId AND m.IsActive=1;
+    WHERE up.UserId=@UserId AND up.CanView=1 AND m.IsActive=1;
 END
 GO
 

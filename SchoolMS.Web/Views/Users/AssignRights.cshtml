@@ -1,0 +1,275 @@
+@using SchoolMS.Domain;
+@{
+    ViewData["Title"] = "Assign User Rights";
+    var users = ViewBag.Users as List<AppUser> ?? new();
+}
+
+<style>
+@@media (max-width: 768px) {
+  .perm-grid { display: grid !important; grid-template-columns: 1fr auto auto !important; gap: 8px !important; }
+  .perm-grid > div { width: 100% !important; }
+  .perm-grid .btn { grid-column: span 2 !important; width: 100% !important; padding: 8px 12px !important; font-size: 12px !important; }
+  table th { padding: 8px 10px !important; font-size: 11px !important; }
+  table td { padding: 8px 10px !important; font-size: 12px !important; }
+  .card-hdr { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+  .card-hdr .df { width: 100% !important; }
+  .card-hdr .df .btn { width: 100% !important; padding: 8px 12px !important; font-size: 12px !important; }
+}
+
+@@media (max-width: 480px) {
+  .perm-grid { grid-template-columns: 1fr !important; }
+  .perm-grid .btn { grid-column: span 1 !important; }
+  table th:nth-child(2),
+  table th:nth-child(3),
+  table td:nth-child(2),
+  table td:nth-child(3) { font-size: 10px !important; padding: 6px 8px !important; }
+  .card { margin-bottom: 12px !important; }
+  .selectedUserInfo { padding: 10px !important; font-size: 12px !important; }
+}
+</style>
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <div class="breadcrumb"><a href="/Users/Index">Users</a> / <span>Assign Rights</span></div>
+      <h1>🔑 Assign User Rights</h1>
+      <p>Select a user and assign menu access rights</p>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:20px;">
+  <div style="display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:end;">
+    <div>
+      <label style="display:block;font-size:13px;font-weight:600;color:#666;margin-bottom:8px;">User Name</label>
+      <select id="userSelect" style="width:100%;padding:10px 12px;border:1px solid #ccc;border-radius:6px;font-size:14px;">
+        <option value="">--Select--</option>
+        @foreach(var u in users.Where(u => u.IsActive).OrderBy(u => u.FullName))
+        {
+          <option value="@u.UserId">@u.FullName (@u.Username)</option>
+        }
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="loadUserRights()"><i class="fas fa-arrow-right"></i> Show</button>
+    <a href="/Users/Index" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back</a>
+  </div>
+</div>
+
+<div id="loadingMsg" style="display:none;text-align:center;padding:40px;color:#666;">
+  <i class="fas fa-spinner fa-spin" style="font-size:24px;margin-bottom:10px;"></i>
+  <div>Loading permissions...</div>
+</div>
+
+<div id="permissionsPanel" style="display:none;">
+  <div id="selectedUserInfo" style="background:#f0f9ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px;margin-bottom:16px;color:#1d4ed8;font-weight:600;">
+    Configuring rights for: <span id="selectedUserName"></span>
+  </div>
+
+  <div id="permissionsContent"></div>
+
+  <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+    <button class="btn btn-outline" onclick="resetForm()"><i class="fas fa-times"></i> Cancel</button>
+    <button class="btn btn-primary" onclick="saveUserRights()"><i class="fas fa-save"></i> Save Rights</button>
+  </div>
+</div>
+
+<div id="statusMsg" style="margin-top:16px;"></div>
+
+@section Scripts {
+<script>
+let currentUserId = null;
+let allModules = [];
+
+async function loadUserRights() {
+  const userId = document.getElementById('userSelect').value;
+  if (!userId) {
+    alert('Please select a user');
+    return;
+  }
+
+  document.getElementById('loadingMsg').style.display = 'block';
+  document.getElementById('permissionsPanel').style.display = 'none';
+  document.getElementById('statusMsg').innerHTML = '';
+
+  try {
+    const res = await fetch(`/Users/GetUserRights?userId=${userId}`);
+    if (!res.ok) throw new Error('Failed to load');
+    const data = await res.json();
+
+    currentUserId = data.userId;
+    allModules = data.modules;
+
+    document.getElementById('selectedUserName').textContent = data.userName;
+    renderPermissions(data.modules);
+
+    document.getElementById('loadingMsg').style.display = 'none';
+    document.getElementById('permissionsPanel').style.display = 'block';
+  } catch (err) {
+    document.getElementById('loadingMsg').style.display = 'none';
+    document.getElementById('statusMsg').innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> Error loading permissions</div>`;
+  }
+}
+
+function renderPermissions(modules) {
+  const groups = {};
+
+  modules.forEach(m => {
+    const grp = m.groupName || 'Other';
+    if (!groups[grp]) groups[grp] = [];
+    groups[grp].push(m);
+  });
+
+  let html = '';
+
+  Object.keys(groups).sort().forEach(grpName => {
+    const grpModules = groups[grpName].sort((a, b) => a.orderNo - b.orderNo);
+
+    html += `
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-hdr">
+        <span class="card-ttl">
+          <i class="fas fa-layer-group" style="color:var(--p);margin-right:7px;"></i>${grpName}
+        </span>
+        <div class="df g8">
+          <button type="button" class="btn btn-outline btn-sm" onclick="grantGroup('${grpName}',true)">
+            <i class="fas fa-check"></i> Grant All
+          </button>
+          <button type="button" class="btn btn-danger btn-sm" onclick="grantGroup('${grpName}',false)">
+            <i class="fas fa-times"></i> Revoke
+          </button>
+        </div>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#f8f9fa;border-bottom:2px solid #dee2e6;">
+            <th style="padding:11px 14px;text-align:left;font-weight:700;color:#555;">Module / Feature</th>
+            <th style="width:120px;text-align:center;padding:11px 14px;font-weight:700;color:#555;">
+              <i class="fas fa-eye" style="color:var(--ok);margin-right:5px;"></i>View
+            </th>
+            <th style="width:120px;text-align:center;padding:11px 14px;font-weight:700;color:#555;">
+              <i class="fas fa-edit" style="color:var(--p);margin-right:5px;"></i>Edit
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    grpModules.forEach(m => {
+      html += `
+        <tr style="border-bottom:1px solid #f0f0f0;" id="row-${m.moduleId}">
+          <td style="padding:11px 14px;">
+            <div style="display:flex;align-items:center;gap:9px;">
+              <span style="width:30px;height:30px;border-radius:8px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--p);flex-shrink:0;">
+                <i class="${m.icon || 'fas fa-circle'}"></i>
+              </span>
+              <div>
+                <div style="font-weight:700;">${m.moduleName}</div>
+                <div style="font-size:11px;color:#888;">${m.moduleKey}</div>
+              </div>
+            </div>
+          </td>
+          <td style="text-align:center;padding:11px 14px;">
+            <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+              <input type="checkbox" class="perm-view" data-mid="${m.moduleId}"
+                     ${m.canView ? 'checked' : ''}
+                     onchange="syncEdit(this)"
+                     style="accent-color:var(--ok);width:18px;height:18px;cursor:pointer;"/>
+            </label>
+          </td>
+          <td style="text-align:center;padding:11px 14px;">
+            <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;">
+              <input type="checkbox" class="perm-edit" data-mid="${m.moduleId}"
+                     ${m.canEdit ? 'checked' : ''}
+                     onchange="syncView(this)"
+                     style="accent-color:var(--p);width:18px;height:18px;cursor:pointer;"/>
+            </label>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += `
+        </tbody>
+      </table>
+    </div>
+    `;
+  });
+
+  document.getElementById('permissionsContent').innerHTML = html;
+}
+
+function syncEdit(viewChk) {
+  if (!viewChk.checked) {
+    const mid = viewChk.dataset.mid;
+    const eChk = document.querySelector(`.perm-edit[data-mid="${mid}"]`);
+    if (eChk) eChk.checked = false;
+  }
+}
+
+function syncView(editChk) {
+  if (editChk.checked) {
+    const mid = editChk.dataset.mid;
+    const vChk = document.querySelector(`.perm-view[data-mid="${mid}"]`);
+    if (vChk) vChk.checked = true;
+  }
+}
+
+function grantGroup(grpName, grant) {
+  const moduleIds = allModules.filter(m => (m.groupName || 'Other') === grpName).map(m => m.moduleId);
+  moduleIds.forEach(mid => {
+    const vChk = document.querySelector(`.perm-view[data-mid="${mid}"]`);
+    const eChk = document.querySelector(`.perm-edit[data-mid="${mid}"]`);
+    if (vChk) vChk.checked = grant;
+    if (eChk) eChk.checked = false;
+  });
+}
+
+async function saveUserRights() {
+  if (!currentUserId) {
+    alert('No user selected');
+    return;
+  }
+
+  const entries = [];
+  document.querySelectorAll('.perm-view').forEach(vChk => {
+    const mid = parseInt(vChk.dataset.mid);
+    const eChk = document.querySelector(`.perm-edit[data-mid="${mid}"]`);
+    entries.push({ moduleId: mid, canView: vChk.checked, canEdit: eChk?.checked ?? false });
+  });
+
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+  try {
+    const res = await fetch(`/Users/SavePermissions?userId=${currentUserId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entries)
+    });
+    const d = await res.json();
+
+    const msg = document.getElementById('statusMsg');
+    if (d.success) {
+      msg.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Rights saved successfully! You can select another user or modify these rights.</div>';
+      setTimeout(() => msg.innerHTML = '', 5000);
+    } else {
+      msg.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> ${d.message || 'Error saving rights'}</div>`;
+    }
+  } catch (err) {
+    document.getElementById('statusMsg').innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> ${err.message || 'Error saving rights'}</div>`;
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-save"></i> Save Rights';
+}
+
+function resetForm() {
+  document.getElementById('userSelect').value = '';
+  document.getElementById('permissionsPanel').style.display = 'none';
+  document.getElementById('statusMsg').innerHTML = '';
+  currentUserId = null;
+}
+</script>
+}

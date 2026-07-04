@@ -32,6 +32,18 @@ public class ParentRepo(CommonConnectivity db)
     public void UpdateLastLogin(int parentId)
         => db.Exec("sp_ParentUpdateLastLogin", new() { { "@ParentId", parentId } });
 
+    public List<ParentAccount> GetAllParents()
+        => db.Sql("SELECT ParentId, Phone, Password, FullName, IsActive, CreatedAt, LastLogin FROM ParentAccounts ORDER BY CreatedAt DESC",
+            r => new ParentAccount {
+                ParentId  = G.G<int>(r, "ParentId"),
+                Phone     = G.G<string>(r, "Phone")     ?? "",
+                Password  = G.G<string>(r, "Password")  ?? "",
+                FullName  = G.G<string>(r, "FullName"),
+                IsActive  = G.G<bool>(r, "IsActive"),
+                CreatedAt = G.G<DateTime>(r, "CreatedAt"),
+                LastLogin = G.G<DateTime?>(r, "LastLogin"),
+            });
+
     public List<Student> GetChildren(string phone)
         => db.Read("sp_GetChildrenByParentPhone", new() { { "@Phone", phone } }, MapStudent);
 

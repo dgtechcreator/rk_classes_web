@@ -1,0 +1,99 @@
+@model List<SchoolMS.Domain.ParentAccount>
+@{ ViewData["Title"] = "Parent Accounts"; }
+
+<style>
+@@media (max-width: 768px) {
+  .tbl-wrap table {
+    font-size: 12px;
+  }
+  .tbl-wrap table th, .tbl-wrap table td {
+    padding: 8px 6px;
+  }
+}
+</style>
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <h1>👨‍👩‍👧 Parent Accounts</h1>
+      <p>Manage parent login credentials and account information</p>
+    </div>
+    <div class="df g8">
+      <input type="text" id="searchInput" placeholder="Search by name or phone..." class="fc" style="min-width:250px;" oninput="filterTable(this.value)"/>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="tbl-wrap">
+    @if (!Model.Any())
+    {
+      <div class="empty"><div class="empty-ico">👥</div><h3>No parent accounts found</h3></div>
+    }
+    else
+    {
+      <table>
+        <thead>
+          <tr>
+            <th style="width:50px;">ID</th>
+            <th style="width:120px;">Phone</th>
+            <th style="width:140px;">Password</th>
+            <th>Full Name</th>
+            <th style="width:80px;">Status</th>
+            <th style="width:160px;">Created At</th>
+            <th style="width:160px;">Last Login</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var p in Model)
+          {
+            <tr>
+              <td class="text-mu fw7">@p.ParentId</td>
+              <td>
+                <span class="mono" style="font-size:13px;font-weight:600;">@p.Phone</span>
+              </td>
+              <td>
+                <span class="mono" style="font-size:12px;">@p.Password</span>
+              </td>
+              <td>
+                <div class="fw7">@p.FullName</div>
+              </td>
+              <td>
+                <span class="badge @(p.IsActive ? "b-active" : "b-inactive")">
+                  @(p.IsActive ? "Active" : "Inactive")
+                </span>
+              </td>
+              <td style="font-size:12px;color:var(--mu);">
+                @(p.CreatedAt.ToString("dd MMM yyyy HH:mm"))
+              </td>
+              <td style="font-size:12px;color:var(--mu);">
+                @(p.LastLogin?.ToString("dd MMM yyyy HH:mm") ?? "Never")
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>
+
+<script>
+function filterTable(searchValue) {
+  const table = document.querySelector('table tbody');
+  if (!table) return;
+
+  const rows = table.querySelectorAll('tr');
+  const searchTerm = searchValue.toLowerCase();
+
+  rows.forEach(row => {
+    const phone = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+    const fullName = row.querySelector('td:nth-child(4)')?.textContent.toLowerCase() || '';
+
+    if (phone.includes(searchTerm) || fullName.includes(searchTerm)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+</script>

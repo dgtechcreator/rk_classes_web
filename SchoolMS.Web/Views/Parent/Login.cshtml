@@ -130,11 +130,14 @@ body::before {
 
 <div class="card">
   <!-- Header -->
-  <div class="card-head">
-    <div style="position:absolute;top:12px;left:14px;font-size:13px;font-weight:700;color:#1a237e;">Kapil Sir's</div>
-    <img src="/images/rklogo3.png" alt="RK Classes" style="margin-top:20px;"/>
-    <h1>PARENT / GUARDIAN PORTAL</h1>
-    <p>For any Enquiry contact on the given phone number and email</p>
+  <div class="card-head" style="border-bottom:none;padding-bottom:8px;">
+    <div style="display:flex;justify-content:space-between;width:100%;padding:0 24px;font-size:13px;font-weight:700;color:#1a237e;margin-bottom:8px;">
+      <span>Kapil Sir's</span>
+      <span>SINCE : 2002</span>
+    </div>
+    <div style="font-size:16px;font-weight:800;color:#cc0000;letter-spacing:0.5px;text-align:center;margin-bottom:10px;">RAMJEET KALAVATI EDUCATIONAL INSTITUTE</div>
+    <img src="/images/rklogo3.png" alt="RK Classes" style="margin-top:8px;max-width:260px;width:85%;"/>
+    <h1 style="font-size:14px;margin-top:8px;">PARENT / GUARDIAN LOGIN</h1>
   </div>
 
   <!-- Body -->
@@ -218,9 +221,6 @@ body::before {
       </div>
     </div>
 
-    <div style="text-align:center;margin-top:14px;margin-bottom:12px;">
-      <button id="installBtn" style="padding:10px 20px;background:#cc0000;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;transition:background .2s;"><i class="fas fa-download"></i> Download App</button>
-    </div>
 
     <div class="back-link">
       <a href="/Account/Login"><i class="fas fa-arrow-left"></i> Staff Login</a>
@@ -238,45 +238,6 @@ body::before {
 </div>
 
 <script>
-let deferredPrompt;
-const installBtn = document.getElementById('installBtn');
-
-// Only run if button exists
-if (installBtn) {
-  // Listen for install prompt
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    // Show button when app can be installed
-    installBtn.style.display = 'inline-block';
-  });
-
-  // When user clicks Download App button
-  installBtn.addEventListener('click', async () => {
-    if (deferredPrompt) {
-      // Show the install prompt
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log(`User response: ${outcome}`);
-
-      if (outcome === 'accepted') {
-        // App was installed, hide button
-        installBtn.style.display = 'none';
-      }
-
-      deferredPrompt = null;
-    }
-  });
-
-  // When app is successfully installed
-  window.addEventListener('appinstalled', () => {
-    console.log('PWA installed successfully!');
-    // Hide the button after installation
-    installBtn.style.display = 'none';
-    // Keep user on login page - they can now login
-  });
-}
-
 function switchTab(t) {
   document.getElementById('secLogin').classList.toggle('active', t==='login');
   document.getElementById('secRegister').classList.toggle('active', t==='register');

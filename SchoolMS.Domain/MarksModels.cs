@@ -10,6 +10,10 @@ public class TestMark
     public int      ExamId{get;set;}
     public string?  ExamName{get;set;}
     public DateTime? TestDate{get;set;}
+    public DateTime? EnteredAt{get;set;}
+    public int?     ClassId{get;set;}
+    public int?     SectionId{get;set;}
+    public int?     BatchId{get;set;}
     public int      SubjectId{get;set;}
     public string?  SubjectName{get;set;}
     public string?  SubjectCode{get;set;}

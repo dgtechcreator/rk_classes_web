@@ -3,7 +3,24 @@
     ViewData["Title"] = Model.UserId == 0 ? "Add User" : "Edit User";
     var roles = ViewBag.Roles as List<SchoolMS.Domain.Role> ?? new();
     bool isEdit = Model.UserId > 0;
+    bool isOwnProfile = (bool?)ViewBag.IsOwnProfile ?? false;
+    bool isAdmin = (bool?)ViewBag.IsAdmin ?? false;
 }
+
+<style>
+@@media (max-width: 768px) {
+  .form-grid { grid-template-columns: 1fr !important; }
+  .form-grid .fg { width: 100% !important; }
+  .fg.full { grid-column: auto !important; }
+}
+
+@@media (max-width: 480px) {
+  max-width: 100% !important;
+  padding: 0 10px !important;
+  .card { margin-bottom: 12px !important; padding: 14px 12px !important; }
+  .btn { padding: 8px 14px !important; font-size: 12px !important; }
+}
+</style>
 
 <div class="pg-hdr">
   <div class="pg-row">
@@ -37,54 +54,85 @@
                  style="@(isEdit?"background:#f8f6ff;":"")"
                  oninput="this.value=this.value.toLowerCase().replace(/\s/g,'')"/>
         </div>
-        <div class="fg">
-          <label>Role *</label>
-          <select name="RoleId" class="fs" required>
-            <option value="">— Select Role —</option>
-            @foreach(var r in roles){<option value="@r.RoleId" selected=@(Model.RoleId==r.RoleId?"selected":"")>@r.RoleName</option>}
-          </select>
-        </div>
-        <div class="fg">
-          <label>Email</label>
-          <input type="email" name="Email" value="@Model.Email" class="fc" placeholder="email@example.com"/>
-        </div>
-        <div class="fg">
-          <label>Phone</label>
-          <input type="text" name="Phone" value="@Model.Phone" class="fc" placeholder="Contact number"/>
-        </div>
-        <div class="fg">
-          <label>@(isEdit ? "New Password" : "Password *") @(isEdit?"(leave blank to keep current)":"")</label>
-          <div style="position:relative;">
-            <input type="password" name="newPassword" id="pwdInp" class="fc"
-                   placeholder="@(isEdit?"Leave blank to keep current":"Set login password")"
-                   @(!isEdit?"required":"")
-                   style="padding-right:42px;"/>
-            <button type="button" onclick="togglePwd()"
-                    style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--mu);font-size:15px;">
-              <i class="fas fa-eye" id="eyeIco"></i>
-            </button>
+        @if (isAdmin)
+        {
+          <div class="fg">
+            <label>Role *</label>
+            <select name="RoleId" class="fs" required>
+              <option value="">— Select Role —</option>
+              @foreach(var r in roles){<option value="@r.RoleId" selected=@(Model.RoleId==r.RoleId?"selected":"")>@r.RoleName</option>}
+            </select>
           </div>
-        </div>
-        <div class="fg">
-          <label>Status</label>
-          <select name="IsActive" class="fs">
-            <option value="true"  selected=@(Model.IsActive?"selected":"")>Active</option>
-            <option value="false" selected=@(!Model.IsActive?"selected":"")>Inactive</option>
-          </select>
-        </div>
+          <div class="fg">
+            <label>Email</label>
+            <input type="email" name="Email" value="@Model.Email" class="fc" placeholder="email@example.com"/>
+          </div>
+          <div class="fg">
+            <label>Phone</label>
+            <input type="text" name="Phone" value="@Model.Phone" class="fc" placeholder="Contact number"/>
+          </div>
+          <div class="fg">
+            <label>@(isEdit ? "New Password" : "Password *") @(isEdit?"(leave blank to keep current)":"")</label>
+            <div style="position:relative;">
+              <input type="password" name="newPassword" id="pwdInp" class="fc"
+                     placeholder="@(isEdit?"Leave blank to keep current":"Set login password")"
+                     @(!isEdit?"required":"")
+                     style="padding-right:42px;"/>
+              <button type="button" onclick="togglePwd()"
+                      style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--mu);font-size:15px;">
+                <i class="fas fa-eye" id="eyeIco"></i>
+              </button>
+            </div>
+          </div>
+          <div class="fg">
+            <label>Status</label>
+            <select name="IsActive" class="fs">
+              <option value="true"  selected=@(Model.IsActive?"selected":"")>Active</option>
+              <option value="false" selected=@(!Model.IsActive?"selected":"")>Inactive</option>
+            </select>
+          </div>
+        }
+        else
+        {
+          <div class="fg full">
+            <label>Role</label>
+            <input type="text" value="@Model.RoleName" class="fc" readonly style="background:#f8f6ff;"/>
+            <input type="hidden" name="RoleId" value="@Model.RoleId"/>
+          </div>
+          <div class="fg">
+            <label>Email</label>
+            <input type="email" name="Email" value="@Model.Email" class="fc" placeholder="email@example.com" readonly style="background:#f8f6ff;"/>
+          </div>
+          <div class="fg">
+            <label>Phone</label>
+            <input type="text" name="Phone" value="@Model.Phone" class="fc" placeholder="Contact number" readonly style="background:#f8f6ff;"/>
+          </div>
+        }
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:1px solid var(--bdr);">
         <a href="/Users/Index" class="btn btn-outline"><i class="fas fa-times"></i> Cancel</a>
-        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save &amp; Set Permissions</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save"></i>
+          @if (isAdmin)
+          {
+            <text>Save &amp; Set Permissions</text>
+          }
+          else
+          {
+            <text>Save Profile</text>
+          }
+        </button>
       </div>
     </div>
   </form>
 
-  @* Change password section for existing users *@
-  @if (isEdit && Model.UserId != 1)
+  @* Change password section - ONLY for own profile *@
+  @if (isEdit && isOwnProfile && Model.UserId != 1)
   {
     <div class="card" style="margin-top:16px;">
-      <div class="card-hdr"><span class="card-ttl"><i class="fas fa-lock" style="color:var(--p);margin-right:6px;"></i>Reset Password</span></div>
+      <div class="card-hdr">
+        <span class="card-ttl"><i class="fas fa-lock" style="color:var(--p);margin-right:6px;"></i>Change Password</span>
+      </div>
       <form method="post" action="/Users/ChangePassword">
         <input type="hidden" name="userId" value="@Model.UserId"/>
         <div class="form-grid">
@@ -98,7 +146,9 @@
           </div>
         </div>
         <div style="margin-top:14px;">
-          <button type="submit" class="btn btn-warning"><i class="fas fa-key"></i> Change Password</button>
+          <button type="submit" class="btn btn-warning">
+            <i class="fas fa-key"></i> Change Password
+          </button>
         </div>
       </form>
     </div>

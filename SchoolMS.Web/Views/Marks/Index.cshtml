@@ -33,32 +33,65 @@
   </div>
 </div>
 
-@* ── PAST TESTS quick-load strip ───────────────────────────── *@
-@if (examList.Any())
-{
-  <div style="margin-bottom:16px;">
-    <div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
-      <i class="fas fa-history" style="color:var(--p);margin-right:5px;"></i>Recent Tests — click to reload
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      @foreach (var ex in examList.Take(8))
-      {
-        var td = ex.TestDate?.ToString("yyyy-MM-dd") ?? "";
-        var active = ex.ExamName == examName && td == testDate;
-        <a href="/Marks/Index?yearId=@ex.AcademicYearId&classId=@ex.ClassId&sectionId=@sectionId&batchId=@batchId&subjectId=@subjectId&examName=@Uri.EscapeDataString(ex.ExamName)&testDate=@td&maxMarks=@maxMarks"
-           style="display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:99px;font-size:12px;font-weight:700;border:1.5px solid @(active?"var(--p)":"var(--bdr)");background:@(active?"#f5f3ff":"var(--sur)");color:@(active?"var(--p)":"var(--mu)");text-decoration:none;transition:all .15s;"
-           onmouseover="this.style.borderColor='var(--p)';this.style.color='var(--p)'"
-           onmouseout="@(active?"":"this.style.borderColor='var(--bdr)';this.style.color='var(--mu)'")">
-          <i class="fas fa-file-alt" style="font-size:11px;"></i>
-          @ex.ExamName
-          @if (ex.TestDate.HasValue){<span style="opacity:.7;">@ex.TestDate.Value.ToString("dd MMM")</span>}
-          @if (ex.EntryCount > 0){<span style="background:@(active?"var(--p)":"#e9e5f8");color:@(active?"#fff":"var(--p)");padding:1px 6px;border-radius:99px;font-size:10px;">@ex.EntryCount</span>}
-        </a>
-      }
-    </div>
-  </div>
+@{
+  var selectedDate = string.IsNullOrEmpty(testDate) ? DateTime.Today.ToString("yyyy-MM-dd") : testDate;
+  var isToday = selectedDate == DateTime.Today.ToString("yyyy-MM-dd");
+  var yesterdayStr = DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd");
 }
 
+@* ── DATE SELECTOR ─────────────────────────────────────── *@
+<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:16px;">
+  <a href="?testDate=@DateTime.Today.ToString("yyyy-MM-dd")"
+     style="display:inline-flex;align-items:center;justify-content:center;gap:6px;background:@(isToday ? "#1e40af" : "#e5e7eb");border:none;border-radius:20px;padding:8px 14px;font-size:12px;font-weight:700;color:@(isToday ? "#fff" : "#374151");text-decoration:none;transition:all .2s;cursor:pointer;"
+     onmouseover="this.style.background='@(isToday ? "#1e3a8a" : "#d1d5db")';this.style.boxShadow='0 4px 12px rgba(30,64,175,.3)'"
+     onmouseout="this.style.background='@(isToday ? "#1e40af" : "#e5e7eb")';this.style.boxShadow='none'">
+    <i class="fas fa-calendar-day"></i> 23
+  </a>
+  <a href="?testDate=@yesterdayStr"
+     style="display:inline-flex;align-items:center;justify-content:center;gap:6px;background:@(!isToday ? "#1e40af" : "#e5e7eb");border:none;border-radius:20px;padding:8px 14px;font-size:12px;font-weight:700;color:@(!isToday ? "#fff" : "#374151");text-decoration:none;transition:all .2s;cursor:pointer;"
+     onmouseover="this.style.background='@(!isToday ? "#1e3a8a" : "#d1d5db")';this.style.boxShadow='0 4px 12px rgba(30,64,175,.3)'"
+     onmouseout="this.style.background='@(!isToday ? "#1e40af" : "#e5e7eb")';this.style.boxShadow='none'">
+    <i class="fas fa-calendar"></i> 22
+  </a>
+</div>
+
+@* ── ALL TESTS Grid ────────────────────────────────────────── *@
+@if (examList.Any())
+{
+    <div style="margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;
+                    letter-spacing:.5px;margin-bottom:12px;">
+            <i class="fas fa-file-alt" style="color:var(--p);margin-right:5px;"></i>
+            All Tests — Click to Enter Marks
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
+            @foreach (var ex in examList.OrderByDescending(e => e.TestDate).ThenByDescending(e => e.ExamId))
+            {
+                var td = ex.TestDate?.ToString("yyyy-MM-dd") ?? "";
+                var className = classes.FirstOrDefault(c => c.ClassId == ex.ClassId)?.ClassName ?? "Unknown";
+                var displayDate = ex.TestDate?.ToString("dd MMM yyyy") ?? "N/A";
+
+                <a href="/Marks/Index?yearId=@ex.AcademicYearId&classId=@ex.ClassId&sectionId=&batchId=&subjectId=&examName=@Uri.EscapeDataString(ex.ExamName)&testDate=@td&maxMarks=@(ex.MaxMarks ?? maxMarks)"
+                   style="display:block;padding:14px;background:var(--sur2);border:1.5px solid var(--bdr);border-radius:8px;text-decoration:none;transition:all .2s;cursor:pointer;"
+                   onmouseover="this.style.borderColor='var(--p)';this.style.boxShadow='0 4px 12px rgba(37,99,235,0.2)'"
+                   onmouseout="this.style.borderColor='var(--bdr)';this.style.boxShadow='none'">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                        <div style="font-weight:700;color:var(--txt);font-size:14px;">@ex.ExamName</div>
+                        @if (ex.EntryCount > 0)
+                        {
+                            <span style="background:var(--p);color:#fff;padding:4px 8px;border-radius:99px;font-size:10px;font-weight:700;">@ex.EntryCount</span>
+                        }
+                    </div>
+                    <div style="font-size:13px;color:var(--txt);font-weight:600;margin-bottom:4px;">@className</div>
+                    <div style="font-size:11px;color:var(--mu);">
+                        <i class="fas fa-calendar" style="margin-right:4px;"></i>@displayDate
+                    </div>
+                </a>
+            }
+        </div>
+    </div>
+}
 @* ── Filter Bar ─────────────────────────────────────────────── *@
 <form method="get" action="/Marks/Index" id="fltForm">
 <div class="filter-bar" style="flex-wrap:wrap;gap:10px;">
@@ -83,7 +116,7 @@
   </select>
 
   <select name="classId" class="fs" id="sel_class" onchange="this.form.submit()">
-    <option value="">— Std —</option>
+    <option value="">All Std</option>
     @foreach (var c in classes)
     {
       if (classId == c.ClassId) { <option value="@c.ClassId" selected>@c.ClassName</option> }
@@ -101,7 +134,7 @@
   </select>
 
   <select name="subjectId" class="fs" id="sel_subject">
-    <option value="">— Subject —</option>
+    <option value="">All Subject</option>
     @foreach (var s in subjects)
     {
       if (subjectId == s.SubjectId) { <option value="@s.SubjectId" selected>@s.SubjectName</option> }
@@ -128,9 +161,25 @@
 </div>
 </form>
 
+@* ── Subject Pills ─────────────────────────────────────────────── *@
+@if (classId.HasValue && subjects.Any())
+{
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;padding:12px;background:var(--sur2);border-radius:8px;border:1px solid var(--bdr);">
+    <span style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;white-space:nowrap;align-self:center;">Subjects:</span>
+    @foreach (var sub in subjects)
+    {
+      var isActive = subjectId == sub.SubjectId && !string.IsNullOrWhiteSpace(examName);
+      <a href="/Marks/Index?yearId=@yearId&sectionId=@sectionId&classId=@classId&batchId=@batchId&subjectId=@sub.SubjectId&examName=@Uri.EscapeDataString(examName??string.Empty)&testDate=@testDate&maxMarks=@maxMarks"
+         style="display:inline-flex;align-items:center;gap:6px;background:@(isActive?"var(--p)":"var(--sur)");border:1.5px solid @(isActive?"var(--p)":"var(--bdr)");border-radius:20px;padding:8px 14px;font-size:12px;font-weight:700;color:@(isActive?"#fff":"var(--txt)");text-decoration:none;transition:all .2s;cursor:pointer;">
+        @sub.SubjectName
+      </a>
+    }
+  </div>
+}
+
 @* ── States ─────────────────────────────────────────────────── *@
-@if (classId == null)
-{<div class="card"><div class="empty"><div class="empty-ico">✏️</div><h3>Select Filters to Begin</h3><p>Choose Academic Year, Medium/Stream, Std, Subject and enter a test name, then click Load.</p></div></div>}
+@if (!examList.Any())
+{<div class="card"><div class="empty"><div class="empty-ico">📋</div><h3>No Tests Found</h3><p>No tests have been created for the current academic year yet.</p></div></div>}
 else if (!subjects.Any())
 {<div class="card"><div class="empty"><div class="empty-ico">📚</div><h3>No subjects found</h3><p>Add subjects in Academic Manager.</p></div></div>}
 else if (subjectId == null || string.IsNullOrWhiteSpace(examName))
