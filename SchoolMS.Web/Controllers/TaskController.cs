@@ -20,11 +20,17 @@ public class TaskController(TaskService taskSvc, NotificationService notifSvc) :
     }
 
     [HttpPost]
-    public IActionResult CreateTask(string title, string description, int? studentId, DateTime dueDate)
+    public IActionResult CreateTask(string title, string description, int? studentId, string dueDate)
     {
         try
         {
             int userId = HttpContext.Session.GetUserId() ?? 0;
+
+            // Parse the ISO 8601 datetime string
+            if (!DateTime.TryParse(dueDate, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedDate))
+            {
+                return Json(new { success = false, message = "Invalid date format" });
+            }
 
             var task = new TaskItem
             {
@@ -34,7 +40,7 @@ public class TaskController(TaskService taskSvc, NotificationService notifSvc) :
                 UserId = userId,
                 Priority = "Medium",
                 Category = "General",
-                DueDate = dueDate,
+                DueDate = parsedDate,
                 Status = "Pending"
             };
 
