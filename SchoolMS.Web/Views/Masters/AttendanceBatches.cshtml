@@ -8,7 +8,7 @@
 <style>
     .batch-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .batch-form { width: 100%; margin-bottom: 24px; }
-    .students-grid { display: grid; gap: 12px; max-height: 600px; overflow-y: auto; }
+    .students-grid { display: grid; gap: 12px; }
     .student-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; }
     .student-item input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
     .student-info { flex: 1; }
@@ -17,7 +17,6 @@
     .batch-actions { display: flex; gap: 12px; margin-top: 20px; }
     @@media (max-width: 768px) {
         .batch-filters { grid-template-columns: 1fr; }
-        .students-grid { max-height: 400px; }
     }
 </style>
 
