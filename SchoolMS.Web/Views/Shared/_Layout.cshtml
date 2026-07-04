@@ -221,10 +221,10 @@
   <div class="nav-grp">
     <div class="nav-lbl">Masters</div>
     @if(Context.Session.HasPerm("masters_view")){
-    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Masters"?"active":"")" href="/Masters/Index">
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Masters" && ViewContext.RouteData.Values["action"]?.ToString()=="Index"?"active":"")" href="/Masters/Index">
       <span class="nav-ic"><i class="fas fa-layer-group"></i></span> Academic Manager
     </a>
-    <a class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString()=="AttendanceBatches"?"active":"")" href="/Masters/AttendanceBatches">
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Masters" && ViewContext.RouteData.Values["action"]?.ToString()=="AttendanceBatches"?"active":"")" href="/Masters/AttendanceBatches">
       <span class="nav-ic"><i class="fas fa-list-check"></i></span> Attendance Batches
     </a>}
     @if(Context.Session.HasPerm("users_view")){
