@@ -6,7 +6,7 @@ using SchoolMS.Web.Filters;
 namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
-public class MastersController(MastersService svc, FeeStructureService feeSvc, LookupService lookup, StudentService studentSvc) : Controller
+public class MastersController(MastersService svc, FeeStructureService feeSvc, LookupService lookup, StudentService studentSvc, AttendanceBatchService batchSvc) : Controller
 {
     public IActionResult Index()
     {
@@ -178,8 +178,8 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
             if (string.IsNullOrWhiteSpace(request?.BatchName) || request?.StudentIds == null || !request.StudentIds.Any())
                 return Json(new { success = false, message = "Batch name and students are required." });
 
-            TempData["Success"] = $"Attendance Batch '{request.BatchName}' created with {request.StudentIds.Count} students.";
-            return Json(new { success = true, message = $"Batch '{request.BatchName}' created with {request.StudentIds.Count} students." });
+            var batchId = batchSvc.CreateBatch(request.BatchName, request.StudentIds);
+            return Json(new { success = true, message = $"Batch '{request.BatchName}' created with {request.StudentIds.Count} students.", batchId = batchId });
         }
         catch (Exception ex)
         {

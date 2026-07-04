@@ -6,8 +6,11 @@ public class AttendanceRecord
     public string FullName{get;set;}="";
     public string AdmissionNo{get;set;}="";
     public string? RollNo{get;set;}
+    public int? ClassId{get;set;}
     public string? ClassName{get;set;}
+    public int? SectionId{get;set;}
     public string? SectionName{get;set;}
+    public int? BatchId{get;set;}
     public string? BatchName{get;set;}
     public string? ProfilePicPath{get;set;}
     public string   AttendanceStatus{get;set;}="Present";
@@ -17,6 +20,9 @@ public class AttendanceRecord
     public string?  SirName{get;set;}
     public TimeSpan? StartTime{get;set;}
     public TimeSpan? EndTime{get;set;}
+    public string?  Phone{get;set;}
+    public string?  FatherPhone{get;set;}
+    public string?  MotherPhone{get;set;}
 }
 
 public class AttendanceReport
@@ -48,4 +54,14 @@ public class DateAttendanceEntry
     public int      StudentId{get;set;}
     public DateTime AttendanceDate{get;set;}
     public string   Status{get;set;}="Present";
+}
+
+public class AttendanceBatch
+{
+    public int BatchId { get; set; }
+    public string BatchName { get; set; } = "";
+    public List<int> StudentIds { get; set; } = new();
+    public int StudentCount { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public bool IsActive { get; set; } = true;
 }

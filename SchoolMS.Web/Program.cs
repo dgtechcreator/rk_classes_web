@@ -51,6 +51,9 @@ builder.Services.AddScoped<FacultyRepo>();
 builder.Services.AddScoped<ClassFeeSetupRepo>();
 builder.Services.AddScoped<UserMgmtRepo>();
 builder.Services.AddScoped<ParentRepo>();
+builder.Services.AddScoped<TaskRepo>();
+builder.Services.AddScoped<NotificationRepo>();
+builder.Services.AddScoped<AttendanceBatchRepo>();
 
 // Services
 builder.Services.AddScoped<AuthService>();
@@ -66,6 +69,9 @@ builder.Services.AddScoped<FacultyService>();
 builder.Services.AddScoped<ClassFeeSetupService>();
 builder.Services.AddScoped<UserMgmtService>();
 builder.Services.AddScoped<ParentService>();
+builder.Services.AddScoped<TaskService>();
+builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<AttendanceBatchService>();
 
 var app = builder.Build();
 
