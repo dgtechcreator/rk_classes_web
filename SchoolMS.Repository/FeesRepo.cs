@@ -102,11 +102,10 @@ public class FeesRepo(CommonConnectivity db)
     {
         var query = @"
             SELECT
-                ISNULL(SUM(fs.Amount), 0) AS TotalFeesOwed,
+                ISNULL(SUM(sf.Amount), 0) AS TotalFeesOwed,
                 ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fp.Amount ELSE 0 END), 0) AS TotalCollected,
                 ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fp.Discount ELSE 0 END), 0) AS TotalDiscount
             FROM StudentFees sf
-            INNER JOIN FeeStructure fs ON sf.StructureId = fs.StructureId
             LEFT JOIN FeePayments fp ON fp.StudentId = sf.StudentId
         ";
 
