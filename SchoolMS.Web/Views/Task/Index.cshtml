@@ -119,11 +119,15 @@ function closeAddTaskModal() {
 function saveTask(e) {
   e.preventDefault();
   const dueDateStr = document.getElementById('taskDue').value;
+  // Convert date from YYYY-MM-DD to MM/dd/yyyy for ASP.NET parsing
+  const [year, month, day] = dueDateStr.split('-');
+  const formattedDate = `${month}/${day}/${year}`;
+
   const params = new URLSearchParams();
   params.append('title', document.getElementById('taskTitle').value);
   params.append('description', document.getElementById('taskDesc').value);
   params.append('studentId', '');
-  params.append('dueDate', dueDateStr);
+  params.append('dueDate', formattedDate);
 
   fetch('/Task/CreateTask', {
     method: 'POST',
