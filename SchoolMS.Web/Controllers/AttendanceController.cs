@@ -8,26 +8,57 @@ namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
 public class AttendanceController(AttendanceService svc, LookupService lookup,
-    MastersService mastersSvc, FacultyService facultySvc, StudentService studentSvc) : Controller
+    MastersService mastersSvc, FacultyService facultySvc, StudentService studentSvc, AttendanceBatchService batchSvc) : Controller
 {
     public IActionResult Index(DateTime? date, int? classId, int? sectionId, int? batchId,
         string? subject, string? sirName, string? startTime, string? endTime)
     {
         var d = date ?? DateTime.Today;
+        var todayRecords = svc.GetForDate(d, null, null, null).Where(r => r.AttendanceId.HasValue).ToList();
+
         var records = classId.HasValue
             ? svc.GetForDate(d, classId, sectionId, batchId)
-            : new List<AttendanceRecord>();
+            : todayRecords;
         var first = records.FirstOrDefault(r => r.Subject != null || r.SirName != null);
         var (teachers, _) = facultySvc.GetAll(null, "Active", null, 1, 1000);
+
+        var totalPresent = records.Count(r => r.AttendanceStatus == "Present");
+        var totalAbsent = records.Count(r => r.AttendanceStatus == "Absent");
+
+        // Get all unique class/section/batch combinations with total student count
+        var (allStudents, _) = studentSvc.GetAll(1, 10000, null, null, null, null, null, "Active");
+        var allSessions = allStudents
+            .GroupBy(s => new { s.ClassId, s.ClassName, s.SectionId, s.SectionName, s.BatchId, s.BatchName })
+            .Select(g => new {
+                g.Key.ClassId, g.Key.ClassName,
+                g.Key.SectionId, g.Key.SectionName,
+                g.Key.BatchId, g.Key.BatchName,
+                TotalStudents = g.Count()
+            })
+            .OrderBy(x => (x.BatchName ?? "").ToUpper().Contains("EVENING") ? 1 : 0)
+            .ThenBy(x => {
+                var classNum = System.Text.RegularExpressions.Regex.Match(x.ClassName ?? "", @"\d+").Value;
+                return string.IsNullOrEmpty(classNum) ? 0 : int.Parse(classNum);
+            })
+            .Cast<dynamic>()
+            .ToList();
+
+        var attendanceBatches = batchSvc.GetAll();
+        ViewBag.AttendanceBatches = attendanceBatches;
+
         return View(new AttendanceVM {
             Records=records, Date=d, ClassId=classId, SectionId=sectionId, BatchId=batchId,
             Subject   = subject   ?? first?.Subject,
             SirName   = sirName   ?? first?.SirName,
             StartTime = startTime ?? first?.StartTime?.ToString(@"hh\:mm"),
             EndTime   = endTime   ?? first?.EndTime?.ToString(@"hh\:mm"),
+            TotalPresent = totalPresent,
+            TotalAbsent = totalAbsent,
+            TotalMarked = records.Count,
             Classes=lookup.GetClasses(), Sections=lookup.GetSections(), Batches=lookup.GetBatches(),
             Subjects=mastersSvc.GetSubjects(),
-            Teachers=teachers
+            Teachers=teachers,
+            AllSessions = allSessions
         });
     }
 
@@ -103,7 +134,9 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
             if (!DateTime.TryParse(date, out var selectedDate))
                 return Json(new List<object>());
 
-            var records = svc.GetForDate(selectedDate, classId, sectionId, batchId);
+            var records = svc.GetForDate(selectedDate, classId, sectionId, batchId)
+                .Where(r => r.AttendanceId.HasValue)
+                .ToList();
 
             var result = records
       .GroupBy(r => r.StudentId)
