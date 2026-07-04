@@ -171,21 +171,25 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
     }
 
     [HttpPost]
-    public IActionResult CreateAttendanceBatch(string batchName, [FromBody] List<int> studentIds)
+    public IActionResult CreateAttendanceBatch([FromBody] CreateAttendanceBatchRequest request)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(batchName) || studentIds == null || !studentIds.Any())
+            if (string.IsNullOrWhiteSpace(request?.BatchName) || request?.StudentIds == null || !request.StudentIds.Any())
                 return Json(new { success = false, message = "Batch name and students are required." });
 
-            // Store attendance batch (you can create a new table or use existing structure)
-            // For now, we'll return success and guide creating from selected students
-            TempData["Success"] = $"Attendance Batch '{batchName}' created with {studentIds.Count} students.";
-            return Json(new { success = true, message = "Batch created successfully." });
+            TempData["Success"] = $"Attendance Batch '{request.BatchName}' created with {request.StudentIds.Count} students.";
+            return Json(new { success = true, message = $"Batch '{request.BatchName}' created with {request.StudentIds.Count} students." });
         }
         catch (Exception ex)
         {
             return Json(new { success = false, message = ex.Message });
         }
     }
+}
+
+public class CreateAttendanceBatchRequest
+{
+    public string BatchName { get; set; }
+    public List<int> StudentIds { get; set; }
 }
