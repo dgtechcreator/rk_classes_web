@@ -133,10 +133,8 @@ function saveTask(e) {
   const dueDateStr = document.getElementById('taskDue').value;
   const timeStr = document.getElementById('taskTime').value;
 
-  // Combine date and time, convert from YYYY-MM-DD HH:mm to MM/dd/yyyy HH:mm:ss
-  const [year, month, day] = dueDateStr.split('-');
-  const [hours, minutes] = timeStr.split(':');
-  const formattedDateTime = `${month}/${day}/${year} ${hours}:${minutes}:00`;
+  // Send as ISO 8601 format: YYYY-MM-DDTHH:mm:ss
+  const formattedDateTime = `${dueDateStr}T${timeStr}:00`;
 
   const params = new URLSearchParams();
   params.append('title', document.getElementById('taskTitle').value);
