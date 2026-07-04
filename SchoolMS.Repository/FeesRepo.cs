@@ -102,15 +102,9 @@ public class FeesRepo(CommonConnectivity db)
     {
         var query = @"
             SELECT
-                ISNULL(SUM(StudentFee.TotalFee), 0) AS TotalFeesOwed,
-                ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fp.Amount ELSE 0 END), 0) AS TotalCollected,
-                ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fp.Discount ELSE 0 END), 0) AS TotalDiscount
-            FROM (
-                SELECT StudentId, SUM(Amount) AS TotalFee
-                FROM StudentFees
-                GROUP BY StudentId
-            ) StudentFee
-            LEFT JOIN FeePayments fp ON fp.StudentId = StudentFee.StudentId
+                (SELECT ISNULL(SUM(Amount), 0) FROM StudentFees) AS TotalFeesOwed,
+                (SELECT ISNULL(SUM(Amount), 0) FROM FeePayments WHERE IsDeleted=0) AS TotalCollected,
+                (SELECT ISNULL(SUM(Discount), 0) FROM FeePayments WHERE IsDeleted=0) AS TotalDiscount
         ";
 
         var result = db.Sql(query, r => new {
