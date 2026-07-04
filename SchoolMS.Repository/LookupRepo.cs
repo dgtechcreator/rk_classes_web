@@ -38,7 +38,7 @@ public class LookupRepo(CommonConnectivity db)
         // Populate dynamic class strengths
         var colors = new[] { "#6d28d9", "#db2777", "#2563eb", "#059669", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899" };
         var classStrengths = db.Sql(@"
-            SELECT c.ClassId, c.ClassName, c.OrderNo, COUNT(s.StudentId) as StudentCount
+            SELECT c.ClassId, c.ClassName, c.OrderNo, COUNT(DISTINCT s.StudentId) as StudentCount
             FROM Classes c
             LEFT JOIN Students s ON s.ClassId=c.ClassId AND ISNULL(s.Status,'Active') <> 'Deleted'
             WHERE c.IsActive=1
@@ -58,7 +58,7 @@ public class LookupRepo(CommonConnectivity db)
 
         // Populate all classes
         stats.AllClasses = db.Sql(@"
-            SELECT c.ClassId, c.ClassName, c.OrderNo, c.IsActive, COUNT(s.StudentId) as StudentCount
+            SELECT c.ClassId, c.ClassName, c.OrderNo, c.IsActive, COUNT(DISTINCT s.StudentId) as StudentCount
             FROM Classes c
             LEFT JOIN Students s ON s.ClassId=c.ClassId AND ISNULL(s.Status,'Active') <> 'Deleted'
             WHERE c.IsActive=1
