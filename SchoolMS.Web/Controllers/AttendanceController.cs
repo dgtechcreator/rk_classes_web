@@ -44,7 +44,19 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
             .ToList();
 
         var attendanceBatches = batchSvc.GetAll();
+
+        // Check which batches have attendance marked
+        var batchAttendanceStatus = new Dictionary<int, bool>();
+        foreach (var batch in attendanceBatches)
+        {
+            // Check if all students in this batch have attendance marked today
+            var studentsInBatch = batch.StudentIds.Count;
+            var attendanceMarked = todayRecords.Count(r => batch.StudentIds.Contains(r.StudentId));
+            batchAttendanceStatus[batch.BatchId] = attendanceMarked > 0; // If any student has attendance marked
+        }
+
         ViewBag.AttendanceBatches = attendanceBatches;
+        ViewBag.BatchAttendanceStatus = batchAttendanceStatus;
 
         return View(new AttendanceVM {
             Records=records, Date=d, ClassId=classId, SectionId=sectionId, BatchId=batchId,
