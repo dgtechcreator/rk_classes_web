@@ -1,279 +1,669 @@
 @model SchoolMS.Web.ViewModels.AttendanceVM
-@{ ViewData["Title"] = "Attendance"; }
+@{
+    ViewData["Title"] = "Attendance";
+}
 
 <style>
-/* Mobile Responsive - Attendance Filters */
-@@media (max-width: 768px) {
-  .filter-flex-row {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 12px !important;
-    align-items: flex-end !important;
-  }
-  .filter-flex-row > div {
-    min-width: unset !important;
-  }
-  .filter-flex-row .btn {
-    grid-column: span 2;
-    width: 100%;
-  }
-}
+    /* Mobile Responsive - Attendance Filters */
+    @@media (max-width: 768px) {
+        .filter-flex-row {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 12px !important;
+            align-items: flex-end !important;
+        }
 
-@@media (max-width: 480px) {
-  .filter-flex-row {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
-  }
-  .filter-flex-row > div {
-    width: 100%;
-  }
-  .filter-flex-row .fc,
-  .filter-flex-row .fs {
-    width: 100% !important;
-  }
-  .filter-flex-row .btn {
-    grid-column: span 1;
-    width: 100%;
-  }
-}
+            .filter-flex-row > div {
+                min-width: unset !important;
+            }
+
+            .filter-flex-row .btn {
+                grid-column: span 2;
+                width: 100%;
+            }
+
+        .attendance-batch-section {
+            margin-bottom: 16px !important;
+        }
+
+            .attendance-batch-section > div:last-child {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+            }
+    }
+
+    @@media (max-width: 480px) {
+        .filter-flex-row {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+        }
+
+            .filter-flex-row > div {
+                width: 100%;
+            }
+
+            .filter-flex-row .fc,
+            .filter-flex-row .fs {
+                width: 100% !important;
+            }
+
+            .filter-flex-row .btn {
+                grid-column: span 1;
+                width: 100%;
+            }
+
+        .attendance-batch-section {
+            margin-bottom: 14px !important;
+        }
+
+            .attendance-batch-section > div:first-child {
+                font-size: 11px !important;
+                margin-bottom: 8px !important;
+            }
+
+            .attendance-batch-section > div:last-child {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 8px !important;
+            }
+
+            .attendance-batch-section a {
+                padding: 8px 10px !important;
+                font-size: 11px !important;
+                gap: 6px !important;
+                white-space: normal !important;
+                text-align: center !important;
+            }
+
+            .attendance-batch-section span:first-of-type {
+                flex: 1 !important;
+            }
+
+            .attendance-batch-section span:last-child {
+                padding: 2px 6px !important;
+                font-size: 10px !important;
+            }
+
+            .attendance-batch-section i {
+                display: none !important;
+            }
+    }
+
+    /* Mobile Card Layout for Attendance */
+    @@media (max-width: 768px) {
+        .tbl-wrap table {
+            font-size: 0 !important;
+        }
+
+        .tbl-wrap table thead {
+            display: none !important;
+        }
+
+        .tbl-wrap table tbody {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 12px !important;
+        }
+
+        .tbl-wrap table tr {
+            display: flex !important;
+            flex-direction: column !important;
+            background: #fff !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 6px !important;
+            padding: 8px !important;
+            gap: 6px !important;
+        }
+
+        .tbl-wrap table td {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding: 0 !important;
+            border: none !important;
+            background: none !important;
+            min-height: auto !important;
+            font-size: 13px !important;
+        }
+
+        .tbl-wrap table td:nth-child(1),
+        .tbl-wrap table td:nth-child(2),
+        .tbl-wrap table td:nth-child(3) {
+            display: none !important;
+        }
+
+        /* Student Name */
+        .tbl-wrap table td:nth-child(4) {
+            display: flex !important;
+            font-weight: 700 !important;
+            font-size: 14px !important;
+            flex-direction: column !important;
+            margin-bottom: 4px !important;
+        }
+
+        .tbl-wrap table td:nth-child(4) div:first-child {
+            font-weight: 700 !important;
+            color: #1f2937 !important;
+            font-size: 14px !important;
+        }
+
+        .tbl-wrap table td:nth-child(4) div:last-child {
+            font-size: 11px !important;
+            color: #6b7280 !important;
+        }
+
+        /* Attendance Buttons */
+        .tbl-wrap table td:nth-child(7) {
+            display: flex !important;
+            gap: 4px !important;
+            flex-wrap: wrap !important;
+        }
+
+        .tbl-wrap table .att-grp {
+            display: flex !important;
+            gap: 4px !important;
+            width: 100% !important;
+        }
+
+        .tbl-wrap table .att-btn {
+            flex: 1 !important;
+            padding: 6px 4px !important;
+            font-size: 10px !important;
+            min-height: 30px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 4px !important;
+        }
+
+        /* Contact Buttons */
+        .tbl-wrap table td:nth-child(8) {
+            display: flex !important;
+            gap: 4px !important;
+            justify-content: flex-start !important;
+            width: 100% !important;
+        }
+    }
+
 </style>
 
 <div class="pg-hdr">
-  <div class="pg-row">
-    <div><h1>📅 Attendance</h1><p>Mark daily student attendance</p></div>
-    <a href="/Attendance/Report" class="btn btn-outline"><i class="fas fa-chart-bar"></i> Attendance Report</a>
-  </div>
+    <div class="pg-row">
+        <div><h1>📅 Attendance</h1><p>Mark daily student attendance</p></div>
+        <a href="/Attendance/Report" class="btn btn-outline"><i class="fas fa-chart-bar"></i> Attendance Report</a>
+    </div>
+</div>
+
+@{
+    var todayAttendance = Model.Records.Where(r => r.AttendanceId.HasValue).ToList();
+    var yesterdayDate = DateTime.Today.AddDays(-1);
+}
+
+@{
+    var isToday = Model.Date.Date == DateTime.Today.Date;
+}
+
+<div style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;">
+        <div style="font-size:13px;font-weight:800;color:#1f2937;text-transform:uppercase;letter-spacing:.5px;">📅 ATTENDANCE</div>
+        <div style="display:flex;gap:8px;">
+            <a href="?date=@DateTime.Today.ToString("yyyy-MM-dd")"
+               style="display:inline-flex;align-items:center;justify-content:center;gap:6px;background:@(isToday ? "#1e40af" : "#e5e7eb");border:none;border-radius:20px;padding:8px 14px;font-size:12px;font-weight:700;color:@(isToday ? "#fff" : "#374151");text-decoration:none;transition:all .2s;cursor:pointer;"
+               onmouseover="this.style.background='@(isToday ? "#1e3a8a" : "#d1d5db")';this.style.boxShadow='0 4px 12px rgba(30,64,175,.3)'"
+               onmouseout="this.style.background='@(isToday ? "#1e40af" : "#e5e7eb")';this.style.boxShadow='none'">
+                <i class="fas fa-calendar-day"></i> Today
+            </a>
+            <a href="?date=@yesterdayDate.ToString("yyyy-MM-dd")"
+               style="display:inline-flex;align-items:center;justify-content:center;gap:6px;background:@(!isToday ? "#1e40af" : "#e5e7eb");border:none;border-radius:20px;padding:8px 14px;font-size:12px;font-weight:700;color:@(!isToday ? "#fff" : "#374151");text-decoration:none;transition:all .2s;cursor:pointer;"
+               onmouseover="this.style.background='@(!isToday ? "#1e3a8a" : "#d1d5db")';this.style.boxShadow='0 4px 12px rgba(30,64,175,.3)'"
+               onmouseout="this.style.background='@(!isToday ? "#1e40af" : "#e5e7eb")';this.style.boxShadow='none'">
+                <i class="fas fa-calendar"></i> Yesterday
+            </a>
+        </div>
+    </div>
+
+
 </div>
 
 <form method="get" action="/Attendance/Index" id="flt">
-<div class="card" style="margin-bottom:16px;padding:16px 18px;">
+    <div class="card" style="margin-bottom:16px;padding:16px 18px;">
 
-  @* Row 1: Date + dropdowns + search *@
-  <div class="filter-flex-row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px;">
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Date</label>
-      <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" class="fc" style="width:155px;"/>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Medium / Stream</label>
-      <select name="sectionId" class="fs" style="min-width:155px;">
-        <option value="">— Select —</option>
-        @foreach(var s in Model.Sections)
-        {<option value="@s.SectionId" selected=@(Model.SectionId==s.SectionId?"selected":"")>@s.SectionName</option>}
-      </select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Std</label>
-      <select name="classId" class="fs" style="min-width:130px;">
-        <option value="">— Select —</option>
-        @foreach(var c in Model.Classes)
-        {<option value="@c.ClassId" selected=@(Model.ClassId==c.ClassId?"selected":"")>@c.ClassName</option>}
-      </select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Batch</label>
-      <select name="batchId" class="fs" style="min-width:130px;">
-        <option value="">All Batches</option>
-        @foreach(var b in Model.Batches)
-        {<option value="@b.BatchId" selected=@(Model.BatchId==b.BatchId?"selected":"")>@b.BatchName</option>}
-      </select>
-    </div>
-    <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:1px;">
-      <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
-      @if (Model.ClassId.HasValue || Model.SectionId.HasValue || Model.BatchId.HasValue)
-      {<a href="/Attendance/Index" class="btn btn-outline"><i class="fas fa-times"></i> Clear</a>}
-    </div>
-  </div>
+        @* Row 1: Date + dropdowns + search *@
+        <div class="filter-flex-row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px;">
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Date</label>
+                <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" class="fc" style="width:155px;background:#f8f6ff;cursor:not-allowed;" readonly />
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Medium / Stream</label>
+                <select name="sectionId" class="fs" style="min-width:155px;">
+                    <option value="">— Select —</option>
+                    @foreach (var s in Model.Sections)
+                    {
+                        <option value="@s.SectionId" selected=@(Model.SectionId == s.SectionId ? "selected" : "")>@s.SectionName</option>
+                    }
+                </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Std</label>
+                <select name="classId" class="fs" style="min-width:130px;">
+                    <option value="">— Select —</option>
+                    @foreach (var c in Model.Classes)
+                    {
+                        <option value="@c.ClassId" selected=@(Model.ClassId == c.ClassId ? "selected" : "")>@c.ClassName</option>
+                    }
+                </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Batch</label>
+                <select name="batchId" class="fs" style="min-width:130px;">
+                    <option value="">All Batches</option>
+                    @foreach (var b in Model.Batches)
+                    {
+                        <option value="@b.BatchId" selected=@(Model.BatchId == b.BatchId ? "selected" : "")>@b.BatchName</option>
+                    }
+                </select>
+            </div>
+            <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:1px;">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Search</button>
+                @if (Model.ClassId.HasValue || Model.SectionId.HasValue || Model.BatchId.HasValue)
+                {
+                    <a href="/Attendance/Index" class="btn btn-outline"><i class="fas fa-times"></i> Clear</a>
+                }
+            </div>
+        </div>
 
-  @* Row 2: Lecture details *@
-  <div class="filter-flex-row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding-top:12px;border-top:1px dashed var(--bdr);">
-    <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
-      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">
-        <i class="fas fa-book" style="color:var(--p);margin-right:3px;"></i>Subject
-      </label>
-      <select name="subject" id="inpSubject" class="fs" style="min-width:160px;">
-        <option value="">— Select Subject —</option>
-        @foreach(var s in Model.Subjects)
-        { if(Model.Subject==s.SubjectName){<option value="@s.SubjectName" selected>@s.SubjectName</option>}
-          else{<option value="@s.SubjectName">@s.SubjectName</option>} }
-      </select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
-      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">
-        <i class="fas fa-chalkboard-teacher" style="color:var(--p);margin-right:3px;"></i>Faculty Name
-      </label>
-      <select name="sirName" id="inpSirName" class="fs" style="min-width:160px;">
-        <option value="">— Select Teacher —</option>
-        @foreach(var t in Model.Teachers)
-        {
-          if(Model.SirName==t.FullName){<option value="@t.FullName" selected>@t.FullName</option>}
-          else{<option value="@t.FullName">@t.FullName</option>}
-        }
-      </select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">
-        <i class="fas fa-clock" style="color:var(--ok);margin-right:3px;"></i>Start Time
-      </label>
-      <input type="time" name="startTime" id="inpStartTime" value="@Model.StartTime" class="fc" style="width:135px;"/>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:4px;">
-      <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">
-        <i class="fas fa-clock" style="color:var(--err);margin-right:3px;"></i>End Time
-      </label>
-      <input type="time" name="endTime" id="inpEndTime" value="@Model.EndTime" class="fc" style="width:135px;"/>
-    </div>
-  </div>
+        @* Row 2: Lecture details *@
+        <div class="filter-flex-row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;padding-top:12px;border-top:1px dashed var(--bdr);">
+            <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
+                <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">
+                    <i class="fas fa-book" style="color:var(--p);margin-right:3px;"></i>Subject
+                </label>
+                <select name="subject" id="inpSubject" class="fs" style="min-width:160px;">
+                    <option value="">— Select Subject —</option>
+                    @foreach (var s in Model.Subjects)
+                    {
+                        if (Model.Subject == s.SubjectName)
+                        {
+                            <option value="@s.SubjectName" selected>@s.SubjectName</option>
+                        }
+                        else
+                        {
+                            <option value="@s.SubjectName">@s.SubjectName</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px;">
+                <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">
+                    <i class="fas fa-chalkboard-teacher" style="color:var(--p);margin-right:3px;"></i>Faculty Name
+                </label>
+                <select name="sirName" id="inpSirName" class="fs" style="min-width:160px;">
+                    <option value="">— Select Teacher —</option>
+                    @foreach (var t in Model.Teachers)
+                    {
+                        if (Model.SirName == t.FullName)
+                        {
+                            <option value="@t.FullName" selected>@t.DisplayName</option>
+                        }
+                        else
+                        {
+                            <option value="@t.FullName">@t.DisplayName</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">
+                    <i class="fas fa-clock" style="color:var(--ok);margin-right:3px;"></i>Start Time
+                </label>
+                <input type="time" name="startTime" id="inpStartTime" value="@Model.StartTime" class="fc" style="width:135px;" />
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">
+                    <i class="fas fa-clock" style="color:var(--err);margin-right:3px;"></i>End Time
+                </label>
+                <input type="time" name="endTime" id="inpEndTime" value="@Model.EndTime" class="fc" style="width:135px;" />
+            </div>
+        </div>
 
-</div>
+    </div>
 </form>
 
 @if (Model.Records.Any())
 {
-<div class="card">
-  <div class="card-hdr">
-    <span class="card-ttl">
-      <i class="fas fa-users" style="color:var(--p);margin-right:6px;"></i>
-      @Model.Records.Count Students — @Model.Date.ToString("dddd, dd MMMM yyyy")
-      @if (!string.IsNullOrEmpty(Model.Subject)){<span style="font-size:12px;font-weight:400;color:var(--mu);margin-left:8px;">| @Model.Subject</span>}
-      @if (!string.IsNullOrEmpty(Model.SirName)){<span style="font-size:12px;font-weight:400;color:var(--mu);margin-left:4px;">| @Model.SirName</span>}
+    <div class="card">
+        <div class="card-hdr">
+            <span class="card-ttl">
+                <i class="fas fa-users" style="color:var(--p);margin-right:6px;"></i>
+                @Model.Records.Count Students — @Model.Date.ToString("dddd, dd MMMM yyyy")
+                @if (!string.IsNullOrEmpty(Model.Subject))
+                {
+                    <span style="font-size:12px;font-weight:400;color:var(--mu);margin-left:8px;">| @Model.Subject</span>
+                }
+                @if (!string.IsNullOrEmpty(Model.SirName))
+                {
+                    var teacher = Model.Teachers.FirstOrDefault(t => t.FullName == Model.SirName);
+                    var displayName = teacher?.DisplayName ?? Model.SirName;
+                    <span style="font-size:12px;font-weight:400;color:var(--mu);margin-left:4px;">| @displayName</span>
+                }
+            </span>
+            <div class="df g8">
+                <button class="btn btn-success btn-sm" onclick="markAll('Present')"><i class="fas fa-check"></i> All Present</button>
+                <button class="btn btn-danger btn-sm" onclick="markAll('Absent')"><i class="fas fa-times"></i> All Absent</button>
+                <button class="btn btn-primary" onclick="saveAtt()"><i class="fas fa-save"></i> Save Attendance</button>
+            </div>
+        </div>
 
-    </span>
-    <div class="df g8">
-      <button class="btn btn-success btn-sm" onclick="markAll('Present')"><i class="fas fa-check"></i> All Present</button>
-      <button class="btn btn-danger btn-sm"  onclick="markAll('Absent')"><i class="fas fa-times"></i> All Absent</button>
-      <button class="btn btn-primary"        onclick="saveAtt()"><i class="fas fa-save"></i> Save Attendance</button>
+        <div style="display:flex;gap:14px;margin-bottom:16px;padding:10px 14px;background:var(--sur2);border-radius:var(--rs);border:1px solid var(--bdr);flex-wrap:wrap;">
+            <span style="font-size:13px;font-weight:700;">Total: <strong>@Model.Records.Count</strong></span>
+            <span style="font-size:13px;font-weight:700;color:var(--ok);">Present: <strong id="cP">0</strong></span>
+            <span style="font-size:13px;font-weight:700;color:var(--err);">Absent: <strong id="cA">0</strong></span>
+            <span style="font-size:13px;font-weight:700;color:var(--warn);">Late: <strong id="cL">0</strong></span>
+            @if (!string.IsNullOrEmpty(Model.StartTime) || !string.IsNullOrEmpty(Model.EndTime))
+            {
+                <span style="font-size:13px;font-weight:600;color:var(--mu);margin-left:auto;">
+                    <i class="fas fa-clock"></i>
+                    @(string.IsNullOrEmpty(Model.StartTime) ? "—" : Model.StartTime)
+                    @if (!string.IsNullOrEmpty(Model.EndTime))
+                    {
+                        <text> → @Model.EndTime</text>
+                    }
+                </span>
+            }
+        </div>
+
+        <div class="tbl-wrap">
+            <table style="position: relative;">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Photo</th>
+                        <th>Roll</th>
+                        <th style="position: sticky; left: 130px; z-index: 10; background: #fff; min-width: 200px;">Student Name</th>
+                        <th>Std / Medium</th>
+                        <th>Batch</th>
+                        <th style="min-width:220px;">Attendance</th>
+                        <th style="width:110px;">Contact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int idx = 0;
+                    }
+                    @foreach (var r in Model.Records)
+                    {
+                        idx++;
+                        <tr>
+                            <td class="text-mu fw7">@idx</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(r.ProfilePicPath))
+                                {
+                                    <img src="@r.ProfilePicPath" class="stu-pic" />
+                                }
+                                else
+                                {
+
+                                    <div class="stu-av" style="width:34px;height:34px;font-size:12px;">@r.FullName[0]</div>
+                                }
+                            </td>
+                            <td><span class="mono" style="font-size:12px;">@(r.RollNo ?? "—")</span></td>
+                            <td style="position: sticky; left: 130px; z-index: 9; background: #fff;">
+                                <div class="fw7">@r.FullName</div>
+                                <div style="font-size:11px;" class="text-mu">@r.AdmissionNo</div>
+                            </td>
+                            <td style="font-size:12.5px;">@r.ClassName / @r.SectionName</td>
+                            <td><span class="badge b-purple" style="font-size:11px;">@r.BatchName</span></td>
+                            <td>
+                                <div class="att-grp" data-sid="@r.StudentId">
+                                    <button type="button" class="att-btn p @(r.AttendanceStatus == "Present" ? "sel" : "")" onclick="setAtt(@r.StudentId,'Present',this)">✓ Present</button>
+                                    <button type="button" class="att-btn a @(r.AttendanceStatus == "Absent" ? "sel" : "")" onclick="setAtt(@r.StudentId,'Absent',this)">✗ Absent</button>
+                                    <button type="button" class="att-btn l @(r.AttendanceStatus == "Late" ? "sel" : "")" onclick="setAtt(@r.StudentId,'Late',this)">⏰ Late</button>
+                                </div>
+                            </td>
+
+                            <!-- CONTACT COLUMN -->
+                            <td style="padding:8px;text-align:center;position:relative;">
+                                <div style="display:flex;gap:6px;align-items:center;justify-content:center;">
+
+                                    <!-- Call Button -->
+                                    <button onclick="toggleAttCallMenu('cm_@r.StudentId')"
+                                            style="background:#2563eb;color:#fff;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px;">
+                                        <i class="fas fa-phone"></i>
+                                    </button>
+
+                                    <!-- WhatsApp Button -->
+                                    <button onclick="showAttWhatsApp(@r.StudentId)" style="background:#25d366;color:#fff;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px;"><i class="fab fa-whatsapp"></i></button>
+
+                                </div>
+
+                                <!-- Call Dropdown - JS populated -->
+                                <div id="cm_@r.StudentId"
+                                     data-father="@r.FatherPhone"
+                                     data-mother="@r.MotherPhone"
+                                     style="display:none;position:absolute;right:0;top:42px;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10001;min-width:200px;padding:4px 0;">
+                                </div>
+                            </td>
+
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
-  </div>
-
-  <div style="display:flex;gap:14px;margin-bottom:16px;padding:10px 14px;background:var(--sur2);border-radius:var(--rs);border:1px solid var(--bdr);flex-wrap:wrap;">
-    <span style="font-size:13px;font-weight:700;">Total: <strong>@Model.Records.Count</strong></span>
-    <span style="font-size:13px;font-weight:700;color:var(--ok);">Present: <strong id="cP">0</strong></span>
-    <span style="font-size:13px;font-weight:700;color:var(--err);">Absent: <strong id="cA">0</strong></span>
-    <span style="font-size:13px;font-weight:700;color:var(--warn);">Late: <strong id="cL">0</strong></span>
-    @if (!string.IsNullOrEmpty(Model.StartTime) || !string.IsNullOrEmpty(Model.EndTime))
-    {
-      <span style="font-size:13px;font-weight:600;color:var(--mu);margin-left:auto;">
-        <i class="fas fa-clock"></i>
-        @(string.IsNullOrEmpty(Model.StartTime) ? "—" : Model.StartTime)
-        @if (!string.IsNullOrEmpty(Model.EndTime)){<text> → @Model.EndTime</text>}
-      </span>
-    }
-  </div>
-
-  <div class="tbl-wrap">
-  <table>
-    <thead>
-      <tr>
-        <th>#</th><th>Photo</th><th>Roll</th><th>Student Name</th>
-        <th>Std / Medium</th><th>Batch</th>
-        <th style="min-width:220px;">Attendance</th>
-      </tr>
-    </thead>
-    <tbody>
-    @{ int idx = 0; }
-    @foreach (var r in Model.Records)
-    {
-      idx++;
-      <tr>
-        <td class="text-mu fw7">@idx</td>
-        <td>
-          @if (!string.IsNullOrEmpty(r.ProfilePicPath)){<img src="@r.ProfilePicPath" class="stu-pic"/>}
-          else{<div class="stu-av" style="width:34px;height:34px;font-size:12px;">@r.FullName[0]</div>}
-        </td>
-        <td><span class="mono" style="font-size:12px;">@(r.RollNo??"—")</span></td>
-        <td>
-          <div class="fw7">@r.FullName</div>
-          <div style="font-size:11px;" class="text-mu">@r.AdmissionNo</div>
-        </td>
-        <td style="font-size:12.5px;">@r.ClassName / @r.SectionName</td>
-        <td><span class="badge b-purple" style="font-size:11px;">@r.BatchName</span></td>
-        <td>
-          <div class="att-grp" data-sid="@r.StudentId">
-            <button type="button" class="att-btn p @(r.AttendanceStatus=="Present"?"sel":"")" onclick="setAtt(@r.StudentId,'Present',this)">✓ Present</button>
-            <button type="button" class="att-btn a @(r.AttendanceStatus=="Absent"?"sel":"")"  onclick="setAtt(@r.StudentId,'Absent',this)">✗ Absent</button>
-            <button type="button" class="att-btn l @(r.AttendanceStatus=="Late"?"sel":"")"   onclick="setAtt(@r.StudentId,'Late',this)">⏰ Late</button>
-          </div>
-        </td>
-      </tr>
-    }
-    </tbody>
-  </table>
-  </div>
-</div>
 }
 else if (Model.ClassId.HasValue)
 {
-  <div class="card"><div class="empty"><div class="empty-ico">👥</div><h3>No students found</h3><p>No active students match your filter.</p></div></div>
+    <div class="card"><div class="empty"><div class="empty-ico">👥</div><h3>No students found</h3><p>No active students match your filter.</p></div></div>
 }
 else
 {
-  <div class="card"><div class="empty"><div class="empty-ico">📅</div><h3>Select Filters &amp; Search</h3><p>Choose a date, Medium/Stream, Std and/or Batch, then click <strong>Search</strong> to load students.</p></div></div>
+    <div class="card"><div class="empty"><div class="empty-ico">📅</div><h3>Select Filters &amp; Search</h3><p>Choose a date, Medium/Stream, Std and/or Batch, then click <strong>Search</strong> to load students.</p></div></div>
 }
 
 @section Scripts {
-<script>
-const att = {};
-@foreach(var r in Model.Records){@Html.Raw($"att[{r.StudentId}]='{r.AttendanceStatus}';")}
+    <script>
+        // ===== ATTENDANCE STATE =====
+        const att = {};
+        @foreach (var r in Model.Records)
+        {
+            @Html.Raw($"att[{r.StudentId}]='{r.AttendanceStatus}';")
+        }
 
-function setAtt(sid, status, btn) {
-  att[sid] = status;
-  const grp = btn.closest('.att-grp');
-  grp.querySelectorAll('.att-btn').forEach(b => b.classList.remove('sel'));
-  btn.classList.add('sel');
-  updateCounts();
-}
-function markAll(status) {
-  document.querySelectorAll('.att-grp').forEach(grp => {
-    const sid = parseInt(grp.dataset.sid);
-    att[sid] = status;
-    grp.querySelectorAll('.att-btn').forEach(b => b.classList.remove('sel'));
-    grp.querySelector('.att-btn.' + status[0].toLowerCase())?.classList.add('sel');
-  });
-  updateCounts();
-}
-function updateCounts() {
-  const vs = Object.values(att);
-  document.getElementById('cP').textContent = vs.filter(v=>v==='Present').length;
-  document.getElementById('cA').textContent = vs.filter(v=>v==='Absent').length;
-  document.getElementById('cL').textContent = vs.filter(v=>v==='Late').length;
-}
-async function saveAtt() {
-  const subject   = document.getElementById('inpSubject')?.value  || null;
-  const sirName   = document.getElementById('inpSirName')?.value  || null;
-  const startTime = document.getElementById('inpStartTime')?.value || null;
-  const endTime   = document.getElementById('inpEndTime')?.value   || null;
+        function setAtt(sid, status, btn) {
+          att[sid] = status;
+          const grp = btn.closest('.att-grp');
+          grp.querySelectorAll('.att-btn').forEach(b => b.classList.remove('sel'));
+          btn.classList.add('sel');
+          updateCounts();
+        }
 
-  const entries = Object.entries(att).map(([id,status])=>({studentId:parseInt(id),status,remarks:null}));
-  const res = await fetch('/Attendance/Save', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({
-      date:      '@Model.Date.ToString("yyyy-MM-dd")',
-      classId:   @(Model.ClassId?.ToString()   ?? "null"),
-      sectionId: @(Model.SectionId?.ToString() ?? "null"),
-      batchId:   @(Model.BatchId?.ToString()   ?? "null"),
-      subject, sirName, startTime, endTime,
-      entries
-    })
-  });
-  const d = await res.json();
-  if (d.success) toast('✅ ' + d.message, 'success');
-  else           toast('❌ Error saving attendance', 'danger');
-}
-updateCounts();
+        function markAll(status) {
+          document.querySelectorAll('.att-grp').forEach(grp => {
+            const sid = parseInt(grp.dataset.sid);
+            att[sid] = status;
+            grp.querySelectorAll('.att-btn').forEach(b => b.classList.remove('sel'));
+            grp.querySelector('.att-btn.' + status[0].toLowerCase())?.classList.add('sel');
+          });
+          updateCounts();
+        }
 
-function toast(msg, type) {
-  const el = document.createElement('div');
-  el.className = 'alert alert-' + (type==='success'?'success':'danger');
-  el.textContent = msg;
-  Object.assign(el.style, {
-    position:'fixed', top:'76px', right:'22px', zIndex:'9999',
-    minWidth:'260px', boxShadow:'0 4px 20px rgba(0,0,0,.13)'
-  });
-  document.body.appendChild(el);
-  setTimeout(()=>el.remove(), 4000);
-}
-</script>
+        function updateCounts() {
+          const vs = Object.values(att);
+          document.getElementById('cP').textContent = vs.filter(v=>v==='Present').length;
+          document.getElementById('cA').textContent = vs.filter(v=>v==='Absent').length;
+          document.getElementById('cL').textContent = vs.filter(v=>v==='Late').length;
+        }
+
+        async function saveAtt() {
+          const subject   = document.getElementById('inpSubject')?.value  || null;
+          const sirName   = document.getElementById('inpSirName')?.value  || null;
+          const startTime = document.getElementById('inpStartTime')?.value || null;
+          const endTime   = document.getElementById('inpEndTime')?.value   || null;
+          const entries = Object.entries(att).map(([id,status])=>({studentId:parseInt(id),status,remarks:null}));
+          const res = await fetch('/Attendance/Save', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+              date:      '@Model.Date.ToString("yyyy-MM-dd")',
+              classId:   @(Model.ClassId?.ToString() ?? "null"),
+              sectionId: @(Model.SectionId?.ToString() ?? "null"),
+              batchId:   @(Model.BatchId?.ToString() ?? "null"),
+              subject, sirName, startTime, endTime, entries
+            })
+          });
+          const d = await res.json();
+          if (d.success) toast('✅ ' + d.message, 'success');
+          else           toast('❌ Error saving attendance', 'danger');
+        }
+
+        updateCounts();
+
+        function toast(msg, type) {
+          const el = document.createElement('div');
+          el.className = 'alert alert-' + (type==='success'?'success':'danger');
+          el.textContent = msg;
+          Object.assign(el.style, {
+            position:'fixed', top:'76px', right:'22px', zIndex:'9999',
+            minWidth:'260px', boxShadow:'0 4px 20px rgba(0,0,0,.13)'
+          });
+          document.body.appendChild(el);
+          setTimeout(()=>el.remove(), 4000);
+        }
+
+        // ===== CALL DROPDOWN - API SE FETCH =====
+        function toggleAttCallMenu(menuId) {
+          const menu = document.getElementById(menuId);
+          if (!menu) return;
+
+          const isOpen = menu.style.display === 'block';
+          document.querySelectorAll('[id^="cm_"]').forEach(m => m.style.display = 'none');
+          if (isOpen) return;
+
+          const studentId = menuId.replace('cm_', '');
+
+          menu.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:#666;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+          menu.style.display = 'block';
+
+          fetch('/Attendance/GetStudentContact?studentId=' + studentId)
+            .then(r => r.json())
+            .then(data => {
+              const father = (data.fatherPhone || '').trim();
+              const mother = (data.motherPhone || '').trim();
+              const student = (data.studentPhone || '').trim();
+
+              let html = '';
+              if (student) {
+                html += '<a href="tel:' + student + '" style="display:block;padding:10px 12px;font-size:12px;color:#333;border-bottom:1px solid #f5f5f5;text-decoration:none;"><i class="fas fa-phone" style="color:#2563eb;margin-right:6px;"></i>Student: ' + student + '</a>';
+              }
+              if (father) {
+                html += '<a href="tel:' + father + '" style="display:block;padding:10px 12px;font-size:12px;color:#333;border-bottom:1px solid #f5f5f5;text-decoration:none;"><i class="fas fa-phone" style="color:#dc2626;margin-right:6px;"></i>Father: ' + father + '</a>';
+              }
+              if (mother) {
+                html += '<a href="tel:' + mother + '" style="display:block;padding:10px 12px;font-size:12px;color:#333;text-decoration:none;"><i class="fas fa-phone" style="color:#dc2626;margin-right:6px;"></i>Mother: ' + mother + '</a>';
+              }
+              if (!father && !mother && !student) {
+                html = '<div style="padding:10px 12px;font-size:12px;color:#999;">No number available</div>';
+              }
+              menu.innerHTML = html;
+            })
+            .catch(() => {
+              menu.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:#dc2626;">Error loading numbers</div>';
+            });
+        }
+
+
+        // Close call menus on outside click
+        document.addEventListener('click', function(e) {
+          if (!e.target.closest('button') && !e.target.closest('[id^="cm_"]')) {
+            document.querySelectorAll('[id^="cm_"]').forEach(m => m.style.display = 'none');
+          }
+        });
+
+        // ===== WHATSAPP MODAL =====
+        function showAttWhatsApp(studentId) {
+          const old = document.getElementById('attWaModal');
+          if (old) old.remove();
+
+          const msg = `*Dear Parent,*
+
+        This is to inform you that your ward was absent from today's classes. Kindly inform us of the reason for the absence.
+
+        *Regards,*
+        *R K CLASSES*
+        *Kapil Sir*
+        *M. Sc., B. Ed*
+        *9870375795*
+        *8108499214*
+
+        ......................................
+
+        *प्रिय अभिभावक,*
+
+        यह सूचित किया जाता है कि आपका वार्ड आज की कक्षाओं में अनुपस्थित था। कृपया अनुपस्थिति का कारण हमें बताने की कृपा करें।
+
+        *सादर,*
+        *R K CLASSES*
+        *Kapil Sir*
+        *M. Sc., B. Ed*
+        *9870375795*
+        *8108499214*`;
+
+          // Show modal with loading first
+          const modal = document.createElement('div');
+          modal.id = 'attWaModal';
+          modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+          modal.innerHTML = `
+            <div style="background:#fff;border-radius:12px;padding:24px;max-width:500px;width:92%;max-height:85vh;overflow-y:auto;">
+              <h3 style="margin:0 0 4px 0;font-size:16px;font-weight:700;color:#1f2937;">Send Absence Message</h3>
+              <p style="margin:0 0 14px 0;font-size:12px;color:#666;">Loading student info...</p>
+              <div style="background:#f3f4f6;border-radius:8px;padding:14px;font-size:11px;color:#333;white-space:pre-wrap;line-height:1.7;margin-bottom:16px;">${msg}</div>
+              <div id="waPhoneButtons" style="display:flex;gap:10px;margin-bottom:10px;">
+                <div style="width:100%;text-align:center;padding:12px;color:#666;"><i class="fas fa-spinner fa-spin"></i> Loading contacts...</div>
+              </div>
+              <button onclick="document.getElementById('attWaModal').remove()"
+                      style="width:100%;background:#f3f4f6;color:#374151;border:none;padding:10px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;">Close</button>
+            </div>`;
+
+          document.body.appendChild(modal);
+          modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+          // API se numbers fetch karo
+          fetch('/Attendance/GetStudentContact?studentId=' + studentId)
+            .then(r => r.json())
+            .then(data => {
+              const father = (data.fatherPhone || '').trim();
+              const mother = (data.motherPhone || '').trim();
+              const btnDiv = document.getElementById('waPhoneButtons');
+              if (!btnDiv) return;
+
+              let html = '';
+              if (father) {
+                html += '<button onclick="sendAttWa(\'' + father + '\')" style="flex:1;background:#25d366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;"><i class=\"fab fa-whatsapp\"></i> Send to Father</button>';
+              }
+              if (mother) {
+                html += '<button onclick="sendAttWa(\'' + mother + '\')" style="flex:1;background:#25d366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;"><i class=\"fab fa-whatsapp\"></i> Send to Mother</button>';
+              }
+              if (!father && !mother) {
+                html = '<p style="text-align:center;color:#999;width:100%;">No phone number available</p>';
+              }
+              btnDiv.innerHTML = html;
+            })
+            .catch(() => {
+              const btnDiv = document.getElementById('waPhoneButtons');
+              if (btnDiv) btnDiv.innerHTML = '<p style="color:#dc2626;text-align:center;width:100%;">Error loading contacts</p>';
+            });
+        }
+
+        function sendAttWa(phone) {
+          const msgDiv = document.querySelector('#attWaModal div > div[style*="white-space"]');
+          const msg = msgDiv ? msgDiv.innerText : '';
+          const clean = phone.replace(/\D/g, '');
+          const num = clean.length === 10 ? '91' + clean : clean;
+          window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
+          document.getElementById('attWaModal').remove();
+        }
+    </script>
 }
