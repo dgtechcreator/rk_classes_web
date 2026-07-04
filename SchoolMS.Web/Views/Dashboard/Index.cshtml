@@ -244,7 +244,7 @@
         </div>
 
         <!-- Total Collected -->
-        <div style="background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);border-radius:8px;padding:16px;color:#fff;">
+        <div style="background:linear-gradient(135deg,#43e97b 0%,#38f9d7 100%);border-radius:8px;padding:16px;color:#fff;">
             <div style="font-size:12px;font-weight:600;opacity:0.9;margin-bottom:6px;">Total Collected</div>
             <div style="font-size:24px;font-weight:800;">₹@overallFees.TotalCollected.ToString("N0")</div>
             <div style="font-size:11px;opacity:0.8;margin-top:6px;">Actual payments</div>
@@ -258,7 +258,7 @@
         </div>
 
         <!-- Balance -->
-        <div style="background:linear-gradient(135deg,#43e97b 0%,#38f9d7 100%);border-radius:8px;padding:16px;color:#fff;">
+        <div style="background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);border-radius:8px;padding:16px;color:#fff;">
             <div style="font-size:12px;font-weight:600;opacity:0.9;margin-bottom:6px;">Balance Due</div>
             <div style="font-size:24px;font-weight:800;">₹@overallFees.Balance.ToString("N0")</div>
             <div style="font-size:11px;opacity:0.8;margin-top:6px;">Remaining to collect</div>
@@ -715,7 +715,7 @@
           }
         });
 
-        // Class Students Popup Functions
+        // ===== CLASS STUDENTS POPUP FUNCTIONS =====
         function openClassStudentsPopup(classId) {
           const modal = document.getElementById('classStudentsModal');
           modal.style.display = 'flex';
@@ -762,21 +762,23 @@
 
           students.forEach(s => {
             const callMenuId = 'class-call_' + Math.random().toString(36).substr(2, 9);
-            html += `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:12px;"><div style="font-weight:600;font-size:13px;">${s.fullName}</div><div style="font-size:11px;color:#666;margin-top:2px;">${s.admissionNo}</div></td><td style="padding:12px;font-size:13px;">${s.sectionName || '—'}</td><td style="padding:12px;font-size:13px;">${s.batchName || '—'}</td><td style="padding:12px;font-size:13px;">${s.fatherPhone || '—'}</td><td style="padding:12px;font-size:13px;">${s.motherPhone || '—'}</td><td style="padding:12px;text-align:center;display:flex;gap:6px;justify-content:center;align-items:center;position:relative;">
-              <button onclick="toggleCallMenu('${callMenuId}')" style="background:#2563eb;color:#fff;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px;position:relative;"><i class="fas fa-phone"></i>
-                <div id="${callMenuId}" style="display:none;position:absolute;left:-180px;top:-10px;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10001;min-width:180px;padding:4px 0;">
-                  ${s.fatherPhone ? `<div onclick="callStudent('${s.fatherPhone}')" style="padding:6px 10px;cursor:pointer;font-size:11px;color:#333;border-bottom:1px solid #f5f5f5;"><i class="fas fa-phone" style="color:#dc2626;margin-right:6px;font-size:10px;"></i>Father: ${s.fatherPhone}</div>` : ''}
-                  ${s.motherPhone ? `<div onclick="callStudent('${s.motherPhone}')" style="padding:6px 10px;cursor:pointer;font-size:11px;color:#333;"><i class="fas fa-phone" style="color:#dc2626;margin-right:6px;font-size:10px;"></i>Mother: ${s.motherPhone}</div>` : ''}
-                </div>
-              </button>
-              <button onclick="showAbsenceModalClass('${s.fullName}', '${s.fatherPhone}', '${s.motherPhone}')" style="background:#25d366;color:#fff;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px;"><i class="fab fa-whatsapp"></i></button>
+            html += `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:12px;"><div style="font-weight:600;font-size:13px;">${s.fullName}</div><div style="font-size:11px;color:#666;margin-top:2px;">${s.admissionNo}</div></td><td style="padding:12px;font-size:13px;">${s.sectionName || '—'}</td><td style="padding:12px;font-size:13px;">${s.batchName || '—'}</td><td style="padding:12px;font-size:13px;">${s.fatherPhone || '—'}</td><td style="padding:12px;font-size:13px;">${s.motherPhone || '—'}</td><td style="padding:12px;">
+              <div style="display:flex;gap:6px;justify-content:center;align-items:center;width:100%;position:relative;">
+                <button onclick="toggleCallMenu('${callMenuId}')" style="background:#2563eb;color:#fff;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px;flex-shrink:0;"><i class="fas fa-phone"></i>
+                  <div id="${callMenuId}" style="display:none;position:absolute;left:50%;transform:translateX(-50%);top:100%;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:10001;min-width:180px;padding:4px 0;margin-top:4px;white-space:nowrap;">
+                    ${s.fatherPhone ? `<div onclick="callStudent('${s.fatherPhone}')" style="padding:6px 10px;cursor:pointer;font-size:11px;color:#333;border-bottom:1px solid #f5f5f5;"><i class="fas fa-phone" style="color:#dc2626;margin-right:6px;font-size:10px;"></i>Father: ${s.fatherPhone}</div>` : ''}
+                    ${s.motherPhone ? `<div onclick="callStudent('${s.motherPhone}')" style="padding:6px 10px;cursor:pointer;font-size:11px;color:#333;"><i class="fas fa-phone" style="color:#dc2626;margin-right:6px;font-size:10px;"></i>Mother: ${s.motherPhone}</div>` : ''}
+                  </div>
+                </button>
+                <button onclick="showAbsenceModalClass('${s.fullName}', '${s.fatherPhone}', '${s.motherPhone}')" style="background:#25d366;color:#fff;border:none;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:14px;flex-shrink:0;"><i class="fab fa-whatsapp"></i></button>
+              </div>
             </td></tr>`;
           });
 
           html += '</tbody></table></div>';
           document.getElementById('classStudentsBody').innerHTML = html;
         }
-            
+
         function showAbsenceModalClass(name, fatherPhone, motherPhone) {
           const modal = document.createElement('div');
           modal.id = 'absenceModal';
