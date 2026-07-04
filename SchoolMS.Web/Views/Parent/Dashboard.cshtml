@@ -85,8 +85,8 @@
 }
 
 /* ── Table ── */
-.pp-table-wrap { background:#fff; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; margin-bottom:16px; }
-.pp-table { width:100%; border-collapse:collapse; font-size:13px; }
+.pp-table-wrap { background:#fff; border:1px solid #e5e7eb; border-radius:10px; overflow-x:auto; margin-bottom:16px; }
+.pp-table { width:100%; border-collapse:collapse; font-size:13px; min-width:600px; }
 .pp-table thead tr { background:#f8f9fa; }
 .pp-table thead th { padding:10px 14px; text-align:left; font-weight:700; color:#333; border-bottom:2px solid #e5e7eb; white-space:nowrap; }
 .pp-table tbody td { padding:9px 14px; border-bottom:1px solid #f0f0f0; color:#333; }
@@ -129,6 +129,30 @@
   .stu-card-head { padding:14px 14px; }
   .stu-head-info h2 { font-size:16px; }
 }
+
+/* Marks hierarchy styles */
+.marks-subject-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin: 6px;
+  background: #f3f4f6;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all .2s;
+}
+.marks-subject-pill:hover { border-color: #2563eb; background: #f5f3ff; }
+.marks-subject-pill.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+
+.marks-breadcrumb { margin-bottom: 16px; font-size: 13px; color: #666; }
+.marks-breadcrumb button { background: none; border: none; color: #2563eb; cursor: pointer; font-weight: 600; }
+
+.marks-top5-item { padding: 12px; margin-bottom: 8px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; }
+.marks-top5-rank { font-weight: 700; color: #f59e0b; font-size: 16px; }
 </style>
 
 @if (!Model.Children.Any())
@@ -232,60 +256,123 @@ else
   @if (activeTab == "marks")
   {
     <div class="sec-title"><i class="fas fa-chart-bar"></i> Test Marks</div>
+
     @if (!byExam.Any())
     {
       <div class="pp-table-wrap"><div class="pp-empty"><i class="fas fa-chart-bar"></i>No marks records yet</div></div>
     }
     else
     {
-      @foreach (var grp in byExam)
-      {
-        var mlist = grp.ToList();
-        decimal tot  = mlist.Where(x => x.Grade != "AB" && x.MarksObtained.HasValue).Sum(x => x.MarksObtained!.Value);
-        int     mmax = mlist.Sum(x => x.MaxMarks);
-        decimal pct  = mmax > 0 ? Math.Round(tot * 100m / mmax, 1) : 0;
-        string  pctColor = pct >= 60 ? "#15803d" : pct >= 35 ? "#b45309" : "#dc2626";
+      <!-- Level 1: Subject Selection -->
+      <div id="marksSubjectsView">
+        <h3 style="font-size:14px;margin-bottom:12px;">📚 Select a Subject</h3>
+        <div id="marksSubjectsList" style="display:flex;flex-wrap:wrap;"></div>
+      </div>
 
-        <div class="exam-group">
-          <div class="exam-title">
-            <div>
-              <div class="en"><i class="fas fa-file-alt" style="margin-right:6px;color:#2563eb;"></i>@grp.Key.ExamName</div>
-              @if (grp.Key.Date.HasValue){<div class="ed">@grp.Key.Date.Value.ToString("dd MMM yyyy")</div>}
-            </div>
-            <div class="ep" style="color:@pctColor;">@tot / @mmax &nbsp;(@pct%)</div>
-          </div>
-          <div class="pp-table-wrap" style="border-radius:0 0 10px 10px;border-top:none;">
-            <table class="pp-table">
-              <thead><tr>
-                <th>Subject</th><th style="text-align:right">Marks</th><th style="text-align:right">Out of</th><th style="text-align:right">%</th><th>Grade</th><th>Result</th>
-              </tr></thead>
-              <tbody>
-                @foreach (var mk in mlist.OrderBy(x => x.SubjectName))
-                {
-                  bool isAb = mk.Grade == "AB";
-                  decimal mp = !isAb && mk.MaxMarks > 0 && mk.MarksObtained.HasValue
-                      ? Math.Round(mk.MarksObtained.Value * 100m / mk.MaxMarks, 1) : 0;
-                  string res = isAb ? "Absent" : mp >= 35 ? "Pass" : "Fail";
-                  <tr>
-                    <td style="font-weight:600;">@mk.SubjectName</td>
-                    <td style="text-align:right;font-weight:700;">@(isAb ? "AB" : mk.MarksObtained?.ToString("0") ?? "—")</td>
-                    <td style="text-align:right;">@mk.MaxMarks</td>
-                    <td style="text-align:right;">@(isAb ? "—" : mp.ToString("0.0")+"%")</td>
-                    <td><strong>@(mk.Grade ?? "—")</strong></td>
-                    <td>
-                      @if(res=="Pass"){<span class="badge badge-pass">Pass</span>}
-                      else if(res=="Absent"){<span class="badge badge-late">Absent</span>}
-                      else{<span class="badge badge-fail">Fail</span>}
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
+      <!-- Level 2: Subject Marks & Top 5 -->
+      <div id="marksDetailsView" style="display:none;">
+        <div class="marks-breadcrumb">
+          <button onclick="goBackMarks()">← Subjects</button> / <span id="selectedMarksSubject"></span>
         </div>
-      }
+
+        <div class="pp-table-wrap">
+          <table class="pp-table">
+            <thead><tr>
+              <th>Exam</th><th style="text-align:right">Marks</th><th style="text-align:right">Out of</th><th style="text-align:right">%</th><th>Grade</th><th>Result</th>
+            </tr></thead>
+            <tbody id="marksDetailsBody"></tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:20px;padding-top:20px;border-top:2px solid #e5e7eb;">
+          <h3 style="font-size:14px;margin-bottom:12px;">🏆 Top 5 Students in this Subject</h3>
+          <div id="marksTop5List"></div>
+        </div>
+      </div>
     }
   }
+
+  <script>
+  let marksData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+    Model.Marks.GroupBy(m => m.SubjectName)
+      .Select(g => new {
+        subjectName = g.Key,
+        marks = g.GroupBy(x => new { x.ExamName, x.TestDate })
+          .Select(eg => new {
+            examName = eg.Key.ExamName,
+            testDate = eg.Key.TestDate,
+            items = eg.ToList()
+          }).ToList()
+      }).ToList()
+  ));
+
+  const studentId = @(Model.SelectedChild?.StudentId ?? 0);
+
+  function loadMarksSubjects() {
+    const html = marksData.map(s =>
+      `<button class="marks-subject-pill" onclick="loadMarksForSubject('${s.subjectName}')">${s.subjectName}</button>`
+    ).join('');
+    document.getElementById('marksSubjectsList').innerHTML = html || '<p style="color:#888;">No subjects found</p>';
+  }
+
+  function loadMarksForSubject(subjectName) {
+    const subj = marksData.find(m => m.subjectName === subjectName);
+    if (!subj) return;
+
+    // Show marks table for current student
+    const tableHtml = subj.marks.map(exam =>
+      `<tr>
+        <td style="font-weight:600;">${exam.examName}</td>
+        <td style="text-align:right;font-weight:700;">${exam.items[0].MarksObtained ?? '—'}</td>
+        <td style="text-align:right;">${exam.items[0].MaxMarks}</td>
+        <td style="text-align:right;">${exam.items[0].MarksObtained && exam.items[0].MaxMarks > 0 ? ((exam.items[0].MarksObtained * 100 / exam.items[0].MaxMarks).toFixed(1)) + '%' : '—'}</td>
+        <td><strong>${exam.items[0].Grade ?? '—'}</strong></td>
+        <td><span class="badge ${exam.items[0].Grade === 'AB' ? 'badge-late' : exam.items[0].MarksObtained >= (exam.items[0].MaxMarks * 0.35) ? 'badge-pass' : 'badge-fail'}">${exam.items[0].Grade === 'AB' ? 'Absent' : exam.items[0].MarksObtained >= (exam.items[0].MaxMarks * 0.35) ? 'Pass' : 'Fail'}</span></td>
+      </tr>`
+    ).join('');
+    document.getElementById('marksDetailsBody').innerHTML = tableHtml;
+
+    // Fetch top 5 students from API
+    fetch(`/Parent/GetTop5ForSubject?studentId=${studentId}&subjectName=${encodeURIComponent(subjectName)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.top5 || data.top5.length === 0) {
+          document.getElementById('marksTop5List').innerHTML = '<p style="color:#888;">No data available</p>';
+          return;
+        }
+        const top5Html = data.top5.map((s, i) => {
+          const grade = s.grade || '—';
+          return `<div class="marks-top5-item">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <div style="font-weight:700;font-size:14px;"><span class="marks-top5-rank">#${i+1}</span> ${s.fullName || '—'}</div>
+                <div style="font-size:12px;color:#666;margin-top:4px;">${s.className || ''}</div>
+              </div>
+              <div style="text-align:right;font-weight:700;font-size:15px;">
+                ${s.marksObtained || '—'}/${s.maxMarks || '—'} <span style="font-size:12px;color:#666;">${grade}</span>
+              </div>
+            </div>
+          </div>`;
+        }).join('');
+        document.getElementById('marksTop5List').innerHTML = top5Html;
+      })
+      .catch(e => {
+        console.error('Error:', e);
+        document.getElementById('marksTop5List').innerHTML = '<p style="color:#888;">Error loading data</p>';
+      });
+
+    document.getElementById('marksSubjectsView').style.display = 'none';
+    document.getElementById('marksDetailsView').style.display = 'block';
+    document.getElementById('selectedMarksSubject').textContent = subjectName;
+  }
+
+  function goBackMarks() {
+    document.getElementById('marksSubjectsView').style.display = 'block';
+    document.getElementById('marksDetailsView').style.display = 'none';
+  }
+
+  loadMarksSubjects();
+  </script>
 
   @* ══════════════════════ FEES ══════════════════════ *@
   @if (activeTab == "fees")
@@ -311,12 +398,55 @@ else
     else if (Model.TotalPaid > 0)
     {<div class="alert-ok"><i class="fas fa-check-circle"></i> All fees paid. No balance due.</div>}
 
+    @{
+        var classFeesSummary = ViewBag.ClassFeesSummary as List<dynamic> ?? new();
+    }
+
+    @if (classFeesSummary.Any())
+    {
+        <div style="margin-top:24px;">
+            <div class="sec-title"><i class="fas fa-users"></i> Class Fees Summary (All Students)</div>
+            <div class="pp-table-wrap">
+                <table class="pp-table">
+                    <thead><tr>
+                        <th>Student Name</th>
+                        <th>Admission No</th>
+                        <th style="text-align:right;">Total Fees Owed</th>
+                        <th style="text-align:right;">Collected</th>
+                        <th style="text-align:right;">Discount</th>
+                        <th style="text-align:right;">Balance</th>
+                    </tr></thead>
+                    <tbody>
+                        @foreach (var student in classFeesSummary)
+                        {
+                            <tr>
+                                <td style="font-weight:600;">@student.StudentName</td>
+                                <td style="color:#666;font-size:12px;">@student.AdmissionNo</td>
+                                <td style="text-align:right;font-weight:600;color:#1e3a5f;">₹@student.TotalFeesOwed.ToString("N0")</td>
+                                <td style="text-align:right;font-weight:600;color:#15803d;">₹@student.TotalCollected.ToString("N0")</td>
+                                <td style="text-align:right;font-weight:600;color:#f59e0b;">₹@student.TotalDiscount.ToString("N0")</td>
+                                <td style="text-align:right;font-weight:600;color:@(student.Balance > 0 ? "#dc2626" : "#15803d");">₹@student.Balance.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot><tr style="background:#f3f4f6;font-weight:700;border-top:2px solid #e5e7eb;">
+                        <td colspan="2">Total</td>
+                        <td style="text-align:right;">₹@classFeesSummary.Sum(s => (decimal)s.TotalFeesOwed).ToString("N0")</td>
+                        <td style="text-align:right;">₹@classFeesSummary.Sum(s => (decimal)s.TotalCollected).ToString("N0")</td>
+                        <td style="text-align:right;">₹@classFeesSummary.Sum(s => (decimal)s.TotalDiscount).ToString("N0")</td>
+                        <td style="text-align:right;">₹@classFeesSummary.Sum(s => (decimal)s.Balance).ToString("N0")</td>
+                    </tr></tfoot>
+                </table>
+            </div>
+        </div>
+    }
+
     @if (Model.FeeHistory.Any())
     {
       <div class="pp-table-wrap">
         <table class="pp-table">
           <thead><tr>
-            <th>Receipt No</th><th>Date</th><th style="text-align:right">Amount Paid</th><th>Mode</th><th>Remarks</th>
+            <th>Receipt No</th><th>Date</th><th style="text-align:right">Amount Paid</th><th>Mode</th><th>Remarks</th><th style="width:100px;text-align:center">Action</th>
           </tr></thead>
           <tbody>
             @foreach (var f in Model.FeeHistory.OrderByDescending(x => x.PaymentDate))
@@ -327,6 +457,9 @@ else
                 <td style="text-align:right;font-weight:700;color:#15803d;">₹@f.NetAmount.ToString("N0")</td>
                 <td>@f.PaymentMode</td>
                 <td style="color:#666;font-size:12px;">@(f.Remarks ?? "—")</td>
+                <td style="text-align:center;">
+                  <a href="/Fees/Receipt/@f.PaymentId" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#f3f0ff;color:#2563eb;border:none;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;"><i class="fas fa-print"></i> Receipt</a>
+                </td>
               </tr>
             }
           </tbody>

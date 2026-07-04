@@ -14,4 +14,10 @@ public class FeesService(FeesRepo repo)
     public void DeletePayment(int paymentId, int deletedBy) => repo.DeletePayment(paymentId, deletedBy);
     public void RestorePayment(int paymentId) => repo.RestorePayment(paymentId);
     public List<FeePayment> GetDeletedPayments() => repo.GetDeletedPayments();
+
+    public List<dynamic> GetClassFeesSummary(int classId, int? sectionId)
+    {
+        var fees = repo.GetClassFeesSummary(classId, sectionId);
+        return fees;
+    }
 }

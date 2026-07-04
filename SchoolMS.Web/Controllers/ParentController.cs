@@ -98,6 +98,13 @@ public class ParentController(
             }
             vm.ActualFee = structures.Sum(x => x.Amount);
             vm.Balance   = vm.ActualFee - vm.TotalPaid;
+
+            // Get class fees summary for all students
+            if (selected.ClassId.HasValue)
+            {
+                var classFeesSummary = feesSvc.GetClassFeesSummary(selected.ClassId.Value, selected.SectionId);
+                ViewBag.ClassFeesSummary = classFeesSummary;
+            }
         }
 
         return View(vm);

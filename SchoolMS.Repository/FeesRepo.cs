@@ -62,6 +62,42 @@ public class FeesRepo(CommonConnectivity db)
             WHERE fp.StudentId={studentId} AND fp.IsDeleted=0
             ORDER BY fp.CreatedAt DESC", MapFee);
 
+    public List<dynamic> GetClassFeesSummary(int classId, int? sectionId)
+    {
+        var query = $@"
+            SELECT
+                s.StudentId,
+                s.FullName AS StudentName,
+                s.AdmissionNo,
+                c.ClassName,
+                sec.SectionName,
+                ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fs.Amount ELSE 0 END), 0) AS TotalFeesOwed,
+                ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fp.NetAmount ELSE 0 END), 0) AS TotalCollected,
+                ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fp.Discount ELSE 0 END), 0) AS TotalDiscount,
+                ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fs.Amount ELSE 0 END), 0) - ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fp.NetAmount ELSE 0 END), 0) AS Balance
+            FROM Students s
+            LEFT JOIN Classes c ON c.ClassId = s.ClassId
+            LEFT JOIN Sections sec ON sec.SectionId = s.SectionId
+            LEFT JOIN FeeStructure fs ON fs.ClassId = s.ClassId AND (fs.SectionId IS NULL OR fs.SectionId = s.SectionId)
+            LEFT JOIN FeePayments fp ON fp.StudentId = s.StudentId AND YEAR(fp.PaymentDate) = YEAR(GETDATE())
+            WHERE s.ClassId = {classId} {(sectionId.HasValue ? $"AND s.SectionId = {sectionId}" : "")} AND s.Status = 'Active'
+            GROUP BY s.StudentId, s.FullName, s.AdmissionNo, c.ClassName, sec.SectionName
+            ORDER BY s.FullName
+        ";
+
+        return db.Sql(query, r => new {
+            StudentId = G.G<int>(r, "StudentId"),
+            StudentName = G.G<string>(r, "StudentName") ?? "",
+            AdmissionNo = G.G<string>(r, "AdmissionNo") ?? "",
+            ClassName = G.G<string>(r, "ClassName") ?? "",
+            SectionName = G.G<string>(r, "SectionName") ?? "",
+            TotalFeesOwed = G.G<decimal>(r, "TotalFeesOwed"),
+            TotalCollected = G.G<decimal>(r, "TotalCollected"),
+            TotalDiscount = G.G<decimal>(r, "TotalDiscount"),
+            Balance = G.G<decimal>(r, "Balance")
+        });
+    }
+
     static FeePayment MapFee(SqlDataReader r) => new() {
         PaymentId      = G.G<int>(r,"PaymentId"),
         ReceiptNo      = G.G<string>(r,"ReceiptNo")??"",
