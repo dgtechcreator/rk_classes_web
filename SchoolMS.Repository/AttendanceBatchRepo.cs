@@ -7,12 +7,14 @@ public class AttendanceBatchRepo(CommonConnectivity db)
 {
     public List<AttendanceBatch> GetAll()
     {
-        var batches = db.Read("SELECT BatchId, BatchName, CreatedAt, IsActive FROM AttendanceBatches WHERE IsActive=1 ORDER BY CreatedAt DESC", r => new AttendanceBatch {
-            BatchId = CommonConnectivity.G<int>(r, "BatchId"),
-            BatchName = CommonConnectivity.G<string>(r, "BatchName") ?? "",
-            CreatedAt = CommonConnectivity.G<DateTime>(r, "CreatedAt"),
-            IsActive = CommonConnectivity.G<bool>(r, "IsActive")
-        });
+        var batches = db.Read("SELECT BatchId, BatchName, CreatedAt, IsActive FROM AttendanceBatches WHERE IsActive=1 ORDER BY CreatedAt DESC",
+            new Dictionary<string, object?>(),
+            r => new AttendanceBatch {
+                BatchId = CommonConnectivity.G<int>(r, "BatchId"),
+                BatchName = CommonConnectivity.G<string>(r, "BatchName") ?? "",
+                CreatedAt = CommonConnectivity.G<DateTime>(r, "CreatedAt"),
+                IsActive = CommonConnectivity.G<bool>(r, "IsActive")
+            });
 
         foreach (var batch in batches)
         {
@@ -48,8 +50,14 @@ public class AttendanceBatchRepo(CommonConnectivity db)
     {
         if (batch.BatchId == 0)
         {
-            var sql = "INSERT INTO AttendanceBatches (BatchName, CreatedAt, IsActive) VALUES (@Name, GETDATE(), 1); SELECT CAST(SCOPE_IDENTITY() as int)";
-            var id = db.ExecuteScalar<int>(sql, new() { { "@Name", batch.BatchName } });
+            var sql = "INSERT INTO AttendanceBatches (BatchName, CreatedAt, IsActive) VALUES (@Name, GETDATE(), 1)";
+            db.Exec(sql, new() { { "@Name", batch.BatchName } });
+
+            var newBatch = db.Read("SELECT MAX(BatchId) as BatchId FROM AttendanceBatches",
+                new Dictionary<string, object?>(),
+                r => CommonConnectivity.G<int>(r, "BatchId")).FirstOrDefault();
+
+            int id = newBatch;
 
             if (id > 0 && batch.StudentIds.Any())
             {
