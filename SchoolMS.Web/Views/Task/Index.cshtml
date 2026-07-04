@@ -118,16 +118,17 @@ function closeAddTaskModal() {
 
 function saveTask(e) {
   e.preventDefault();
-  const data = {
-    title: document.getElementById('taskTitle').value,
-    description: document.getElementById('taskDesc').value,
-    dueDate: document.getElementById('taskDue').value
-  };
+  const dueDateStr = document.getElementById('taskDue').value;
+  const params = new URLSearchParams();
+  params.append('title', document.getElementById('taskTitle').value);
+  params.append('description', document.getElementById('taskDesc').value);
+  params.append('studentId', '');
+  params.append('dueDate', dueDateStr);
 
   fetch('/Task/CreateTask', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams(data)
+    body: params.toString()
   })
   .then(r => r.json())
   .then(res => {
@@ -138,6 +139,9 @@ function saveTask(e) {
     } else {
       alert('Error: ' + res.message);
     }
+  })
+  .catch(err => {
+    alert('Error creating task: ' + err.message);
   });
 }
 
