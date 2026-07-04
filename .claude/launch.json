@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "schoolms2",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "SchoolMS.Web"],
+      "port": 5000
+    },
+    {
       "name": "rk-classes",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["serve", "-l", "3456", "D:\\HTML_RK"],

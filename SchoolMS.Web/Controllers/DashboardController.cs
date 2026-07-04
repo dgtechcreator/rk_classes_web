@@ -5,7 +5,7 @@ using SchoolMS.Web.Filters;
 namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
-public class DashboardController(LookupService lookup, AttendanceService attSvc) : Controller
+public class DashboardController(LookupService lookup, AttendanceService attSvc, FeesService feesSvc) : Controller
 {
     public IActionResult Index()
     {
@@ -14,6 +14,10 @@ public class DashboardController(LookupService lookup, AttendanceService attSvc)
         var stats = lookup.GetDashStats();
         var currentYear = lookup.GetYears().FirstOrDefault(y => y.IsCurrent);
         ViewBag.CurrentYearName = currentYear?.YearName ?? "N/A";
+
+        var overallFeesSummary = feesSvc.GetOverallFeesSummary();
+        ViewBag.OverallFeesSummary = overallFeesSummary;
+
         return View(stats);
     }
 

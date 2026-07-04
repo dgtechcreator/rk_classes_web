@@ -227,6 +227,9 @@
 </div>
 
 <!-- Overall Fees Summary -->
+@{
+    var overallFees = ViewBag.OverallFeesSummary;
+}
 <div class="card" style="margin-top:20px;">
     <div class="card-hdr">
         <span class="card-ttl"><i class="fas fa-money-bill-wave" style="color:var(--p);margin-right:7px;"></i>Overall Fees Summary</span>
@@ -235,28 +238,28 @@
         <!-- Total Fees -->
         <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);border-radius:8px;padding:16px;color:#fff;">
             <div style="font-size:12px;font-weight:600;opacity:0.9;margin-bottom:6px;">Total Fees Owed</div>
-            <div style="font-size:24px;font-weight:800;">₹@Model.TotalFeesOverall.ToString("N0")</div>
+            <div style="font-size:24px;font-weight:800;">₹@((decimal)overallFees.TotalFeesOwed).ToString("N0")</div>
             <div style="font-size:11px;opacity:0.8;margin-top:6px;">All active students</div>
         </div>
 
         <!-- Total Collected -->
         <div style="background:linear-gradient(135deg,#f093fb 0%,#f5576c 100%);border-radius:8px;padding:16px;color:#fff;">
             <div style="font-size:12px;font-weight:600;opacity:0.9;margin-bottom:6px;">Total Collected</div>
-            <div style="font-size:24px;font-weight:800;">₹@Model.TotalCollectedOverall.ToString("N0")</div>
+            <div style="font-size:24px;font-weight:800;">₹@((decimal)overallFees.TotalCollected).ToString("N0")</div>
             <div style="font-size:11px;opacity:0.8;margin-top:6px;">Actual payments</div>
         </div>
 
         <!-- Total Discount -->
         <div style="background:linear-gradient(135deg,#4facfe 0%,#00f2fe 100%);border-radius:8px;padding:16px;color:#fff;">
             <div style="font-size:12px;font-weight:600;opacity:0.9;margin-bottom:6px;">Total Discount</div>
-            <div style="font-size:24px;font-weight:800;">₹@Model.TotalDiscountOverall.ToString("N0")</div>
+            <div style="font-size:24px;font-weight:800;">₹@((decimal)overallFees.TotalDiscount).ToString("N0")</div>
             <div style="font-size:11px;opacity:0.8;margin-top:6px;">Concessions given</div>
         </div>
 
         <!-- Balance -->
         <div style="background:linear-gradient(135deg,#43e97b 0%,#38f9d7 100%);border-radius:8px;padding:16px;color:#fff;">
             <div style="font-size:12px;font-weight:600;opacity:0.9;margin-bottom:6px;">Balance Due</div>
-            <div style="font-size:24px;font-weight:800;">₹@Model.BalanceOverall.ToString("N0")</div>
+            <div style="font-size:24px;font-weight:800;">₹@((decimal)overallFees.Balance).ToString("N0")</div>
             <div style="font-size:11px;opacity:0.8;margin-top:6px;">Remaining to collect</div>
         </div>
     </div>

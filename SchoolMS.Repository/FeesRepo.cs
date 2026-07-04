@@ -98,6 +98,35 @@ public class FeesRepo(CommonConnectivity db)
         }).Cast<dynamic>().ToList();
     }
 
+    public dynamic GetOverallFeesSummary()
+    {
+        var query = @"
+            SELECT
+                ISNULL(SUM(fs.Amount), 0) AS TotalFeesOwed,
+                ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fp.Amount ELSE 0 END), 0) AS TotalCollected,
+                ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fp.Discount ELSE 0 END), 0) AS TotalDiscount
+            FROM StudentFees sf
+            INNER JOIN FeeStructure fs ON sf.StructureId = fs.StructureId
+            LEFT JOIN FeePayments fp ON fp.StudentId = sf.StudentId
+        ";
+
+        var result = db.Sql(query, r => new {
+            TotalFeesOwed = G.G<decimal>(r, "TotalFeesOwed"),
+            TotalCollected = G.G<decimal>(r, "TotalCollected"),
+            TotalDiscount = G.G<decimal>(r, "TotalDiscount")
+        }).FirstOrDefault();
+
+        if (result == null)
+            return new { TotalFeesOwed = 0m, TotalCollected = 0m, TotalDiscount = 0m, Balance = 0m };
+
+        return new {
+            result.TotalFeesOwed,
+            result.TotalCollected,
+            result.TotalDiscount,
+            Balance = result.TotalFeesOwed - result.TotalCollected
+        };
+    }
+
     static FeePayment MapFee(SqlDataReader r) => new() {
         PaymentId      = G.G<int>(r,"PaymentId"),
         ReceiptNo      = G.G<string>(r,"ReceiptNo")??"",
