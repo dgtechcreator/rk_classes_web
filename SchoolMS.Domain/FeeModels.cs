@@ -102,3 +102,11 @@ public class ClassFeeSetup
     public decimal Amount{get;set;}
     public bool    IsActive{get;set;}=true;
 }
+
+public class OverallFeesSummary
+{
+    public decimal TotalFeesOwed{get;set;}
+    public decimal TotalCollected{get;set;}
+    public decimal TotalDiscount{get;set;}
+    public decimal Balance{get;set;}
+}

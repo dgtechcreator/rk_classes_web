@@ -98,7 +98,7 @@ public class FeesRepo(CommonConnectivity db)
         }).Cast<dynamic>().ToList();
     }
 
-    public dynamic GetOverallFeesSummary()
+    public OverallFeesSummary GetOverallFeesSummary()
     {
         var query = @"
             SELECT
@@ -117,12 +117,12 @@ public class FeesRepo(CommonConnectivity db)
         }).FirstOrDefault();
 
         if (result == null)
-            return new { TotalFeesOwed = 0m, TotalCollected = 0m, TotalDiscount = 0m, Balance = 0m };
+            return new OverallFeesSummary { TotalFeesOwed = 0, TotalCollected = 0, TotalDiscount = 0, Balance = 0 };
 
-        return new {
-            result.TotalFeesOwed,
-            result.TotalCollected,
-            result.TotalDiscount,
+        return new OverallFeesSummary {
+            TotalFeesOwed = result.TotalFeesOwed,
+            TotalCollected = result.TotalCollected,
+            TotalDiscount = result.TotalDiscount,
             Balance = result.TotalFeesOwed - result.TotalCollected
         };
     }

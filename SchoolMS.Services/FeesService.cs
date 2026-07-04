@@ -18,6 +18,6 @@ public class FeesService(FeesRepo repo)
     public List<dynamic> GetClassFeesSummary(int classId, int? sectionId)
         => repo.GetClassFeesSummary(classId, sectionId);
 
-    public dynamic GetOverallFeesSummary()
+    public OverallFeesSummary GetOverallFeesSummary()
         => repo.GetOverallFeesSummary();
 }
