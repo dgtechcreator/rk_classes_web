@@ -5,6 +5,7 @@ namespace SchoolMS.Services;
 
 public class TaskService(TaskRepo repo, NotificationRepo notifRepo)
 {
+    public List<TaskItem> GetAllTasks() => repo.GetAllTasks();
     public List<TaskItem> GetUserTasks(int userId, string status = "") => repo.GetUserTasks(userId, status);
     public List<TaskItem> GetPendingTasks(int userId) => repo.GetUserTasks(userId, "Pending");
     public List<TaskItem> GetOverdueTasks(int userId) => repo.GetUserTasks(userId, "Overdue");

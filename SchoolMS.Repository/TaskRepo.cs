@@ -6,6 +6,33 @@ namespace SchoolMS.Repository;
 
 public class TaskRepo(CommonConnectivity db)
 {
+    public List<TaskItem> GetAllTasks()
+    {
+        return db.Sql(@"
+            SELECT t.*, ISNULL(s.FullName,'') as StudentName, ISNULL(s.AdmissionNo,'') as AdmissionNo, ISNULL(u.FullName,'') as CreatedByName
+            FROM Tasks t
+            LEFT JOIN Students s ON s.StudentId=t.StudentId
+            LEFT JOIN Users u ON u.UserId=t.UserId
+            ORDER BY t.DueDate ASC",
+            r => new TaskItem {
+                TaskId = G.G<int>(r, "TaskId"),
+                Title = G.G<string>(r, "Title") ?? "",
+                Description = G.G<string>(r, "Description"),
+                StudentId = G.G<int?>(r, "StudentId"),
+                UserId = G.G<int?>(r, "UserId"),
+                Priority = G.G<string>(r, "Priority") ?? "Medium",
+                Category = G.G<string>(r, "Category") ?? "General",
+                DueDate = G.G<DateTime>(r, "DueDate"),
+                CreatedAt = G.G<DateTime>(r, "CreatedAt"),
+                CompletedAt = G.G<DateTime?>(r, "CompletedAt"),
+                IsCompleted = G.G<bool>(r, "IsCompleted"),
+                Status = G.G<string>(r, "Status") ?? "Pending",
+                StudentName = G.G<string>(r, "StudentName"),
+                AdmissionNo = G.G<string>(r, "AdmissionNo"),
+                CreatedByName = G.G<string>(r, "CreatedByName")
+            });
+    }
+
     public List<TaskItem> GetUserTasks(int userId, string status = "")
     {
         string where = $"WHERE t.UserId={userId}";

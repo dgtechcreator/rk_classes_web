@@ -12,7 +12,10 @@ public class TaskController(TaskService taskSvc, NotificationService notifSvc) :
     public IActionResult Index()
     {
         int userId = HttpContext.Session.GetUserId() ?? 0;
-        var tasks = taskSvc.GetUserTasks(userId);
+        int? roleId = HttpContext.Session.GetInt32("RoleId");
+
+        // Admin sees all tasks, others see only their own
+        var tasks = roleId == 1 ? taskSvc.GetAllTasks() : taskSvc.GetUserTasks(userId);
         return View(tasks);
     }
 
