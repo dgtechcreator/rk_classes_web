@@ -39,9 +39,9 @@
         <span class="card-ttl"><i class="fas fa-plus-circle" style="color:var(--p);margin-right:6px;"></i>New Attendance Batch</span>
     </div>
 
-    <div style="margin-bottom: 16px;">
-        <label style="font-weight: 700; margin-bottom: 8px; display: block;">Batch Name *</label>
-        <input type="text" id="batchName" placeholder="e.g., 9TH ENGLISH MORNING" class="fc" style="width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 6px;"/>
+    <div style="margin-bottom: 20px;">
+        <label style="font-weight: 700; margin-bottom: 10px; display: block; font-size: 14px;">Batch Name * <span style="color: #999; font-weight: 400; font-size: 12px;">(Required - e.g., 9TH ENGLISH MORNING)</span></label>
+        <input type="text" id="batchName" placeholder="e.g., 9TH ENGLISH MORNING" class="fc" style="width: 100%; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px; font-weight: 500;"/>
     </div>
 
     <div class="batch-filters">
@@ -97,10 +97,10 @@
     </div>
 
     <div class="batch-actions">
-        <button class="btn btn-primary" onclick="createBatch()">
+        <button class="btn btn-primary" onclick="createBatch()" style="padding: 12px 24px; font-size: 14px; font-weight: 700;">
             <i class="fas fa-save"></i> Create Batch
         </button>
-        <button class="btn btn-outline" onclick="resetForm()">
+        <button class="btn btn-outline" onclick="resetForm()" style="padding: 12px 24px; font-size: 14px;">
             <i class="fas fa-redo"></i> Reset
         </button>
     </div>
