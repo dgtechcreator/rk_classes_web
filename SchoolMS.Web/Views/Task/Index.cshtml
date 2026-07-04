@@ -96,11 +96,8 @@
         <textarea id="taskDesc" rows="3" style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;"></textarea>
       </div>
       <div style="margin-bottom:16px;">
-        <label style="display:block;font-weight:700;margin-bottom:6px;">Due Date & Time</label>
-        <div style="display:flex;gap:8px;">
-          <input type="date" id="taskDue" required style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;"/>
-          <input type="time" id="taskTime" required style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;"/>
-        </div>
+        <label style="display:block;font-weight:700;margin-bottom:6px;">Due Date</label>
+        <input type="date" id="taskDue" required style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;"/>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button type="button" onclick="closeAddTaskModal()" style="background:#e5e7eb;color:#374151;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:700;">Cancel</button>
@@ -116,11 +113,8 @@ function showAddTaskModal() {
   const year = today.getFullYear();
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const day = String(today.getDate()).padStart(2, '0');
-  const hours = String(today.getHours()).padStart(2, '0');
-  const minutes = String(today.getMinutes()).padStart(2, '0');
 
   document.getElementById('taskDue').value = `${year}-${month}-${day}`;
-  document.getElementById('taskTime').value = `${hours}:${minutes}`;
   document.getElementById('addTaskModal').style.display = 'flex';
 }
 
@@ -131,16 +125,12 @@ function closeAddTaskModal() {
 function saveTask(e) {
   e.preventDefault();
   const dueDateStr = document.getElementById('taskDue').value;
-  const timeStr = document.getElementById('taskTime').value;
-
-  // Send as ISO 8601 format: YYYY-MM-DDTHH:mm:ss
-  const formattedDateTime = `${dueDateStr}T${timeStr}:00`;
 
   const params = new URLSearchParams();
   params.append('title', document.getElementById('taskTitle').value);
   params.append('description', document.getElementById('taskDesc').value);
   params.append('studentId', '');
-  params.append('dueDate', formattedDateTime);
+  params.append('dueDate', dueDateStr);
 
   fetch('/Task/CreateTask', {
     method: 'POST',

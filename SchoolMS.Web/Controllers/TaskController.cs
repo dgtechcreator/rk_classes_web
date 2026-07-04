@@ -26,8 +26,8 @@ public class TaskController(TaskService taskSvc, NotificationService notifSvc) :
         {
             int userId = HttpContext.Session.GetUserId() ?? 0;
 
-            // Parse the ISO 8601 datetime string
-            if (!DateTime.TryParse(dueDate, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedDate))
+            // Parse date in YYYY-MM-DD format
+            if (!DateTime.TryParseExact(dueDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
             {
                 return Json(new { success = false, message = "Invalid date format" });
             }
