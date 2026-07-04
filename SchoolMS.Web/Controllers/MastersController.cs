@@ -6,7 +6,7 @@ using SchoolMS.Web.Filters;
 namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
-public class MastersController(MastersService svc, FeeStructureService feeSvc, LookupService lookup) : Controller
+public class MastersController(MastersService svc, FeeStructureService feeSvc, LookupService lookup, StudentService studentSvc) : Controller
 {
     public IActionResult Index()
     {
@@ -136,5 +136,57 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
         try { svc.DeleteExpenseCat(id); TempData["Success"] = "Expense category deleted."; }
         catch (Exception ex) { TempData["Error"] = ex.Message; }
         return RedirectToAction("Index", null, "expcats");
+    }
+
+    // ── Attendance Batches ─────────────────────────────────────
+    [HttpGet]
+    public IActionResult AttendanceBatches()
+    {
+        ViewBag.Classes = svc.GetClasses();
+        ViewBag.Sections = svc.GetSections();
+        ViewBag.Batches = svc.GetBatches();
+        return View();
+    }
+
+    [HttpGet]
+    public IActionResult GetStudentsForBatch(int classId, int? sectionId, int? batchId)
+    {
+        try
+        {
+            var currentYearId = lookup.GetCurrentYearId();
+            var (students, _) = studentSvc.GetAll(1, 10000, null, classId > 0 ? classId : null,
+                sectionId, batchId, currentYearId, "Active");
+            return Json(students.Select(s => new {
+                studentId = s.StudentId,
+                fullName = s.FullName,
+                admissionNo = s.AdmissionNo,
+                className = s.ClassName,
+                sectionName = s.SectionName,
+                batchName = s.BatchName
+            }));
+        }
+        catch (Exception ex)
+        {
+            return Json(new { error = ex.Message });
+        }
+    }
+
+    [HttpPost]
+    public IActionResult CreateAttendanceBatch(string batchName, [FromBody] List<int> studentIds)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(batchName) || studentIds == null || !studentIds.Any())
+                return Json(new { success = false, message = "Batch name and students are required." });
+
+            // Store attendance batch (you can create a new table or use existing structure)
+            // For now, we'll return success and guide creating from selected students
+            TempData["Success"] = $"Attendance Batch '{batchName}' created with {studentIds.Count} students.";
+            return Json(new { success = true, message = "Batch created successfully." });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
     }
 }

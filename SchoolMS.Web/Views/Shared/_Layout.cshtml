@@ -18,27 +18,182 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <link rel="stylesheet" href="~/css/app.css" asp-append-version="true"/>
 <link rel="stylesheet" href="~/css/cwc-invoices.css" asp-append-version="true"/>
+<style>
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f9fafb;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+  }
+
+  body.dark-mode {
+    --bg-primary: #1f2937;
+    --bg-secondary: #111827;
+    --text-primary: #f3f4f6;
+    --text-secondary: #d1d5db;
+    --border-color: #374151;
+    background-color: #111827 !important;
+    color: #f3f4f6 !important;
+  }
+
+  /* DARK BACKGROUNDS = WHITE TEXT */
+  body.dark-mode {
+    background: #111827 !important;
+    color: #ffffff !important;
+  }
+
+  body.dark-mode main {
+    background-color: #111827 !important;
+    color: #ffffff !important;
+  }
+
+  body.dark-mode aside.sidebar {
+    background-color: #1f2937 !important;
+    border-right-color: #374151 !important;
+    color: #ffffff !important;
+  }
+
+  body.dark-mode .sidebar a,
+  body.dark-mode .sidebar span,
+  body.dark-mode .sidebar div {
+    color: #ffffff !important;
+  }
+
+  body.dark-mode .sidebar a:hover {
+    color: #e5e7eb !important;
+  }
+
+  body.dark-mode .topbar {
+    background-color: #1f2937 !important;
+    border-bottom-color: #374151 !important;
+    color: #ffffff !important;
+  }
+
+  body.dark-mode .topbar * {
+    color: #ffffff !important;
+  }
+
+  body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode h4, body.dark-mode h5, body.dark-mode h6 {
+    color: #ffffff !important;
+  }
+
+  /* Cards stay LIGHT in dark mode */
+  body.dark-mode .task-card, body.dark-mode .card {
+    background-color: #ffffff !important;
+    border-color: #e5e7eb !important;
+    color: #1f2937 !important;
+  }
+
+  body.dark-mode div[style*="background:#fff"],
+  body.dark-mode [style*="background: #fff"],
+  body.dark-mode [style*="background:#ffffff"] {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #e5e7eb !important;
+  }
+
+  body.dark-mode input, body.dark-mode textarea, body.dark-mode select {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #d1d5db !important;
+  }
+
+  body.dark-mode input::placeholder, body.dark-mode textarea::placeholder {
+    color: #6b7280 !important;
+  }
+
+  body.dark-mode input:focus, body.dark-mode textarea:focus, body.dark-mode select:focus {
+    background-color: #ffffff !important;
+    color: #1f2937 !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+  }
+
+  body.dark-mode table {
+    color: #1f2937 !important;
+    border-color: #d1d5db !important;
+    background-color: #ffffff !important;
+  }
+
+  body.dark-mode th {
+    background-color: #1f2937 !important;
+    color: #ffffff !important;
+    border-color: #374151 !important;
+    font-weight: 700 !important;
+  }
+
+  body.dark-mode th * {
+    color: #ffffff !important;
+  }
+
+  body.dark-mode thead {
+    background-color: #1f2937 !important;
+  }
+
+  body.dark-mode thead tr {
+    background-color: #1f2937 !important;
+  }
+
+  body.dark-mode thead td {
+    color: #ffffff !important;
+    background-color: #1f2937 !important;
+  }
+
+  body.dark-mode td {
+    border-color: #d1d5db !important;
+    color: #1f2937 !important;
+    background-color: #ffffff !important;
+  }
+
+  body.dark-mode tr:hover {
+    background-color: #f9fafb !important;
+  }
+
+  body.dark-mode table * {
+    color: #1f2937 !important;
+  }
+
+  body.dark-mode button {
+    color: #f3f4f6 !important;
+  }
+
+  body.dark-mode .btn {
+    color: #f3f4f6 !important;
+  }
+
+  body.dark-mode hr {
+    border-color: #374151 !important;
+  }
+
+  body.dark-mode label {
+    color: #f3f4f6 !important;
+  }
+
+  body.dark-mode h1, body.dark-mode h2, body.dark-mode h3, body.dark-mode h4, body.dark-mode h5, body.dark-mode h6 {
+    color: #f3f4f6 !important;
+  }
+
+  body.dark-mode .modal, body.dark-mode .alert {
+    background-color: #1f2937 !important;
+    border-color: #374151 !important;
+    color: #f3f4f6 !important;
+  }
+
+  body.dark-mode #notifPanel, body.dark-mode #settingsDropdown, body.dark-mode #taskModal {
+    background-color: #1f2937 !important;
+    border-color: #374151 !important;
+    color: #f3f4f6 !important;
+  }
+
+  body.dark-mode #notifPanel > div, body.dark-mode #settingsDropdown > div, body.dark-mode #taskModal > div {
+    background-color: #1f2937 !important;
+    color: #f3f4f6 !important;
+  }
+</style>
 </head>
 <body>
 
-<!-- ── App Splash Screen ── -->
-<div id="appSplash" style="position:fixed;inset:0;background:#fff;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s ease;">
-  <img src="/images/rk-circle-logo.png" alt="RK Classes"
-       style="width:180px;height:180px;object-fit:contain;"/>
-  <div style="margin-top:18px;font-family:'Segoe UI',Arial,sans-serif;font-size:22px;font-weight:800;color:#cc0000;letter-spacing:2px;text-align:center;">RK CLASSES</div>
-</div>
-<script>
-(function(){
-  window.addEventListener('load', function(){
-    var s = document.getElementById('appSplash');
-    if(!s) return;
-    setTimeout(function(){
-      s.style.opacity='0';
-      setTimeout(function(){ if(s.parentNode) s.parentNode.removeChild(s); }, 500);
-    }, 900);
-  });
-})();
-</script>
 
 <aside class="sidebar">
   <div class="sb-brand" style="position:relative;">
@@ -57,19 +212,25 @@
 
   <div class="nav-grp">
     <div class="nav-lbl">Overview</div>
+    @if(Context.Session.HasPerm("dashboard_view")){
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Dashboard"?"active":"")" href="/Dashboard/Index">
       <span class="nav-ic"><i class="fas fa-th-large"></i></span> Dashboard
-    </a>
+    </a>}
   </div>
 
   <div class="nav-grp">
     <div class="nav-lbl">Masters</div>
+    @if(Context.Session.HasPerm("masters_view")){
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Masters"?"active":"")" href="/Masters/Index">
       <span class="nav-ic"><i class="fas fa-layer-group"></i></span> Academic Manager
     </a>
+    <a class="nav-item @(ViewContext.RouteData.Values["action"]?.ToString()=="AttendanceBatches"?"active":"")" href="/Masters/AttendanceBatches">
+      <span class="nav-ic"><i class="fas fa-list-check"></i></span> Attendance Batches
+    </a>}
+    @if(Context.Session.HasPerm("users_view")){
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Users"?"active":"")" href="/Users/Index">
       <span class="nav-ic"><i class="fas fa-users-cog"></i></span> Users &amp; Permissions
-    </a>
+    </a>}
   </div>
 
   <div class="nav-grp">
@@ -94,8 +255,16 @@
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Student" && ViewContext.RouteData.Values["action"]?.ToString()=="Create"?"active":"")" href="/Student/Create">
       <span class="nav-ic"><i class="fas fa-user-plus"></i></span> New Admission
     </a>}
+    @if(Context.Session.HasPerm("student_profile")){
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Student" && ViewContext.RouteData.Values["action"]?.ToString()=="Profile360"?"active":"")" href="/Student/Profile360">
       <span class="nav-ic"><i class="fas fa-id-card"></i></span> Student 360 View
+    </a>}
+  </div>
+
+  <div class="nav-grp">
+    <div class="nav-lbl">Parents</div>
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Parent" && ViewContext.RouteData.Values["action"]?.ToString()=="Index"?"active":"")" href="/Parent/Index">
+      <span class="nav-ic"><i class="fas fa-users"></i></span> Parent Accounts
     </a>
   </div>
 
@@ -117,12 +286,14 @@
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Marks" && ViewContext.RouteData.Values["action"]?.ToString()=="Index"?"active":"")" href="/Marks/Index">
       <span class="nav-ic"><i class="fas fa-marker"></i></span> Test Marks Entry
     </a>}
+    @if(Context.Session.HasPerm("marks_report")){
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Marks" && ViewContext.RouteData.Values["action"]?.ToString()=="Report"?"active":"")" href="/Marks/Report">
       <span class="nav-ic"><i class="fas fa-chart-line"></i></span> Test Reports
-    </a>
+    </a>}
+    @if(Context.Session.HasPerm("marks_topstudents")){
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Marks" && ViewContext.RouteData.Values["action"]?.ToString()=="TopStudents"?"active":"")" href="/Marks/TopStudents">
       <span class="nav-ic"><i class="fas fa-trophy"></i></span> Top 5 Students
-    </a>
+    </a>}
   </div>
 
   <div class="nav-grp">
@@ -154,10 +325,18 @@
   </div>
 
   <div class="nav-grp">
+    <div class="nav-lbl">Tasks</div>
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Task"?"active":"")" href="/Task/Index">
+      <span class="nav-ic"><i class="fas fa-tasks"></i></span> Tasks & Reminders
+    </a>
+  </div>
+
+  <div class="nav-grp">
     <div class="nav-lbl">Records</div>
+    @if(Context.Session.HasPerm("deleted_records")){
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Deleted"?"active":"")" href="/Deleted/Index">
       <span class="nav-ic"><i class="fas fa-trash-restore"></i></span> Deleted Records
-    </a>
+    </a>}
   </div>
 
   <div class="sb-foot">
@@ -184,13 +363,54 @@
   </button>
   <span class="tb-title">@ViewData["Title"]</span>
   <div class="tb-space"></div>
-  <div class="tb-search">
+  <div class="tb-search" style="position:relative;flex:1;max-width:400px;">
     <i class="fas fa-search" style="font-size:12px;color:var(--mu2);"></i>
-    <input type="text" placeholder="Quick search..."/>
+    <input type="text" id="quickSearch" placeholder="Quick search..." autocomplete="off" style="width:100%;"/>
+    <div id="searchResults" style="position:fixed;top:auto;left:0;right:0;background:#fff;border:1px solid #e2e8f0;border-radius:6px;max-height:60vh;overflow-y:auto;z-index:9998;display:none;margin-top:4px;box-shadow:0 4px 6px rgba(0,0,0,0.1);width:100vw;"></div>
   </div>
-  <div class="tb-icon"><i class="fas fa-bell"></i><span class="nb-dot"></span></div>
-  <div class="tb-icon"><i class="fas fa-cog"></i></div>
+  <div class="tb-icon" id="notifBell" style="position:relative;cursor:pointer;" onclick="showNotifications()">
+    <i class="fas fa-bell"></i>
+    <span class="nb-dot" id="notifBadge" style="position:absolute;top:-2px;right:-4px;background:red;color:white;border-radius:50%;width:14px;height:14px;font-size:9px;align-items:center;justify-content:center;font-weight:bold;line-height:1;display:none;"></span>
+  </div>
+  <div class="tb-icon" id="settingsBtn" style="cursor:pointer;position:relative;" onclick="toggleSettings()">
+    <i class="fas fa-cog"></i>
+  </div>
+  <div id="settingsDropdown" style="position:fixed;top:50px;right:30px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;z-index:9999;min-width:200px;">
+    <div style="padding:12px;border-bottom:1px solid #e2e8f0;font-weight:700;color:#222;font-size:13px;">Theme</div>
+    <div style="padding:8px;">
+      <div onclick="applyTheme('light')" style="padding:10px 12px;cursor:pointer;border-radius:6px;margin-bottom:4px;color:#222;font-size:13px;" class="theme-option">☀️ Light</div>
+      <div onclick="applyTheme('dark')" style="padding:10px 12px;cursor:pointer;border-radius:6px;margin-bottom:4px;color:#222;font-size:13px;" class="theme-option">🌙 Dark</div>
+      <div onclick="applyTheme('auto')" style="padding:10px 12px;cursor:pointer;border-radius:6px;color:#222;font-size:13px;" class="theme-option">🔄 Auto</div>
+    </div>
+  </div>
 </header>
+
+<div id="notifPanel" style="position:fixed;top:65px;right:30px;width:350px;max-height:500px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.2);display:none;z-index:9999;overflow-y:auto;"></div>
+
+<!-- Task Modal -->
+<div id="taskModal" style="display:none !important;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:24px;width:90%;max-width:500px;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+    <h2 style="margin-bottom:20px;font-weight:800;">Create New Task</h2>
+    <form id="taskForm" onsubmit="saveTask(event)">
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-weight:700;margin-bottom:6px;font-size:14px;">Task Title *</label>
+        <input type="text" id="taskTitle" required placeholder="Enter task title" style="width:100%;padding:12px 14px;border:1px solid #e2e8f0;border-radius:6px;font-size:14px;box-sizing:border-box;"/>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-weight:700;margin-bottom:6px;font-size:14px;">Description</label>
+        <textarea id="taskDesc" placeholder="Enter details..." rows="3" style="width:100%;padding:12px 14px;border:1px solid #e2e8f0;border-radius:6px;font-size:14px;box-sizing:border-box;font-family:inherit;"></textarea>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-weight:700;margin-bottom:6px;font-size:13px;">Due Date *</label>
+        <input type="date" id="taskDue" required style="width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box;"/>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+        <button type="button" onclick="closeTaskModal()" style="background:#e5e7eb;color:#374151;border:none;padding:12px 20px;border-radius:6px;cursor:pointer;font-weight:700;font-size:14px;min-width:100px;">Cancel</button>
+        <button type="submit" style="background:#2563eb;color:#fff;border:none;padding:12px 20px;border-radius:6px;cursor:pointer;font-weight:700;font-size:14px;min-width:120px;">Create Task</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <span id="_ts" style="display:none">@TempData["Success"]</span>
 <span id="_te" style="display:none">@TempData["Error"]</span>
@@ -200,6 +420,277 @@
 </main>
 
 <script src="~/js/app.js"></script>
+<script>
+let searchTimeout;
+const quickSearch = document.getElementById('quickSearch');
+const searchResults = document.getElementById('searchResults');
+
+quickSearch.addEventListener('input', function() {
+  const query = this.value.trim();
+
+  clearTimeout(searchTimeout);
+
+  if (query.length < 2) {
+    searchResults.style.display = 'none';
+    return;
+  }
+
+  searchTimeout = setTimeout(() => {
+    fetch(`/Student/QuickSearch?q=${encodeURIComponent(query)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.length === 0) {
+          searchResults.innerHTML = '<div style="padding:12px;color:var(--mu);text-align:center;font-size:13px;">No students found</div>';
+          searchResults.style.display = 'block';
+          // Position on mobile
+          const rect = quickSearch.getBoundingClientRect();
+          searchResults.style.top = (rect.bottom + window.scrollY) + 'px';
+          return;
+        }
+
+        searchResults.innerHTML = data.map(s => `
+          <a href="/Student/Profile360?classId=${s.classId}&sectionId=${s.sectionId}&studentId=${s.studentId}"
+             style="display:block;padding:10px 14px;border-bottom:1px solid #f0f0f0;cursor:pointer;text-decoration:none;color:inherit;transition:background .2s;">
+            <div style="font-weight:600;font-size:13px;color:var(--txt);">${s.fullName}</div>
+            <div style="font-size:11px;color:var(--mu);margin-top:2px;">${s.admissionNo} • ${s.className}/${s.sectionName}</div>
+          </a>
+        `).join('');
+        searchResults.style.display = 'block';
+        // Position on mobile
+        const rect = quickSearch.getBoundingClientRect();
+        searchResults.style.top = (rect.bottom + window.scrollY) + 'px';
+      })
+      .catch(err => console.error('Search error:', err));
+  }, 300);
+});
+
+quickSearch.addEventListener('focus', () => {
+  if (searchResults.innerHTML && searchResults.style.display !== 'none') {
+    searchResults.style.display = 'block';
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.tb-search') && !e.target.closest('#searchResults')) {
+    searchResults.style.display = 'none';
+  }
+});
+
+// Load notifications on page load
+function loadNotifications() {
+  fetch('/Task/GetNotifications')
+    .then(r => r.json())
+    .then(data => {
+      const badge = document.getElementById('notifBadge');
+      if (data.unreadCount > 0) {
+        badge.textContent = data.unreadCount;
+        badge.style.display = 'flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    });
+}
+
+function showNotifications() {
+  const panel = document.getElementById('notifPanel');
+  if (panel.style.display === 'none') {
+    fetch('/Task/GetNotifications')
+      .then(r => r.json())
+      .then(data => {
+        let html = `
+          <div style="padding:12px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-weight:700;">📋 Tasks</div>
+            <button onclick="showAddTaskModal()" style="background:#2563eb;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">+ Add</button>
+          </div>
+        `;
+
+        let tasksHtml = '';
+        if (data.tasks && data.tasks.length > 0) {
+          data.tasks.forEach(task => {
+            const dueDate = new Date(task.dueDate);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const isOverdue = dueDate < today ? '🔴 Overdue' : '📅 Due';
+            tasksHtml += `
+              <div style="padding:12px;border-bottom:1px solid #f0f0f0;background:#fffbeb;border-radius:4px;margin:4px;">
+                <div style="font-weight:600;font-size:13px;color:#222;">${task.title}</div>
+                <div style="font-size:11px;color:#666;margin:4px 0;">${isOverdue}: ${dueDate.toLocaleDateString()}</div>
+                <button onclick="completeTaskFromNotif(${task.taskId})" style="background:#16a34a;color:#fff;border:none;padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;font-weight:700;">✓ Done</button>
+              </div>
+            `;
+          });
+        }
+
+        if (tasksHtml === '') {
+          html += '<div style="padding:20px;text-align:center;color:#999;">No pending tasks</div>';
+        } else {
+          html += tasksHtml;
+        }
+
+        panel.innerHTML = html;
+        panel.style.display = 'block';
+      })
+      .catch(err => {
+        console.error('Error loading notifications:', err);
+        document.getElementById('notifPanel').innerHTML = '<div style="padding:20px;color:red;">Error loading tasks</div>';
+      });
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+function completeTaskFromNotif(taskId) {
+  if (confirm('Mark task as complete?')) {
+    fetch('/Task/CompleteTask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'taskId=' + taskId
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        setTimeout(() => location.reload(), 300);
+        loadNotifications();
+      }
+    });
+  }
+}
+
+function showAddTaskModal() {
+  const modal = document.getElementById('taskModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    document.getElementById('taskForm').reset();
+  }
+}
+
+function closeTaskModal() {
+  const modal = document.getElementById('taskModal');
+  if (modal) {
+    modal.style.display = 'none';
+    document.getElementById('taskForm').reset();
+  }
+}
+
+function handleNotification(notifId, action) {
+  fetch(`/Task/MarkNotificationAsRead?notificationId=${notifId}`, {method: 'POST'})
+    .then(() => {
+      loadNotifications();
+      if (action) window.location.href = action;
+    });
+}
+
+// Settings & Theme
+function toggleSettings() {
+  const dropdown = document.getElementById('settingsDropdown');
+  dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+}
+
+function initTheme() {
+  const theme = localStorage.getItem('theme') || 'light';
+  applyTheme(theme);
+  highlightActiveTheme();
+}
+
+function applyTheme(theme) {
+  const body = document.body;
+
+  if (theme === 'dark') {
+    body.classList.add('dark-mode');
+    localStorage.setItem('theme', 'dark');
+  } else {
+    body.classList.remove('dark-mode');
+    localStorage.setItem('theme', theme === 'auto' ? 'auto' : 'light');
+  }
+
+  highlightActiveTheme();
+  document.getElementById('settingsDropdown').style.display = 'none';
+}
+
+function highlightActiveTheme() {
+  const theme = localStorage.getItem('theme') || 'light';
+  document.querySelectorAll('.theme-option').forEach(el => {
+    el.style.backgroundColor = '';
+    el.style.fontWeight = 'normal';
+  });
+
+  // Highlight active theme
+  const options = document.querySelectorAll('.theme-option');
+  if (theme === 'dark') {
+    options[1].style.backgroundColor = '#dbeafe';
+    options[1].style.fontWeight = '700';
+  } else if (theme === 'auto') {
+    options[2].style.backgroundColor = '#dbeafe';
+    options[2].style.fontWeight = '700';
+  } else {
+    options[0].style.backgroundColor = '#dbeafe';
+    options[0].style.fontWeight = '700';
+  }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const dropdown = document.getElementById('settingsDropdown');
+  const settingsBtn = document.getElementById('settingsBtn');
+  if (!e.target.closest('#settingsBtn') && !e.target.closest('#settingsDropdown')) {
+    dropdown.style.display = 'none';
+  }
+});
+
+// Initialize theme on page load
+initTheme();
+
+// Load initial notification count on page load
+fetch('/Task/GetNotifications')
+  .then(r => r.json())
+  .then(data => {
+    const badge = document.getElementById('notifBadge');
+    if (data && data.unreadCount > 0) {
+      badge.textContent = data.unreadCount;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  })
+  .catch(err => {
+    document.getElementById('notifBadge').style.display = 'none';
+  });
+
+// Close notification panel when clicking outside
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('notifPanel');
+  const bell = document.getElementById('notifBell');
+  if (!e.target.closest('#notifBell') && !e.target.closest('#notifPanel')) {
+    panel.style.display = 'none';
+  }
+});
+
+function saveTask(e) {
+  e.preventDefault();
+  const title = document.getElementById('taskTitle').value;
+  const description = document.getElementById('taskDesc').value;
+  const dueDate = document.getElementById('taskDue').value;
+
+  const params = new URLSearchParams();
+  params.append('title', title);
+  params.append('description', description);
+  params.append('dueDate', dueDate);
+
+  fetch('/Task/CreateTask', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString()
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.success) {
+      closeTaskModal();
+      document.getElementById('taskForm').reset();
+      setTimeout(() => location.reload(), 300);
+    }
+  });
+}
+</script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
