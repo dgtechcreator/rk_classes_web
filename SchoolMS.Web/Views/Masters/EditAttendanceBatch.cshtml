@@ -1,0 +1,217 @@
+@using SchoolMS.Domain;
+@{
+    ViewData["Title"] = "Edit Attendance Batch";
+    var batch = ViewBag.Batch as AttendanceBatch ?? new();
+    var classes = ViewBag.Classes as List<Class> ?? new();
+    var sections = ViewBag.Sections as List<Section> ?? new();
+    var batches = ViewBag.Batches as List<Batch> ?? new();
+}
+
+<style>
+    .batch-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .batch-form { width: 100%; margin-bottom: 24px; }
+    .students-grid { display: grid; gap: 12px; }
+    .student-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .student-item input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+    .student-info { flex: 1; }
+    .student-info .name { font-weight: 700; font-size: 14px; }
+    .student-info .details { font-size: 12px; color: #666; margin-top: 2px; }
+    .batch-actions { display: flex; gap: 12px; margin-top: 20px; }
+
+    @@media (max-width: 768px) {
+        .batch-filters { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="pg-hdr">
+    <div class="pg-row">
+        <div>
+            <h1>✏️ Edit Attendance Batch</h1>
+            <p>Update batch details and students</p>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{<div class="alert alert-success"><i class="fas fa-check-circle"></i> @TempData["Success"]</div>}
+@if (TempData["Error"] != null)
+{<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> @TempData["Error"]</div>}
+
+<div class="card batch-form">
+    <div class="card-hdr">
+        <span class="card-ttl"><i class="fas fa-edit" style="color:var(--p);margin-right:6px;"></i>Batch Details</span>
+    </div>
+
+    <div style="margin-bottom: 20px;">
+        <label style="font-weight: 700; margin-bottom: 10px; display: block; font-size: 14px;">Batch Name * <span style="color: #999; font-weight: 400; font-size: 12px;">(Required)</span></label>
+        <input type="text" id="batchName" value="@batch.BatchName" placeholder="e.g., 9TH ENGLISH MORNING" class="fc" style="width: 100%; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px; font-weight: 500;"/>
+    </div>
+
+    <div class="batch-filters">
+        <div>
+            <label style="font-weight: 700; margin-bottom: 6px; display: block; font-size: 13px;">Class / Standard *</label>
+            <select id="classId" class="fs" onchange="loadStudents()">
+                <option value="">— Select Class —</option>
+                @foreach (var c in classes)
+                {
+                    <option value="@c.ClassId">@c.ClassName</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label style="font-weight: 700; margin-bottom: 6px; display: block; font-size: 13px;">Medium</label>
+            <select id="sectionId" class="fs" onchange="loadStudents()">
+                <option value="">— Select Medium —</option>
+                @foreach (var s in sections)
+                {
+                    <option value="@s.SectionId">@s.SectionName</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label style="font-weight: 700; margin-bottom: 6px; display: block; font-size: 13px;">Batch</label>
+            <select id="batchId" class="fs" onchange="loadStudents()">
+                <option value="">— Select Batch —</option>
+                @foreach (var b in batches)
+                {
+                    <option value="@b.BatchId">@b.BatchName</option>
+                }
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-hdr">
+        <span class="card-ttl"><i class="fas fa-users" style="color:var(--p);margin-right:6px;"></i>Select Students</span>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <label style="display: flex; align-items: center; gap: 8px; margin: 0; cursor: pointer;">
+                <input type="checkbox" id="selectAllChk" onchange="toggleSelectAll()" style="width: 20px; height: 20px;"/>
+                <span style="font-weight: 700; font-size: 13px;">Select All</span>
+            </label>
+            <span id="studentCount" style="font-size: 13px; color: #666;">0 students</span>
+        </div>
+    </div>
+
+    <div id="studentsList" class="students-grid">
+        <div style="padding: 20px; text-align: center; color: #999;">
+            Select class and filters above to view students
+        </div>
+    </div>
+
+    <div class="batch-actions">
+        <button class="btn btn-primary" onclick="saveBatch()" style="padding: 12px 24px; font-size: 14px; font-weight: 700;">
+            <i class="fas fa-save"></i> Save Changes
+        </button>
+        <a href="/Masters/AttendanceBatches" class="btn btn-outline" style="padding: 12px 24px; font-size: 14px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<script>
+let selectedStudents = [];
+const batchId = @batch.BatchId;
+
+async function loadStudents() {
+    const classId = document.getElementById('classId').value;
+    const sectionId = document.getElementById('sectionId').value;
+    const filterBatchId = document.getElementById('batchId').value;
+
+    if (!classId) {
+        document.getElementById('studentsList').innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">Please select a class</div>';
+        return;
+    }
+
+    try {
+        const response = await fetch(`/Masters/GetStudentsForBatch?classId=${classId}&sectionId=${sectionId || ''}&batchId=${filterBatchId || ''}`);
+        const students = await response.json();
+
+        if (!students || students.length === 0) {
+            document.getElementById('studentsList').innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No students found</div>';
+            return;
+        }
+
+        const currentStudentIds = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(batch.StudentIds));
+
+        const html = students.map(s => {
+            const isSelected = currentStudentIds.includes(s.studentId);
+            return `
+                <div class="student-item">
+                    <input type="checkbox" class="student-checkbox" value="${s.studentId}" ${isSelected ? 'checked' : ''} onchange="updateCount()"/>
+                    <div class="student-info">
+                        <div class="name">${s.fullName}</div>
+                        <div class="details">${s.admissionNo} • ${s.className}${s.sectionName ? ' • ' + s.sectionName : ''}${s.batchName ? ' • ' + s.batchName : ''}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        document.getElementById('studentsList').innerHTML = html;
+        document.getElementById('selectAllChk').checked = false;
+        updateCount();
+    } catch (error) {
+        document.getElementById('studentsList').innerHTML = `<div style="padding: 20px; color: #d32f2f;">${error.message}</div>`;
+    }
+}
+
+function toggleSelectAll() {
+    const isChecked = document.getElementById('selectAllChk').checked;
+    document.querySelectorAll('.student-checkbox').forEach(chk => chk.checked = isChecked);
+    updateCount();
+}
+
+function updateCount() {
+    const selected = document.querySelectorAll('.student-checkbox:checked').length;
+    const total = document.querySelectorAll('.student-checkbox').length;
+    document.getElementById('studentCount').textContent = `${selected} of ${total} selected`;
+}
+
+function saveBatch() {
+    const batchName = document.getElementById('batchName').value.trim();
+    const selectedIds = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(chk => parseInt(chk.value));
+
+    if (!batchName) {
+        alert('Please enter batch name');
+        return;
+    }
+
+    if (selectedIds.length === 0) {
+        alert('Please select at least one student');
+        return;
+    }
+
+    // Submit form
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/Masters/SaveAttendanceBatch';
+
+    const fields = [
+        { name: 'batchId', value: batchId },
+        { name: 'batchName', value: batchName }
+    ];
+
+    selectedIds.forEach(id => {
+        fields.push({ name: 'studentIds', value: id });
+    });
+
+    fields.forEach(field => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = field.name;
+        input.value = field.value;
+        form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Load students on page load if any
+window.addEventListener('load', () => {
+    if (@batch.StudentIds.Count > 0) {
+        document.getElementById('selectAllChk').checked = true;
+        updateCount();
+    }
+});
+</script>

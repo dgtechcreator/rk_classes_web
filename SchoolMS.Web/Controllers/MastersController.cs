@@ -232,16 +232,17 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(batchName) || !studentIds.Any())
+            if (string.IsNullOrWhiteSpace(batchName) || studentIds == null || !studentIds.Any())
                 throw new Exception("Batch name and students are required.");
 
             var batch = new AttendanceBatch
             {
                 BatchId = batchId,
-                BatchName = batchName,
-                StudentIds = studentIds
+                BatchName = batchName.Trim(),
+                StudentIds = studentIds ?? new()
             };
 
+            // The Save method in repo handles both insert and update based on BatchId
             batchSvc.CreateBatch(batchName, studentIds);
             TempData["Success"] = "Batch updated successfully.";
         }
