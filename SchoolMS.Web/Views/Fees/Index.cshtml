@@ -245,6 +245,7 @@
               <th>Mother Contact</th>
               @if (hasFeeStructure){ <th style="text-align:right;">Total Fee</th> }
               <th style="text-align:right;">Discount</th>
+              <th style="text-align:right;">Additional Fees</th>
               <th style="text-align:right;">Payable Fees</th>
               <th style="text-align:right;">Collected</th>
               <th style="text-align:right;">Balance</th>
@@ -268,7 +269,29 @@
             var history = feesService.GetStudentHistory(s.StudentId);
             var totalDiscount = history.Sum(h => h.Discount);
             var totalCollected = history.Sum(h => h.NetAmount);
-            var feeAfterDiscount = stuFee - totalDiscount;
+
+            // Extract additional charges from remarks
+            decimal totalAdditionalCharges = 0;
+            foreach (var payment in history)
+            {
+                if (!string.IsNullOrEmpty(payment.Remarks) && payment.Remarks.Contains("Additional Charges:"))
+                {
+                    var parts = payment.Remarks.Split("|");
+                    foreach (var part in parts)
+                    {
+                        if (part.Contains("Additional Charges:"))
+                        {
+                            var chargeStr = part.Replace("Additional Charges:", "").Replace("₹", "").Trim();
+                            if (decimal.TryParse(chargeStr, out decimal charge))
+                                totalAdditionalCharges += charge;
+                        }
+                    }
+                }
+            }
+
+            // Total fee = base fee + additional charges
+            var totalFeeWithAdditional = stuFee + totalAdditionalCharges;
+            var feeAfterDiscount = totalFeeWithAdditional - totalDiscount;
             var balance = Math.Max(0, feeAfterDiscount - totalCollected);
             var lastPayment = history.OrderByDescending(h => h.PaymentDate).FirstOrDefault();
             var addedBy = lastPayment?.CollectorName ?? "—";
@@ -291,8 +314,8 @@
               }
             }
 
-            // Calculate payable fees
-            var payableFees = stuFee - totalDiscount;
+            // Calculate payable fees with additional charges
+            var payableFees = totalFeeWithAdditional - totalDiscount;
 
             <tr data-student-id="@s.StudentId">
               <td class="sid clickable-cell" style="width:40px;">@sr</td>
@@ -306,9 +329,10 @@
               <td style="font-size:13px;">@(s.MotherPhone ?? "—")</td>
               @if (hasFeeStructure)
               {
-                <td class="clickable-cell" style="text-align:right;font-weight:700;color:#15803d;">₹@stuFee.ToString("N0")</td>
+                <td class="clickable-cell" style="text-align:right;font-weight:700;color:#15803d;">₹@totalFeeWithAdditional.ToString("N0")</td>
               }
               <td class="clickable-cell" style="text-align:right;font-weight:700;color:#B8860B;">₹@totalDiscount.ToString("N0")</td>
+              <td class="clickable-cell" style="text-align:right;font-weight:700;color:#D4A017;background:#FFFACD;">₹@totalAdditionalCharges.ToString("N0")</td>
               <td class="clickable-cell" style="text-align:right;font-weight:700;color:#059669;">₹@payableFees.ToString("N0")</td>
               <td class="clickable-cell" style="text-align:right;font-weight:700;color:#1976D2;">₹@totalCollected.ToString("N0")</td>
               <td class="clickable-cell" style="text-align:right;font-weight:700;color:#DC2626;">₹@balance.ToString("N0")</td>
