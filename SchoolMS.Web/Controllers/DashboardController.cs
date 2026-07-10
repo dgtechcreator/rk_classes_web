@@ -17,6 +17,7 @@ public class DashboardController(LookupService lookup, AttendanceService attSvc,
 
         var overallFeesSummary = feesSvc.GetOverallFeesSummary();
         ViewBag.OverallFeesSummary = overallFeesSummary;
+        ViewBag.TotalAdditionalCharges = feesSvc.GetTotalAdditionalCharges();
 
         return View(stats);
     }

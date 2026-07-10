@@ -124,6 +124,18 @@ public class FeesRepo(CommonConnectivity db)
         };
     }
 
+    public decimal GetTotalAdditionalCharges()
+    {
+        var query = @"
+            SELECT ISNULL(SUM(CAST(SUBSTRING(Remarks, CHARINDEX('₹', Remarks) + 1, LEN(Remarks)) AS DECIMAL(10, 2))), 0) as TotalCharges
+            FROM FeePayments
+            WHERE Remarks LIKE '%Additional Charges:%' AND IsDeleted = 0
+        ";
+
+        var result = db.Sql(query, r => G.G<decimal>(r, "TotalCharges")).FirstOrDefault();
+        return result;
+    }
+
     static FeePayment MapFee(SqlDataReader r) => new() {
         PaymentId      = G.G<int>(r,"PaymentId"),
         ReceiptNo      = G.G<string>(r,"ReceiptNo")??"",

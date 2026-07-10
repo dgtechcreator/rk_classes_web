@@ -20,4 +20,7 @@ public class FeesService(FeesRepo repo)
 
     public OverallFeesSummary GetOverallFeesSummary()
         => repo.GetOverallFeesSummary();
+
+    public decimal GetTotalAdditionalCharges()
+        => repo.GetTotalAdditionalCharges();
 }
