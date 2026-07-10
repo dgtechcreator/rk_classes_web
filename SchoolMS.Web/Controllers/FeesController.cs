@@ -173,11 +173,15 @@ public class FeesController(FeesService svc, LookupService lookup,
         // given"). It must NOT be subtracted from payingNow again here or inside
         // FeesRepo.Save — NetAmount in the DB should equal payingNow as-is.
 
-        // Note: additionalCharges is saved but not deducted from payingNow as it's
-        // added to the fee owed amount for future payments
+        // Note: additionalCharges is added to base fee for total fee calculation
+        // Store it in remarks if present for tracking
+        string finalRemarks = remarks ?? "";
+        if (additionalCharges > 0)
+            finalRemarks = (finalRemarks.Length > 0 ? finalRemarks + " | " : "") + $"Additional Charges: ₹{additionalCharges}";
+
         var payId = svc.Collect(studentId, null, payingNow, discountToApply, 0,
             paymentDate, paymentMode, transactionRef,
-            student.AcademicYearId, null, remarks, uid, dueDate);
+            student.AcademicYearId, null, finalRemarks, uid, dueDate);
 
         TempData["Success"] = "Fee collected successfully.";
         return RedirectToAction("Receipt", new { id = payId });
@@ -303,10 +307,31 @@ public class FeesController(FeesService svc, LookupService lookup,
             var history = svc.GetStudentHistory(paymentData.StudentId);
             decimal totalPaid = history.Sum(x => x.NetAmount);
             decimal totalDiscount = history.Sum(x => x.Discount);
-            decimal netFeeAmount = totalFee - totalDiscount;
+
+            // Extract additional charges from all payment remarks
+            decimal totalAdditionalCharges = 0;
+            foreach (var payment in history)
+            {
+                if (!string.IsNullOrEmpty(payment.Remarks) && payment.Remarks.Contains("Additional Charges:"))
+                {
+                    var parts = payment.Remarks.Split("|");
+                    foreach (var part in parts)
+                    {
+                        if (part.Contains("Additional Charges:"))
+                        {
+                            var chargeStr = part.Replace("Additional Charges:", "").Replace("₹", "").Trim();
+                            if (decimal.TryParse(chargeStr, out decimal charge))
+                                totalAdditionalCharges += charge;
+                        }
+                    }
+                }
+            }
+
+            decimal netFeeAmount = (totalFee + totalAdditionalCharges) - totalDiscount;
             decimal remainingBalance = netFeeAmount - totalPaid;
 
             ViewBag.TotalFee = totalFee;
+            ViewBag.AdditionalCharges = totalAdditionalCharges;
             ViewBag.RemainingBalance = Math.Max(0, remainingBalance);
 
             var firstDue = structures.FirstOrDefault(x => x.DueDay > 0);
