@@ -47,7 +47,8 @@ public class ExpensesController(ExpensesService svc, LookupService lookup) : Con
     [HttpPost]
     public IActionResult Delete(int id)
     {
-        svc.Delete(id);
+        int uid = HttpContext.Session.GetUserId() ?? 1;
+        svc.Delete(id, uid);
         TempData["Success"] = "Expense deleted successfully.";
         return RedirectToAction("Index");
     }
