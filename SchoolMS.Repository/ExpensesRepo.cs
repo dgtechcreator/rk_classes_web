@@ -23,6 +23,7 @@ public class ExpensesRepo(CommonConnectivity db)
         { "@PaymentMode",e.PaymentMode }, { "@BillNo",e.BillNo }, { "@VendorName",e.VendorName },
         { "@EnteredBy",by }
     }, "@NewExpenseId");
+    public void Delete(int expenseId) => db.Exec("sp_DeleteExpense", new() { { "@ExpenseId",expenseId } });
     static Expense MapExp(SqlDataReader r) => new() {
         ExpenseId=G.G<int>(r,"ExpenseId"), ExpenseNo=G.G<string>(r,"ExpenseNo")??"",
         CategoryId=G.G<int?>(r,"CategoryId"), CategoryName=G.G<string>(r,"CategoryName"),

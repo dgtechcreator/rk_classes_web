@@ -43,4 +43,12 @@ public class ExpensesController(ExpensesService svc, LookupService lookup) : Con
         TempData["Success"] = "Expense recorded successfully.";
         return RedirectToAction("Index");
     }
+
+    [HttpPost]
+    public IActionResult Delete(int id)
+    {
+        svc.Delete(id);
+        TempData["Success"] = "Expense deleted successfully.";
+        return RedirectToAction("Index");
+    }
 }
