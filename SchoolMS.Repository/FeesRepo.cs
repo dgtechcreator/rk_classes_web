@@ -127,7 +127,15 @@ public class FeesRepo(CommonConnectivity db)
     public decimal GetTotalAdditionalCharges()
     {
         var query = @"
-            SELECT ISNULL(SUM(CAST(SUBSTRING(Remarks, CHARINDEX('₹', Remarks) + 1, LEN(Remarks)) AS DECIMAL(10, 2))), 0) as TotalCharges
+            SELECT ISNULL(SUM(CAST(
+                REPLACE(
+                    REPLACE(
+                        TRIM(SUBSTRING(Remarks, CHARINDEX('₹', Remarks) + 1, LEN(Remarks))),
+                        ',', ''
+                    ),
+                    ' ', ''
+                ) AS DECIMAL(10, 2)
+            )), 0) as TotalCharges
             FROM FeePayments
             WHERE Remarks LIKE '%Additional Charges:%' AND IsDeleted = 0
         ";
