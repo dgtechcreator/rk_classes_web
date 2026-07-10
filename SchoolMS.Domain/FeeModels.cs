@@ -70,6 +70,7 @@ public class StudentFee
     public string?  Month{get;set;}
     public DateTime? DueDate{get;set;}
     public decimal  Amount{get;set;}
+    public decimal  AdditionalFees{get;set;} // Extra charges (performance, late submission, etc.)
     public decimal  PaidAmount{get;set;}
     public decimal  Discount{get;set;}
     public decimal  LateFine{get;set;}

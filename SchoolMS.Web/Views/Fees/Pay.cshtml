@@ -297,6 +297,17 @@
                     <input class="fp-input" id="actualFees" readonly value="@Model.ActualFee.ToString("0")" />
                 </div>
                 <div class="fp-field">
+                    <label>Additional Charges</label>
+                    <input class="fp-input" type="number" name="additionalCharges" id="additionalCharges"
+                           value="0" min="0" step="0.01" placeholder="0"
+                           onchange="recalc()" oninput="recalc()" />
+                </div>
+                <div class="fp-field">
+                    <label>Total Fees (Base + Extra)</label>
+                    <input class="fp-input" id="totalFees" readonly value="@Model.ActualFee.ToString("0")" />
+                </div>
+
+                <div class="fp-field">
                     <label>Existing Balance</label>
                     <input class="fp-input" id="existingBalance" readonly value="@Model.Balance.ToString("0")" />
                 </div>
@@ -396,10 +407,16 @@
         let userEditedPaying = false;
 
         function recalc() {
-          const disc    = parseFloat(document.getElementById('discount').value) || 0;
-          // Payable = actualFee - existingDiscount(already saved on prior payments)
+          const disc      = parseFloat(document.getElementById('discount').value) || 0;
+          const addCharges = parseFloat(document.getElementById('additionalCharges').value) || 0;
+
+          // Total fees = base fee + additional charges
+          const totalFee = actualFee + addCharges;
+          document.getElementById('totalFees').value = totalFee.toFixed(0);
+
+          // Payable = totalFee - existingDiscount(already saved on prior payments)
           //           - totalPaid - newDiscount(only if Apply was clicked)
-          const payable = Math.max(0, actualFee - existingDiscount - totalPaid - (discountApplied ? disc : 0));
+          const payable = Math.max(0, totalFee - existingDiscount - totalPaid - (discountApplied ? disc : 0));
 
           document.getElementById('payable').value = payable.toFixed(0);
 

@@ -150,12 +150,16 @@ public class FeesController(FeesService svc, LookupService lookup,
     [HttpPost]
     [RequireLogin]
     public IActionResult SavePay(int studentId, decimal payingNow, decimal additionalDiscount,
-       DateTime paymentDate, DateTime? dueDate, string paymentMode = "Cash",
-       string? transactionRef = null, string? remarks = null)
+       decimal additionalCharges = 0, DateTime paymentDate = default, DateTime? dueDate = null,
+       string paymentMode = "Cash", string? transactionRef = null, string? remarks = null)
     {
         int uid = HttpContext.Session.GetUserId() ?? 1;
         var student = studentSvc.GetById(studentId);
         if (student == null) return NotFound();
+
+        // Set payment date to today if not provided
+        if (paymentDate == default)
+            paymentDate = DateTime.Today;
 
         var history = svc.GetStudentHistory(studentId);
         decimal existingDiscount = history.Sum(x => x.Discount);
@@ -168,6 +172,9 @@ public class FeesController(FeesService svc, LookupService lookup,
         // discountToApply = recorded purely for history/reporting (e.g. "2000 discount
         // given"). It must NOT be subtracted from payingNow again here or inside
         // FeesRepo.Save — NetAmount in the DB should equal payingNow as-is.
+
+        // Note: additionalCharges is saved but not deducted from payingNow as it's
+        // added to the fee owed amount for future payments
         var payId = svc.Collect(studentId, null, payingNow, discountToApply, 0,
             paymentDate, paymentMode, transactionRef,
             student.AcademicYearId, null, remarks, uid, dueDate);
