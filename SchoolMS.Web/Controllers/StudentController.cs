@@ -362,8 +362,29 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
         decimal totalActualFees = feeStructures.Sum(f => f.Amount);
         decimal totalPaidFees = fees.Sum(f => f.NetAmount);
         decimal totalDiscount = fees.Sum(f => f.Discount);
-        decimal feesAfterDiscount = totalActualFees - totalDiscount;
-        decimal balanceDue = Math.Max(0, totalActualFees - totalDiscount - totalPaidFees);
+
+        // Extract additional charges from remarks
+        decimal totalAdditionalCharges = 0;
+        foreach (var payment in fees)
+        {
+            if (!string.IsNullOrEmpty(payment.Remarks) && payment.Remarks.Contains("Additional Charges:"))
+            {
+                var parts = payment.Remarks.Split("|");
+                foreach (var part in parts)
+                {
+                    if (part.Contains("Additional Charges:"))
+                    {
+                        var chargeStr = part.Replace("Additional Charges:", "").Replace("₹", "").Trim();
+                        if (decimal.TryParse(chargeStr, out decimal charge))
+                            totalAdditionalCharges += charge;
+                    }
+                }
+            }
+        }
+
+        decimal totalFeeWithAdditional = totalActualFees + totalAdditionalCharges;
+        decimal feesAfterDiscount = totalFeeWithAdditional - totalDiscount;
+        decimal balanceDue = Math.Max(0, totalFeeWithAdditional - totalDiscount - totalPaidFees);
 
         ViewBag.Classes     = classes;
         ViewBag.Sections    = sections;
