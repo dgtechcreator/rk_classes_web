@@ -103,7 +103,28 @@ public class FeesController(FeesService svc, LookupService lookup,
         var history = svc.GetStudentHistory(id);
         var totalPaid = history.Sum(x => x.NetAmount);
         var totalDiscount = history.Sum(x => x.Discount);
-        var netActualFee = actualFee - totalDiscount;
+
+        // Extract additional charges from previous payments
+        decimal totalAdditionalCharges = 0;
+        foreach (var payment in history)
+        {
+            if (!string.IsNullOrEmpty(payment.Remarks) && payment.Remarks.Contains("Additional Charges:"))
+            {
+                var parts = payment.Remarks.Split("|");
+                foreach (var part in parts)
+                {
+                    if (part.Contains("Additional Charges:"))
+                    {
+                        var chargeStr = part.Replace("Additional Charges:", "").Replace("₹", "").Trim();
+                        if (decimal.TryParse(chargeStr, out decimal charge))
+                            totalAdditionalCharges += charge;
+                    }
+                }
+            }
+        }
+
+        var totalFeeWithAdditional = actualFee + totalAdditionalCharges;
+        var netActualFee = totalFeeWithAdditional - totalDiscount;
         var balance = netActualFee - totalPaid;
 
         var vm = new FeePayVM
