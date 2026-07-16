@@ -14,6 +14,10 @@ public class TaskService(TaskRepo repo, NotificationRepo notifRepo)
 
     public void SaveTask(TaskItem task)
     {
+        // Ensure TaskId is 0 for new tasks
+        if (task.TaskId == 0)
+            task.TaskId = 0; // SP will handle it
+
         // Update status based on due date
         if (!task.IsCompleted)
         {

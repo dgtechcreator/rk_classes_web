@@ -4,179 +4,458 @@
 }
 
 <style>
-.task-card { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin-bottom:12px; }
-.task-card.pending { border-left:4px solid #f59e0b; }
-.task-card.overdue { border-left:4px solid #dc2626; }
-.task-card.completed { border-left:4px solid #16a34a; opacity:0.6; }
-.task-priority { display:inline-block; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:700; margin-right:8px; }
-.task-priority.high { background:#fee2e2; color:#dc2626; }
-.task-priority.medium { background:#fef3c7; color:#d97706; }
-.task-priority.low { background:#dcfce7; color:#16a34a; }
+    body {
+        background: #f8f9fa;
+    }
+
+    .task-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+        transition: all 0.2s;
+    }
+
+        .task-card:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-card.pending {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .task-card.overdue {
+            border-left: 4px solid #dc2626;
+        }
+
+        .task-card.completed {
+            border-left: 4px solid #16a34a;
+            opacity: 0.6;
+        }
+
+    .task-priority {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        margin-right: 8px;
+    }
+
+        .task-priority.high {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .task-priority.medium {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .task-priority.low {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+    .kpi-box {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px;
+        text-align: center;
+    }
+
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+    .modal-content {
+        background: #fff;
+        border-radius: 12px;
+        padding: 24px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .form-group {
+        margin-bottom: 16px;
+    }
+
+        .form-group label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: #111;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+            .form-group input:focus,
+            .form-group textarea:focus {
+                outline: none;
+                border-color: #2563eb;
+                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            }
+
+    .btn {
+        border: none;
+        border-radius: 6px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 13px;
+        transition: all 0.2s;
+    }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+    .btn-primary {
+        background: #2563eb;
+        color: #fff;
+    }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+    .btn-secondary {
+        background: #e5e7eb;
+        color: #374151;
+    }
+
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+
+    .btn-success {
+        background: #16a34a;
+        color: #fff;
+    }
+
+        .btn-success:hover {
+            background: #15803d;
+        }
+
+    .btn-danger {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+        .btn-danger:hover {
+            background: #fecaca;
+        }
+
+    .no-tasks {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+    }
+
+        .no-tasks svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+        }
+
+    .task-actions {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
 </style>
 
-<div style="padding:20px;">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-    <h1 style="font-size:24px;font-weight:800;">📋 Tasks & Reminders</h1>
-    <button onclick="showAddTaskModal()" class="btn btn-primary"><i class="fas fa-plus"></i> Add Task</button>
-  </div>
+<div style="padding: 20px;">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h1 style="font-size: 28px; font-weight: 800; color: #111;">📋 Tasks & Reminders</h1>
+        <button onclick="showAddTaskModal()" class="btn btn-primary">
+            <i class="fas fa-plus" style="margin-right: 6px;"></i> Add Task
+        </button>
+    </div>
 
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:20px;">
-    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:16px;text-align:center;">
-      <div style="font-size:20px;font-weight:900;color:#d97706;">@Model.Count</div>
-      <div style="font-size:12px;color:#b45309;margin-top:4px;">Total Tasks</div>
+    <!-- KPI Summary -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px;">
+        <div class="kpi-box">
+            <div style="font-size: 22px; font-weight: 900; color: #d97706;">@Model.Count</div>
+            <div style="font-size: 12px; color: #b45309; margin-top: 4px;">Total Tasks</div>
+        </div>
+        <div class="kpi-box">
+            <div style="font-size: 22px; font-weight: 900; color: #dc2626;">@Model.Count(t => t.Status == "Pending")</div>
+            <div style="font-size: 12px; color: #b91c1c; margin-top: 4px;">Pending</div>
+        </div>
+        <div class="kpi-box">
+            <div style="font-size: 22px; font-weight: 900; color: #dc2626;">@Model.Count(t => t.Status == "Overdue")</div>
+            <div style="font-size: 12px; color: #b91c1c; margin-top: 4px;">Overdue</div>
+        </div>
+        <div class="kpi-box">
+            <div style="font-size: 22px; font-weight: 900; color: #16a34a;">@Model.Count(t => t.IsCompleted)</div>
+            <div style="font-size: 12px; color: #15803d; margin-top: 4px;">Completed</div>
+        </div>
     </div>
-    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;text-align:center;">
-      <div style="font-size:20px;font-weight:900;color:#dc2626;">@Model.Count(t => t.Status == "Pending")</div>
-      <div style="font-size:12px;color:#b91c1c;margin-top:4px;">Pending</div>
-    </div>
-    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;text-align:center;">
-      <div style="font-size:20px;font-weight:900;color:#dc2626;">@Model.Count(t => t.Status == "Overdue")</div>
-      <div style="font-size:12px;color:#b91c1c;margin-top:4px;">Overdue</div>
-    </div>
-    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;text-align:center;">
-      <div style="font-size:20px;font-weight:900;color:#16a34a;">@Model.Count(t => t.IsCompleted)</div>
-      <div style="font-size:12px;color:#15803d;margin-top:4px;">Completed</div>
-    </div>
-  </div>
 
-  @foreach(var task in Model.OrderBy(t => t.DueDate))
-  {
-    var statusClass = task.Status.ToLower();
-    <div class="task-card @statusClass">
-      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
-        <div>
-          <span class="task-priority @task.Priority.ToLower()">@task.Priority</span>
-          <span style="font-size:11px;background:#f0f0f0;padding:3px 8px;border-radius:4px;color:#666;">@task.Category</span>
-        </div>
-        <div>
-          @if (!task.IsCompleted)
-          {
-            <button onclick="completeTask(@task.TaskId)" style="background:#16a34a;color:#fff;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;margin-right:6px;font-size:12px;font-weight:700;">
-              ✓ Complete
-            </button>
-          }
-          <button onclick="deleteTask(@task.TaskId)" style="background:#fee2e2;color:#dc2626;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;">
-            🗑 Delete
-          </button>
-        </div>
-      </div>
-      <div style="font-size:15px;font-weight:700;color:#111;margin-bottom:6px;">@task.Title</div>
-      <div style="font-size:13px;color:#666;margin-bottom:8px;">@task.Description</div>
-      <div style="display:flex;gap:16px;font-size:12px;color:#999;">
-        <div>📅 Due: <strong>@task.DueDate.ToString("dd MMM yyyy")</strong></div>
-        @if (task.StudentName != null)
+    <!-- Tasks List -->
+    @if (Model.Any())
+    {
+        @foreach (var task in Model.OrderBy(t => t.DueDate))
         {
-          <div>👤 @task.StudentName (@task.AdmissionNo)</div>
-        }
-      </div>
-    </div>
-  }
+            var statusClass = task.Status.ToLower();
+            <div class="task-card @statusClass">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                    <div style="flex: 1;">
+                        <span class="task-priority @task.Priority.ToLower()">@task.Priority.ToUpper()</span>
+                        <span style="font-size: 11px; background: #f0f0f0; padding: 3px 8px; border-radius: 4px; color: #666;">
+                            @task.Category
+                        </span>
+                        <span style="font-size: 11px; background: #f0f0f0; padding: 3px 8px; border-radius: 4px; color: #666; margin-left: 6px;">
+                            @task.Status
+                        </span>
+                    </div>
+                    <div class="task-actions">
+                        @if (!task.IsCompleted)
+                        {
+                            <button onclick="completeTask(@task.TaskId)" class="btn btn-success" title="Mark as complete">
+                                <i class="fas fa-check"></i> Complete
+                            </button>
+                        }
+                        <button onclick="deleteTask(@task.TaskId)" class="btn btn-danger" title="Delete task">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
 
-  @if (!Model.Any())
-  {
-    <div style="text-align:center;padding:40px;color:#999;">
-      <div style="font-size:48px;margin-bottom:12px;">📋</div>
-      <div style="font-size:16px;font-weight:700;">No tasks yet</div>
-      <button onclick="showAddTaskModal()" class="btn btn-primary" style="margin-top:16px;">Create your first task</button>
-    </div>
-  }
+                <div style="font-size: 16px; font-weight: 700; color: #111; margin-bottom: 6px;">
+                    @task.Title
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(task.Description))
+                {
+                    <div style="font-size: 13px; color: #666; margin-bottom: 8px;">
+                        @task.Description
+                    </div>
+                }
+
+                <div style="display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: #999;">
+                    <div>
+                        <i class="fas fa-calendar" style="margin-right: 4px;"></i>
+                        Due: <strong>@task.DueDate.ToString("dd MMM yyyy")</strong>
+                    </div>
+                    @if (task.StudentName != null)
+                    {
+                        <div>
+                            <i class="fas fa-user" style="margin-right: 4px;"></i>
+                            @task.StudentName (@task.AdmissionNo)
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="no-tasks">
+            <div style="font-size: 48px; margin-bottom: 12px;">📋</div>
+            <div style="font-size: 16px; font-weight: 700; color: #333;">No tasks yet</div>
+            <div style="font-size: 13px; color: #999; margin-top: 6px; margin-bottom: 16px;">Create your first task to get started</div>
+            <button onclick="showAddTaskModal()" class="btn btn-primary">Create First Task</button>
+        </div>
+    }
 </div>
 
 <!-- Add Task Modal -->
-<div id="addTaskModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:12px;padding:24px;width:90%;max-width:500px;max-height:90vh;overflow-y:auto;">
-    <h2 style="margin-bottom:20px;font-weight:800;">Create New Task</h2>
-    <form onsubmit="saveTask(event)">
-      <div style="margin-bottom:16px;">
-        <label style="display:block;font-weight:700;margin-bottom:6px;">Task Title</label>
-        <input type="text" id="taskTitle" required style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;"/>
-      </div>
-      <div style="margin-bottom:16px;">
-        <label style="display:block;font-weight:700;margin-bottom:6px;">Description</label>
-        <textarea id="taskDesc" rows="3" style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;"></textarea>
-      </div>
-      <div style="margin-bottom:16px;">
-        <label style="display:block;font-weight:700;margin-bottom:6px;">Due Date</label>
-        <input type="date" id="taskDue" required style="width:100%;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;"/>
-      </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button type="button" onclick="closeAddTaskModal()" style="background:#e5e7eb;color:#374151;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:700;">Cancel</button>
-        <button type="submit" style="background:#2563eb;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:700;">Create Task</button>
-      </div>
-    </form>
-  </div>
+<div id="addTaskModal" class="modal-overlay">
+    <div class="modal-content">
+        <h2 style="margin-bottom: 20px; font-weight: 800; color: #111;">Create New Task</h2>
+
+        <form id="taskForm" onsubmit="saveTask(event)">
+            <div class="form-group">
+                <label for="taskTitle">Task Title</label>
+                <input type="text" id="taskTitle" placeholder="e.g., Prepare exam paper" required />
+            </div>
+
+            <div class="form-group">
+                <label for="taskDesc">Description</label>
+                <textarea id="taskDesc" rows="3" placeholder="Add details about this task..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="taskDue">Due Date</label>
+                <input type="date" id="taskDue" required />
+            </div>
+
+            <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 24px;">
+                <button type="button" onclick="closeAddTaskModal()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Task</button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <script>
-function showAddTaskModal() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
+    // ===== MODAL FUNCTIONS =====
+    function showAddTaskModal() {
+        // Clear form aur set today's date
+        document.getElementById('taskForm').reset();
 
-  document.getElementById('taskDue').value = `${year}-${month}-${day}`;
-  document.getElementById('addTaskModal').style.display = 'flex';
-}
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
 
-function closeAddTaskModal() {
-  document.getElementById('addTaskModal').style.display = 'none';
-}
+        document.getElementById('taskDue').value = `${year}-${month}-${day}`;
+        document.getElementById('addTaskModal').classList.add('active');
 
-function saveTask(e) {
-  e.preventDefault();
-  const dueDateStr = document.getElementById('taskDue').value;
-
-  const params = new URLSearchParams();
-  params.append('title', document.getElementById('taskTitle').value);
-  params.append('description', document.getElementById('taskDesc').value);
-  params.append('studentId', '');
-  params.append('dueDate', dueDateStr);
-
-  fetch('/Task/CreateTask', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params.toString()
-  })
-  .then(r => r.json())
-  .then(res => {
-    if (res.success) {
-      closeAddTaskModal();
-      alert('✓ Task created!');
-      location.reload();
-    } else {
-      alert('Error: ' + res.message);
+        // Focus on title field
+        setTimeout(() => {
+            document.getElementById('taskTitle').focus();
+        }, 100);
     }
-  })
-  .catch(err => {
-    alert('Error creating task: ' + err.message);
-  });
-}
 
-function completeTask(taskId) {
-  if (confirm('Mark this task as complete?')) {
-    fetch('/Task/CompleteTask', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'taskId=' + taskId
-    })
-    .then(r => r.json())
-    .then(res => {
-      if (res.success) {
-        alert('✓ Task completed!');
-        location.reload();
-      }
+    function closeAddTaskModal() {
+        document.getElementById('addTaskModal').classList.remove('active');
+        document.getElementById('taskForm').reset();
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('addTaskModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeAddTaskModal();
+        }
     });
-  }
-}
 
-function deleteTask(taskId) {
-  if (confirm('Delete this task?')) {
-    fetch('/Task/DeleteTask', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'taskId=' + taskId
-    })
-    .then(() => location.reload());
-  }
-}
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeAddTaskModal();
+        }
+    });
+
+    // ===== FORM SUBMISSION =====
+    function saveTask(e) {
+        e.preventDefault();
+
+        const title = document.getElementById('taskTitle').value.trim();
+        const description = document.getElementById('taskDesc').value.trim();
+        const dueDateStr = document.getElementById('taskDue').value.trim();
+
+        // Debug logging
+        console.log('Form Data:', {
+            title: `"${title}"`,
+            description: `"${description}"`,
+            dueDate: `"${dueDateStr}"`
+        });
+
+        // Validation
+        if (!title || title === '') {
+            alert('❌ Please enter a task title');
+            document.getElementById('taskTitle').focus();
+            return;
+        }
+
+        if (!dueDateStr || dueDateStr === '') {
+            alert('❌ Please select a due date');
+            return;
+        }
+
+        // Prepare form data
+        const params = new URLSearchParams();
+        params.append('title', title);
+        params.append('description', description);
+        params.append('dueDate', dueDateStr);
+
+        console.log('Sending to API:', params.toString());
+
+        // Submit
+        fetch('/Task/CreateTask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        })
+        .then(r => {
+            if (!r.ok) {
+                throw new Error(`HTTP error! status: ${r.status}`);
+            }
+            return r.json();
+        })
+        .then(res => {
+            console.log('API Response:', res);
+
+            if (res.success) {
+                alert('✅ Task created successfully!');
+                closeAddTaskModal();
+                location.reload();
+            } else {
+                alert('❌ Error: ' + (res.message || 'Unknown error'));
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('❌ Network error: ' + err.message);
+        });
+    }
+
+    // ===== TASK ACTIONS =====
+    function completeTask(taskId) {
+        if (confirm('✓ Mark this task as complete?')) {
+            fetch('/Task/CompleteTask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'taskId=' + taskId
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    alert('✅ Task marked as complete!');
+                    location.reload();
+                } else {
+                    alert('❌ Error: ' + res.message);
+                }
+            })
+            .catch(err => alert('❌ Error: ' + err.message));
+        }
+    }
+
+    function deleteTask(taskId) {
+        if (confirm('🗑️ Delete this task? This action cannot be undone.')) {
+            fetch('/Task/DeleteTask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'taskId=' + taskId
+            })
+            .then(r => {
+                if (r.ok) {
+                    alert('✅ Task deleted!');
+                    location.reload();
+                }
+            })
+            .catch(err => alert('❌ Error: ' + err.message));
+        }
+    }
 </script>

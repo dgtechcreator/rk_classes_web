@@ -26,22 +26,32 @@ public class TaskController(TaskService taskSvc, NotificationService notifSvc) :
         {
             int userId = HttpContext.Session.GetUserId() ?? 0;
 
-            // Parse date in YYYY-MM-DD format
+            // Validate inputs
+            if (string.IsNullOrWhiteSpace(title))
+                return Json(new { success = false, message = "Title is required" });
+
+            if (string.IsNullOrWhiteSpace(dueDate))
+                return Json(new { success = false, message = "Due date is required" });
+
+            // Parse date
             if (!DateTime.TryParseExact(dueDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
-            {
                 return Json(new { success = false, message = "Invalid date format" });
-            }
+
+            // studentId ke liye: agar empty ya 0 hai toh NULL banao
+            if (studentId == 0)
+                studentId = null;
 
             var task = new TaskItem
             {
-                Title = title,
-                Description = description,
+                Title = title.Trim(),
+                Description = description?.Trim() ?? "",
                 StudentId = studentId,
                 UserId = userId,
                 Priority = "Medium",
                 Category = "General",
                 DueDate = parsedDate,
-                Status = "Pending"
+                Status = "Pending",
+                IsCompleted = false  // Explicitly set
             };
 
             taskSvc.SaveTask(task);
