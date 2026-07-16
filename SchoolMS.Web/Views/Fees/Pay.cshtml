@@ -177,8 +177,29 @@
         <div class="fp-info-item"><strong>Standard:</strong> @(Model.Student.ClassName ?? "—")</div>
         <div class="fp-info-item"><strong>Medium:</strong> @(Model.Student.SectionName ?? "—")</div>
         <div class="fp-info-item"><strong>Batch:</strong> @(Model.Student.BatchName ?? "—")</div>
-        <div class="fp-info-item" style="color:@(Model.ActualFee > 0 ? "#15803d" : "#dc2626");font-weight:700;">
-            <strong>Total Fee:</strong> ₹ @Model.ActualFee.ToString("N0")
+        @{
+            // Calculate total additional charges from payment history
+            decimal totalAdditionalCharges = 0;
+            foreach (var payment in Model.PaymentHistory)
+            {
+                if (!string.IsNullOrEmpty(payment.Remarks) && payment.Remarks.Contains("Additional Charges:"))
+                {
+                    var parts = payment.Remarks.Split("|");
+                    foreach (var part in parts)
+                    {
+                        if (part.Contains("Additional Charges:"))
+                        {
+                            var chargeStr = part.Replace("Additional Charges:", "").Replace("₹", "").Trim();
+                            if (decimal.TryParse(chargeStr, out decimal charge))
+                                totalAdditionalCharges += charge;
+                        }
+                    }
+                }
+            }
+            var totalFeeWithAdditional = Model.ActualFee + totalAdditionalCharges;
+        }
+        <div class="fp-info-item" style="color:@(totalFeeWithAdditional > 0 ? "#15803d" : "#dc2626");font-weight:700;">
+            <strong>Total Fee:</strong> ₹ @totalFeeWithAdditional.ToString("N0")
             @if (Model.ActualFee == 0)
             {
                 <span style="font-size:11px;color:#dc2626;font-weight:400;"> (no fee structure set)</span>
@@ -304,7 +325,7 @@
                 </div>
                 <div class="fp-field">
                     <label>Total Fees (Base + Extra)</label>
-                    <input class="fp-input" id="totalFees" readonly value="@Model.ActualFee.ToString("0")" />
+                    <input class="fp-input" id="totalFees" readonly value="@totalFeeWithAdditional.ToString("0")" />
                 </div>
 
                 <div class="fp-field">
@@ -395,7 +416,7 @@
 
 @section Scripts {
     <script>
-        const actualFee = @Model.ActualFee;
+        const actualFee = @totalFeeWithAdditional;  // Base fee + additional charges from previous payments
         const totalPaid = @Model.TotalPaid;
         const existingDiscount = @Model.ExistingDiscount;
 
