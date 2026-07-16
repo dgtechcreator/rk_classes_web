@@ -285,7 +285,7 @@
                         <td colspan="3" style="padding:8px 12px;font-weight:700;color:#15803d;">Total Paid</td>
                         <td style="padding:8px 12px;text-align:right;font-weight:800;color:#15803d;font-size:15px;">₹@Model.TotalPaid.ToString("N0")</td>
                         <td colspan="4" style="padding:8px 12px;font-weight:700;color:#dc2626;">
-                            Balance Due: <span id="balanceDueFooter">₹@Model.Balance.ToString("N0")</span>
+                            Balance Due: <span id="balanceDueFooter">₹@((totalFeeWithAdditional - Model.ExistingDiscount - Model.TotalPaid > 0 ? totalFeeWithAdditional - Model.ExistingDiscount - Model.TotalPaid : 0).ToString("N0"))</span>
                         </td>
                     </tr>
                 </tfoot>
