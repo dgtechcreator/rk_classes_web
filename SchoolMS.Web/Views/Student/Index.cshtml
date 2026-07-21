@@ -168,22 +168,22 @@
     margin-bottom: 2px;
   }
 
-  /* Action buttons - full width */
+  /* Action buttons - full width with original styling */
   .tbl-wrap table tbody tr > td:last-child {
     grid-column: 1 / -1;
-    display: flex !important;
-    flex-direction: row;
-    gap: 4px;
-    flex-wrap: wrap;
-    white-space: normal;
-    position: static;
+    display: block !important;
+    white-space: nowrap;
+    position: relative;
     margin-bottom: 0;
+    padding: 0;
+    border: none;
   }
   .tbl-wrap table tbody tr > td:last-child::before {
     display: none;
   }
   .tbl-wrap table tbody tr > td:last-child > div {
     display: inline-block !important;
+    position: relative;
   }
   .tbl-wrap table tbody tr > td:last-child > form {
     display: inline-block;
