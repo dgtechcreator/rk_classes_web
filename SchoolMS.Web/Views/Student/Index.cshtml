@@ -2,36 +2,60 @@
 @{ ViewData["Title"] = "Students"; }
 
 <style>
-/* Mobile: Fix student name header, scroll rest */
+/* Mobile: Card-style student display */
 @@media (max-width: 768px) {
-  .tbl-wrap table {
-    position: relative;
-  }
   .tbl-wrap table thead {
-    position: sticky;
-    top: 0;
-    background: #f8f9fa;
-    z-index: 10;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: none;
   }
   .tbl-wrap table tbody tr {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 14px;
-    border-bottom: 1px solid #e5e7eb;
+    display: block;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    margin-bottom: 12px;
+    border-radius: 8px;
   }
   .tbl-wrap table tbody td {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0;
-    border: none;
+    display: none;
   }
-  .tbl-wrap table tbody td:first-child::before {
-    content: attr(data-label);
+
+  /* Photo */
+  .tbl-wrap table tbody tr > td:nth-child(1) {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+
+  /* Student Name */
+  .tbl-wrap table tbody tr > td:nth-child(3) {
+    display: block;
+    margin-bottom: 8px;
+  }
+  .tbl-wrap table tbody tr > td:nth-child(3)::before {
+    content: "STUDENT NAME";
+    display: block;
+    font-size: 10px;
     font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .tbl-wrap table tbody tr > td:nth-child(3) > div:first-child {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111;
+  }
+  .tbl-wrap table tbody tr > td:nth-child(3) > div:last-child {
+    font-size: 12px;
     color: #666;
+    margin-top: 2px;
+  }
+
+  /* Call & WhatsApp buttons directly under name */
+  .tbl-wrap table tbody tr > td:last-child {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 }
 </style>
