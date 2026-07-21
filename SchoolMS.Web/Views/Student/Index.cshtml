@@ -29,7 +29,7 @@
   /* Student Name */
   .tbl-wrap table tbody tr > td:nth-child(3) {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
   }
   .tbl-wrap table tbody tr > td:nth-child(3)::before {
     content: "STUDENT NAME";
@@ -53,9 +53,17 @@
 
   /* Call & WhatsApp buttons directly under name */
   .tbl-wrap table tbody tr > td:last-child {
-    display: flex;
-    gap: 8px;
+    display: flex !important;
+    gap: 6px;
     flex-wrap: wrap;
+    white-space: normal;
+    position: static;
+  }
+  .tbl-wrap table tbody tr > td:last-child > div {
+    display: inline-block !important;
+  }
+  .tbl-wrap table tbody tr > td:last-child > form {
+    display: inline-block;
   }
 }
 </style>
