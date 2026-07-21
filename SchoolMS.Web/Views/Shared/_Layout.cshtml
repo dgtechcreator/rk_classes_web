@@ -180,13 +180,13 @@
     color: #f3f4f6 !important;
   }
 
-  body.dark-mode #notifPanel, body.dark-mode #settingsDropdown, body.dark-mode #taskModal {
+  body.dark-mode #notifPanel, body.dark-mode #taskModal {
     background-color: #1f2937 !important;
     border-color: #374151 !important;
     color: #f3f4f6 !important;
   }
 
-  body.dark-mode #notifPanel > div, body.dark-mode #settingsDropdown > div, body.dark-mode #taskModal > div {
+  body.dark-mode #notifPanel > div, body.dark-mode #taskModal > div {
     background-color: #1f2937 !important;
     color: #f3f4f6 !important;
   }
@@ -372,17 +372,15 @@
     <i class="fas fa-bell"></i>
     <span class="nb-dot" id="notifBadge" style="position:absolute;top:-2px;right:-4px;background:red;color:white;border-radius:50%;width:14px;height:14px;font-size:9px;align-items:center;justify-content:center;font-weight:bold;line-height:1;display:none;"></span>
   </div>
-  <div class="tb-icon" id="settingsBtn" style="cursor:pointer;position:relative;" onclick="toggleSettings()">
-    <i class="fas fa-cog"></i>
-  </div>
-  <div id="settingsDropdown" style="position:fixed;top:50px;right:30px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;z-index:9999;min-width:200px;">
-    <div style="padding:12px;border-bottom:1px solid #e2e8f0;font-weight:700;color:#222;font-size:13px;">Theme</div>
-    <div style="padding:8px;">
-      <div onclick="applyTheme('light')" style="padding:10px 12px;cursor:pointer;border-radius:6px;margin-bottom:4px;color:#222;font-size:13px;" class="theme-option">☀️ Light</div>
-      <div onclick="applyTheme('dark')" style="padding:10px 12px;cursor:pointer;border-radius:6px;margin-bottom:4px;color:#222;font-size:13px;" class="theme-option">🌙 Dark</div>
-      <div onclick="applyTheme('auto')" style="padding:10px 12px;cursor:pointer;border-radius:6px;color:#222;font-size:13px;" class="theme-option">🔄 Auto</div>
+  <a href="/Account/Logout" style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;text-decoration:none;cursor:pointer;transition:all 0.2s;">
+    <div style="width:32px;height:32px;border-radius:50%;background:#dc2626;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;">
+      @(Context.Session.GetString("FullName")?.FirstOrDefault() ?? 'U')
     </div>
-  </div>
+    <div>
+      <div style="font-weight:700;color:#111;font-size:13px;">@Context.Session.GetString("FullName")</div>
+      <div style="font-size:11px;color:#666;">@Context.Session.GetString("RoleName")</div>
+    </div>
+  </a>
 </header>
 
 <div id="notifPanel" style="position:fixed;top:65px;right:30px;width:350px;max-height:500px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.2);display:none;z-index:9999;overflow-y:auto;"></div>
@@ -580,11 +578,7 @@ function handleNotification(notifId, action) {
     });
 }
 
-// Settings & Theme
-function toggleSettings() {
-  const dropdown = document.getElementById('settingsDropdown');
-  dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
-}
+// Theme
 
 function initTheme() {
   const theme = localStorage.getItem('theme') || 'light';
@@ -604,7 +598,6 @@ function applyTheme(theme) {
   }
 
   highlightActiveTheme();
-  document.getElementById('settingsDropdown').style.display = 'none';
 }
 
 function highlightActiveTheme() {
@@ -627,15 +620,6 @@ function highlightActiveTheme() {
     options[0].style.fontWeight = '700';
   }
 }
-
-// Close dropdown when clicking outside
-document.addEventListener('click', (e) => {
-  const dropdown = document.getElementById('settingsDropdown');
-  const settingsBtn = document.getElementById('settingsBtn');
-  if (!e.target.closest('#settingsBtn') && !e.target.closest('#settingsDropdown')) {
-    dropdown.style.display = 'none';
-  }
-});
 
 // Initialize theme on page load
 initTheme();
