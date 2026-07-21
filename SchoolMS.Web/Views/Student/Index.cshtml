@@ -17,6 +17,9 @@
   }
   .tbl-wrap table tbody td {
     display: none;
+    margin-bottom: 12px;
+    padding: 0;
+    border: none;
   }
 
   /* Photo */
@@ -26,38 +29,204 @@
     margin-bottom: 12px;
   }
 
+  /* Admission No */
+  .tbl-wrap table tbody tr > td:nth-child(2) {
+    display: block;
+    margin-bottom: 10px;
+  }
+  .tbl-wrap table tbody tr > td:nth-child(2)::before {
+    content: "ADMISSION NO";
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .tbl-wrap table tbody tr > td:nth-child(2) span {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111;
+  }
+
   /* Student Name */
   .tbl-wrap table tbody tr > td:nth-child(3) {
     display: block;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
   .tbl-wrap table tbody tr > td:nth-child(3)::before {
     content: "STUDENT NAME";
     display: block;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     color: #999;
     text-transform: uppercase;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
   .tbl-wrap table tbody tr > td:nth-child(3) > div:first-child {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     color: #111;
   }
   .tbl-wrap table tbody tr > td:nth-child(3) > div:last-child {
-    font-size: 12px;
+    font-size: 11px;
     color: #666;
     margin-top: 2px;
   }
 
-  /* Call & WhatsApp buttons directly under name */
+  /* Class/Std */
+  .tbl-wrap table tbody tr > td:nth-child(4) {
+    display: block;
+    margin-bottom: 10px;
+  }
+  .tbl-wrap table tbody tr > td:nth-child(4)::before {
+    content: "STANDARD";
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  /* Admission Date */
+  .tbl-wrap table tbody tr > td:nth-child(5) {
+    display: block;
+    margin-bottom: 10px;
+  }
+  .tbl-wrap table tbody tr > td:nth-child(5)::before {
+    content: "ADMISSION DATE";
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  /* Section/Medium */
+  .tbl-wrap table tbody tr > td:nth-child(6) {
+    display: block;
+    margin-bottom: 10px;
+  }
+  .tbl-wrap table tbody tr > td:nth-child(6)::before {
+    content: "MEDIUM/STREAM";
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  /* Batch */
+  .tbl-wrap table tbody tr > td:nth-child(7) {
+    display: block;
+    margin-bottom: 10px;
+  }
+  .tbl-wrap table tbody tr > td:nth-child(7)::before {
+    content: "BATCH";
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  /* Father Name */
+  .tbl-wrap table tbody tr > td:nth-child(8) {
+    display: block;
+    margin-bottom: 10px;
+  }
+  .tbl-wrap table tbody tr > td:nth-child(8)::before {
+    content: "FATHER NAME";
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  /* Father Phone */
+  .tbl-wrap table tbody tr > td:nth-child(9) {
+    display: block;
+    margin-bottom: 10px;
+  }
+  .tbl-wrap table tbody tr > td:nth-child(9)::before {
+    content: "FATHER PHONE";
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  /* Mother Phone */
+  .tbl-wrap table tbody tr > td:nth-child(10) {
+    display: block;
+    margin-bottom: 10px;
+  }
+  .tbl-wrap table tbody tr > td:nth-child(10)::before {
+    content: "MOTHER PHONE";
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  /* Status */
+  .tbl-wrap table tbody tr > td:nth-child(11) {
+    display: block;
+    margin-bottom: 10px;
+  }
+  .tbl-wrap table tbody tr > td:nth-child(11)::before {
+    content: "STATUS";
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  /* Added By */
+  .tbl-wrap table tbody tr > td:nth-child(12) {
+    display: block;
+    margin-bottom: 12px;
+  }
+  .tbl-wrap table tbody tr > td:nth-child(12)::before {
+    content: "ADDED BY";
+    display: block;
+    font-size: 9px;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  /* Action buttons */
   .tbl-wrap table tbody tr > td:last-child {
     display: flex !important;
     gap: 6px;
     flex-wrap: wrap;
     white-space: normal;
     position: static;
+    margin-bottom: 0;
+  }
+  .tbl-wrap table tbody tr > td:last-child::before {
+    content: "ACTIONS";
+    display: block;
+    width: 100%;
+    font-size: 9px;
+    font-weight: 700;
+    color: #999;
+    text-transform: uppercase;
+    margin-bottom: 8px;
   }
   .tbl-wrap table tbody tr > td:last-child > div {
     display: inline-block !important;
