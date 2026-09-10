@@ -448,14 +448,17 @@ public class FeesController(FeesService svc, LookupService lookup,
             var termsFont  = new Font(Font.FontFamily.HELVETICA, 7);
 
             var outer = new PdfPTable(1) { WidthPercentage = 100 };
-            var outerCell = new PdfPCell { Border = Rectangle.BOX_BORDER, Padding = 0 };
+            var outerCell = new PdfPCell { Padding = 0 };
 
             // Top label row: "Kapil Sir's" | "SINCE : 2002"
             var topLabel = new PdfPTable(2) { WidthPercentage = 100 };
-            topLabel.AddCell(new PdfPCell(new Phrase("Kapil Sir's", boldSmall))
-                { Border = Rectangle.BOTTOM_BORDER, Padding = 5 });
-            topLabel.AddCell(new PdfPCell(new Phrase("SINCE : 2002", boldSmall))
-                { Border = Rectangle.BOTTOM_BORDER, Padding = 5, HorizontalAlignment = Element.ALIGN_RIGHT });
+            var topLabelLeft = new PdfPCell(new Phrase("Kapil Sir's", boldSmall)) { Padding = 5 };
+            topLabelLeft.BorderWidthBottom = 1;
+            topLabel.AddCell(topLabelLeft);
+            var topLabelRight = new PdfPCell(new Phrase("SINCE : 2002", boldSmall))
+                { Padding = 5, HorizontalAlignment = Element.ALIGN_RIGHT };
+            topLabelRight.BorderWidthBottom = 1;
+            topLabel.AddCell(topLabelRight);
             outerCell.AddElement(topLabel);
 
             // Institute name
@@ -467,7 +470,9 @@ public class FeesController(FeesService svc, LookupService lookup,
             var header = new PdfPTable(2) { WidthPercentage = 100 };
             header.SetWidths(new float[] { 1.6f, 1f });
 
-            var leftCell = new PdfPCell { Border = Rectangle.TOP_BORDER | Rectangle.BOTTOM_BORDER, Padding = 8 };
+            var leftCell = new PdfPCell { Padding = 8 };
+            leftCell.BorderWidthTop = 1;
+            leftCell.BorderWidthBottom = 1;
             try
             {
                 var logoPath = Path.Combine(env.WebRootPath, "images", "rkBw.png");
@@ -489,7 +494,10 @@ public class FeesController(FeesService svc, LookupService lookup,
                 "Mobile No: 9870375795 / 8108499214", addrFont));
             header.AddCell(leftCell);
 
-            var rightCell = new PdfPCell { Border = Rectangle.TOP_BORDER | Rectangle.BOTTOM_BORDER | Rectangle.LEFT_BORDER, Padding = 8 };
+            var rightCell = new PdfPCell { Padding = 8 };
+            rightCell.BorderWidthTop = 1;
+            rightCell.BorderWidthBottom = 1;
+            rightCell.BorderWidthLeft = 1;
             rightCell.AddElement(new Paragraph((payment.StudentName ?? "—").ToUpper(), boldSmall));
             rightCell.AddElement(new Paragraph($"Address: {payment.StudentAddress ?? "-"}", cellFont));
             rightCell.AddElement(new Paragraph($"Contact No.: {payment.FatherPhone ?? payment.StudentPhone ?? "-"}", cellFont));
@@ -545,7 +553,8 @@ public class FeesController(FeesService svc, LookupService lookup,
                 "2) Present this receipt of fees whenever demanded.\n" +
                 "3) Fees once paid is neither refundable nor transferable under any circumstances\n" +
                 "4) This is a computer generated voucher, signature is not required", termsFont));
-            var termsCell = new PdfPCell { Border = Rectangle.TOP_BORDER, Padding = 8 };
+            var termsCell = new PdfPCell { Padding = 8 };
+            termsCell.BorderWidthTop = 1;
             termsCell.AddElement(terms);
             var termsTable = new PdfPTable(1) { WidthPercentage = 100 };
             termsTable.AddCell(termsCell);
