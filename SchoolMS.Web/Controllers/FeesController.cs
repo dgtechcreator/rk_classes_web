@@ -433,11 +433,14 @@ public class FeesController(FeesService svc, LookupService lookup,
     {
         try
         {
+            if (payment == null) return BadRequest("Payment not found.");
+
             var fileName = $"Receipt_{payment.ReceiptNo}.pdf";
             var ms = new MemoryStream();
 
             var doc = new Document(PageSize.A5.Rotate(), 18, 18, 14, 14);
-            PdfWriter.GetInstance(doc, ms);
+            var writer = PdfWriter.GetInstance(doc, ms);
+            writer.CloseStream = false;
             doc.Open();
 
             var titleFont  = new Font(Font.FontFamily.HELVETICA, 14, Font.BOLD);
@@ -473,18 +476,21 @@ public class FeesController(FeesService svc, LookupService lookup,
             var leftCell = new PdfPCell { Padding = 8 };
             leftCell.BorderWidthTop = 1;
             leftCell.BorderWidthBottom = 1;
-            try
+            if (env != null)
             {
-                var logoPath = Path.Combine(env.WebRootPath, "images", "rkBw.png");
-                if (System.IO.File.Exists(logoPath))
+                try
                 {
-                    var logo = iTextSharp.text.Image.GetInstance(logoPath);
-                    logo.ScaleToFit(90, 55);
-                    logo.SpacingAfter = 4;
-                    leftCell.AddElement(logo);
+                    var logoPath = Path.Combine(env.WebRootPath, "images", "rkBw.png");
+                    if (System.IO.File.Exists(logoPath))
+                    {
+                        var logo = iTextSharp.text.Image.GetInstance(logoPath);
+                        logo.ScaleToFit(90, 55);
+                        logo.SpacingAfter = 4;
+                        leftCell.AddElement(logo);
+                    }
                 }
+                catch { /* logo is decorative — skip if it can't be loaded */ }
             }
-            catch { /* logo is decorative — skip if it can't be loaded */ }
             leftCell.AddElement(new Paragraph(
                 "Shop No. 2, Santosh Society, Krishna Nagar,\n" +
                 "Near Eden School, Kajupada Pipe Line,\n" +
@@ -566,11 +572,17 @@ public class FeesController(FeesService svc, LookupService lookup,
             doc.Close();
 
             byte[] pdfBytes = ms.ToArray();
+            ms.Close();
             return File(pdfBytes, "application/pdf", fileName);
         }
         catch (Exception ex)
         {
-            return BadRequest($"Error: {ex.Message}");
+            var errorMsg = $"PDF Generation Error: {ex.GetType().Name} - {ex.Message}";
+            if (ex.InnerException != null)
+                errorMsg += $" | Inner: {ex.InnerException.Message}";
+            System.Diagnostics.Debug.WriteLine(errorMsg);
+            System.Diagnostics.Debug.WriteLine(ex.StackTrace);
+            return BadRequest(errorMsg);
         }
     }
 
