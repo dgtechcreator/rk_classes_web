@@ -3,6 +3,13 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+@if (!string.IsNullOrEmpty(ViewBag.Error))
+{
+    <div style="background: #fee; color: #c33; padding: 20px; border-radius: 8px; margin: 20px;">
+        <strong>⚠️ Error:</strong> @ViewBag.Error
+    </div>
+}
+
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #f5f7fa; }
