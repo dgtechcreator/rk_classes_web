@@ -37,14 +37,29 @@
 body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
 
 /* ── Buttons ── */
-.no-print { max-width: 820px; margin: 0 auto 14px; display: flex; gap: 10px; }
-.no-print button {
+.no-print { max-width: 820px; margin: 0 auto 14px; }
+.btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
+.btn-group button {
   flex: 1; padding: 11px; font-size: 14px; font-weight: 700;
   cursor: pointer; border-radius: 6px; border: none;
 }
 .btn-print     { background: #1a237e; color: #fff; }
 .btn-landscape { background: #0d6832; color: #fff; }
 .btn-close     { background: #fff; color: #1a237e; border: 2px solid #1a237e !important; }
+
+/* WhatsApp buttons */
+.whatsapp-group { display: flex; gap: 10px; }
+.btn-whatsapp {
+  flex: 1; padding: 11px; font-size: 13px; font-weight: 700;
+  cursor: pointer; border-radius: 6px; border: none;
+  background: #25D366; color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px;
+  text-decoration: none; transition: background 0.3s;
+}
+.btn-whatsapp:hover { background: #20BA5A; }
+.btn-whatsapp-disabled {
+  background: #ccc; color: #666; cursor: not-allowed; opacity: 0.6;
+}
+.btn-whatsapp-disabled:hover { background: #ccc; }
 
 /* ── Page box ── */
 .page { background: #fff; max-width: 820px; margin: 0 auto; border: 2px solid #333; }
@@ -128,9 +143,39 @@ body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
 <body>
 
 <div class="no-print">
-  <button class="btn-print"     onclick="printPortrait()">🖨️ Print Receipt (Portrait)</button>
-  <button class="btn-landscape" onclick="printLandscape()">🖨️ Print Landscape</button>
-  <button class="btn-close"     onclick="history.back()">✕ Close</button>
+  <div class="btn-group">
+    <button class="btn-print"     onclick="printPortrait()">🖨️ Print Receipt (Portrait)</button>
+    <button class="btn-landscape" onclick="printLandscape()">🖨️ Print Landscape</button>
+    <button class="btn-close"     onclick="history.back()">✕ Close</button>
+  </div>
+
+  <div class="whatsapp-group">
+    @if (!string.IsNullOrWhiteSpace(Model.FatherPhone))
+    {
+      <a class="btn-whatsapp" onclick="sendWhatsAppFather()" style="cursor: pointer;">
+        <span>📱</span> <span>Send to Father (@Model.FatherPhone)</span>
+      </a>
+    }
+    else
+    {
+      <div class="btn-whatsapp btn-whatsapp-disabled" title="Father phone number not available">
+        <span>📱</span> <span>Send to Father (No number)</span>
+      </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.StudentPhone))
+    {
+      <a class="btn-whatsapp" onclick="sendWhatsAppMother()" style="cursor: pointer;">
+        <span>📱</span> <span>Send to Mother (@Model.StudentPhone)</span>
+      </a>
+    }
+    else
+    {
+      <div class="btn-whatsapp btn-whatsapp-disabled" title="Mother phone number not available">
+        <span>📱</span> <span>Send to Mother (No number)</span>
+      </div>
+    }
+  </div>
 </div>
 
 @{
@@ -242,6 +287,75 @@ function printLandscape() {
   s.textContent = rule;
   window.print();
   setTimeout(function(){ s.textContent = ''; }, 1500);
+}
+
+function getReceiptMessage() {
+  // Extract receipt details from the page
+  const studentName = "@(Model.StudentName ?? "Student")";
+  const receiptNo = "@Model.ReceiptNo";
+  const paymentDate = "@Model.PaymentDate.ToString("dd-MM-yyyy")";
+  const amount = "@Model.NetAmount.ToString("N0")";
+  const className = "@(Model.ClassName ?? "")";
+  const sectionName = "@(Model.SectionName ?? "")";
+
+  const message =
+    "*🎓 Fee Payment Receipt*\n\n" +
+    "Hi! 👋\n\n" +
+    "Payment received from *" + studentName + "* (" + className + " - " + sectionName + ")\n\n" +
+    "💳 Receipt No: " + receiptNo + "\n" +
+    "📅 Date: " + paymentDate + "\n" +
+    "💰 Amount: ₹" + amount + "/-\n\n" +
+    "📄 Receipt PDF is attached below 👇\n\n" +
+    "Thank you! ✅\n\n" +
+    "Ramjeet Kalavati Educational Institute (RK Classes)\n" +
+    "📧 rkclasseskapilsir2002@gmail.com\n" +
+    "📞 9870375795 / 8108499214";
+
+  return message;
+}
+
+// Downloads the receipt PDF to this device so it's one tap away to attach in WhatsApp
+// (WhatsApp's wa.me chat links can only pre-fill text — they cannot attach a file for you)
+function downloadReceiptPdf() {
+  const paymentId = @Model.PaymentId;
+  const pdfUrl = window.location.origin + '/Fees/Receipt/' + paymentId + '?download=1';
+  const link = document.createElement('a');
+  link.href = pdfUrl;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function openWhatsAppChat(rawPhone, label) {
+  const phone = rawPhone.replace(/\D/g, '');
+  if (!phone || phone.length === 0) {
+    alert(label + ' phone number not available');
+    return;
+  }
+
+  // Format phone number
+  let formattedPhone = phone;
+  if (!phone.startsWith('91') && phone.length === 10) {
+    formattedPhone = '91' + phone;
+  }
+
+  const message = getReceiptMessage();
+  const encodedMessage = encodeURIComponent(message);
+  const whatsappUrl = 'https://wa.me/' + formattedPhone + '?text=' + encodedMessage;
+
+  // Open WhatsApp FIRST — this must be the first popup in the click handler or
+  // some browsers block it. The PDF download is triggered right after.
+  window.open(whatsappUrl, '_blank');
+  downloadReceiptPdf();
+}
+
+function sendWhatsAppFather() {
+  openWhatsAppChat("@Model.FatherPhone", 'Father');
+}
+
+function sendWhatsAppMother() {
+  openWhatsAppChat("@Model.StudentPhone", 'Mother');
 }
 
 </script>

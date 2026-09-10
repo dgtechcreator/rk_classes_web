@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using SchoolMS.Domain;
 using SchoolMS.Services;
@@ -11,7 +12,7 @@ namespace SchoolMS.Web.Controllers;
 
 public class FeesController(FeesService svc, LookupService lookup,
     ClassFeeSetupService feeSetupSvc, StudentService studentSvc,
-    FeeStructureService feeStructureSvc) : Controller
+    FeeStructureService feeStructureSvc, IWebHostEnvironment env) : Controller
 {
     // ── Page 1: Student search list ──────────────────────────────
     [RequireLogin]
@@ -169,43 +170,69 @@ public class FeesController(FeesService svc, LookupService lookup,
     //    on the receipt — discount is recorded for history/reporting only and must NOT
     //    be subtracted again on the way into the database.
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [RequireLogin]
     public IActionResult SavePay(int studentId, decimal payingNow, decimal additionalDiscount,
        decimal additionalCharges = 0, DateTime paymentDate = default, DateTime? dueDate = null,
        string paymentMode = "Cash", string? transactionRef = null, string? remarks = null)
     {
-        int uid = HttpContext.Session.GetUserId() ?? 1;
-        var student = studentSvc.GetById(studentId);
-        if (student == null) return NotFound();
+        try
+        {
+            // Get user ID from session with fallback
+            int? sessionUserId = HttpContext.Session.GetUserId();
+            if (!sessionUserId.HasValue)
+            {
+                TempData["Error"] = "Your session has expired. Please login again.";
+                return RedirectToAction("Login", "Auth");
+            }
+            int uid = sessionUserId.Value;
 
-        // Set payment date to today if not provided
-        if (paymentDate == default)
-            paymentDate = DateTime.Today;
+            var student = studentSvc.GetById(studentId);
+            if (student == null) return NotFound();
 
-        var history = svc.GetStudentHistory(studentId);
-        decimal existingDiscount = history.Sum(x => x.Discount);
+            // Set payment date to today if not provided
+            if (paymentDate == default)
+                paymentDate = DateTime.Today;
 
-        // Discount is only allowed once per student (first payment). On later
-        // payments it's locked to 0 regardless of what the form posts.
-        decimal discountToApply = existingDiscount > 0 ? 0 : additionalDiscount;
+            var history = svc.GetStudentHistory(studentId);
+            decimal existingDiscount = history.Sum(x => x.Discount);
 
-        // payingNow = the actual amount being received right now (e.g. 4000).
-        // discountToApply = recorded purely for history/reporting (e.g. "2000 discount
-        // given"). It must NOT be subtracted from payingNow again here or inside
-        // FeesRepo.Save — NetAmount in the DB should equal payingNow as-is.
+            // Discount is only allowed once per student (first payment). On later
+            // payments it's locked to 0 regardless of what the form posts.
+            decimal discountToApply = existingDiscount > 0 ? 0 : additionalDiscount;
 
-        // Note: additionalCharges is added to base fee for total fee calculation
-        // Store it in remarks if present for tracking
-        string finalRemarks = remarks ?? "";
-        if (additionalCharges > 0)
-            finalRemarks = (finalRemarks.Length > 0 ? finalRemarks + " | " : "") + $"Additional Charges: ₹{additionalCharges}";
+            // payingNow = the actual amount being received right now (e.g. 4000).
+            // discountToApply = recorded purely for history/reporting (e.g. "2000 discount
+            // given"). It must NOT be subtracted from payingNow again here or inside
+            // FeesRepo.Save — NetAmount in the DB should equal payingNow as-is.
 
-        var payId = svc.Collect(studentId, null, payingNow, discountToApply, 0,
-            paymentDate, paymentMode, transactionRef,
-            student.AcademicYearId, null, finalRemarks, uid, dueDate);
+            // Note: additionalCharges is added to base fee for total fee calculation
+            // Store it in remarks if present for tracking
+            string finalRemarks = remarks ?? "";
+            if (additionalCharges > 0)
+                finalRemarks = (finalRemarks.Length > 0 ? finalRemarks + " | " : "") + $"Additional Charges: ₹{additionalCharges}";
 
-        TempData["Success"] = "Fee collected successfully.";
-        return RedirectToAction("Receipt", new { id = payId });
+            var payId = svc.Collect(studentId, null, payingNow, discountToApply, 0,
+                paymentDate, paymentMode, transactionRef,
+                student.AcademicYearId, null, finalRemarks, uid, dueDate);
+
+            if (payId <= 0)
+            {
+                TempData["Error"] = "Failed to save payment. Please try again.";
+                return RedirectToAction("Pay", new { id = studentId });
+            }
+
+            TempData["Success"] = "Fee collected successfully.";
+            return RedirectToAction("Receipt", new { id = payId });
+        }
+        catch (Exception ex)
+        {
+            // Log the error details
+            Console.WriteLine($"[SavePay Error] StudentId={studentId}, PayingNow={payingNow}, Error: {ex.Message}");
+
+            TempData["Error"] = "Error saving payment: " + ex.Message;
+            return RedirectToAction("Pay", new { id = studentId });
+        }
     }
 
     // ── Legacy Collect (keep for backward compatibility) ─────────
@@ -233,14 +260,38 @@ public class FeesController(FeesService svc, LookupService lookup,
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [RequireLogin]
     public IActionResult SavePayment(FeeCollectVM m)
     {
-        int uid = HttpContext.Session.GetUserId() ?? 1;
-        var payId = svc.Collect(m.StudentId, m.FeeTypeId, m.Amount, m.Discount, m.LateFine,
-            DateTime.Today, m.PaymentMode, m.TransactionRef, m.AcademicYearId, m.Month, m.Remarks, uid);
-        TempData["Success"] = "Fee collected successfully.";
-        return RedirectToAction("Receipt", new { id = payId });
+        try
+        {
+            int? sessionUserId = HttpContext.Session.GetUserId();
+            if (!sessionUserId.HasValue)
+            {
+                TempData["Error"] = "Your session has expired. Please login again.";
+                return RedirectToAction("Login", "Auth");
+            }
+            int uid = sessionUserId.Value;
+
+            var payId = svc.Collect(m.StudentId, m.FeeTypeId, m.Amount, m.Discount, m.LateFine,
+                DateTime.Today, m.PaymentMode, m.TransactionRef, m.AcademicYearId, m.Month, m.Remarks, uid);
+
+            if (payId <= 0)
+            {
+                TempData["Error"] = "Failed to save payment. Please try again.";
+                return RedirectToAction("Collect");
+            }
+
+            TempData["Success"] = "Fee collected successfully.";
+            return RedirectToAction("Receipt", new { id = payId });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SavePayment Error] StudentId={m.StudentId}, Amount={m.Amount}, Error: {ex.Message}");
+            TempData["Error"] = "Error saving payment: " + ex.Message;
+            return RedirectToAction("Collect");
+        }
     }
 
     // ── Summary page ─────────────────────────────────────────────
@@ -298,143 +349,210 @@ public class FeesController(FeesService svc, LookupService lookup,
     [RequireAdminOrParent]
     public IActionResult Receipt(int id, int? download = null)
     {
-        // If download parameter is present, generate PDF directly
-        if (download.HasValue && download == 1)
-        {
-            var paymentForPDF = svc.GetPaymentById(id);
-            if (paymentForPDF == null) return NotFound();
-            return GenerateReceiptPDF(paymentForPDF);
-        }
-
         var paymentData = svc.GetPaymentById(id);
         if (paymentData == null) return NotFound();
 
-        var student = studentSvc.GetById(paymentData.StudentId);
-        if (student != null)
+        var (dueDate, remainingBalance) = ComputeDueInfo(paymentData);
+
+        // If download parameter is present, generate the full PDF receipt directly
+        if (download.HasValue && download == 1)
         {
-            var structures = feeStructureSvc.GetAllForStudent(paymentData.StudentId);
-            if (!structures.Any() && student.AcademicYearId.HasValue && student.ClassId.HasValue)
-            {
-                structures = feeStructureSvc.GetAll(student.AcademicYearId, student.ClassId, student.SectionId);
-                if (!structures.Any() && student.SectionId.HasValue)
-                    structures = feeStructureSvc.GetAll(student.AcademicYearId, student.ClassId, null);
-                if (!structures.Any())
-                    structures = feeStructureSvc.GetAll(null, student.ClassId, student.SectionId);
-                if (!structures.Any())
-                    structures = feeStructureSvc.GetAll(null, student.ClassId, null);
-            }
-
-            decimal totalFee = structures.Sum(x => x.Amount);
-            var history = svc.GetStudentHistory(paymentData.StudentId);
-            decimal totalPaid = history.Sum(x => x.NetAmount);
-            decimal totalDiscount = history.Sum(x => x.Discount);
-
-            // Extract additional charges from all payment remarks
-            decimal totalAdditionalCharges = 0;
-            foreach (var payment in history)
-            {
-                if (!string.IsNullOrEmpty(payment.Remarks) && payment.Remarks.Contains("Additional Charges:"))
-                {
-                    var parts = payment.Remarks.Split("|");
-                    foreach (var part in parts)
-                    {
-                        if (part.Contains("Additional Charges:"))
-                        {
-                            var chargeStr = part.Replace("Additional Charges:", "").Replace("₹", "").Trim();
-                            if (decimal.TryParse(chargeStr, out decimal charge))
-                                totalAdditionalCharges += charge;
-                        }
-                    }
-                }
-            }
-
-            decimal netFeeAmount = (totalFee + totalAdditionalCharges) - totalDiscount;
-            decimal remainingBalance = netFeeAmount - totalPaid;
-
-            ViewBag.TotalFee = totalFee;
-            ViewBag.AdditionalCharges = totalAdditionalCharges;
-            ViewBag.RemainingBalance = Math.Max(0, remainingBalance);
-
-            var firstDue = structures.FirstOrDefault(x => x.DueDay > 0);
-            if (firstDue != null)
-                ViewBag.DueDate = new DateTime(paymentData.PaymentDate.Year,
-                                               paymentData.PaymentDate.Month, 1)
-                                      .AddDays(firstDue.DueDay - 1);
-            else
-                ViewBag.DueDate = null;
+            return GenerateReceiptPDF(paymentData, dueDate, remainingBalance);
         }
+
+        // If share parameter is present, return JSON with PDF download URL
+        if (download.HasValue && download == 2)
+        {
+            var downloadUrl = $"{Request.Scheme}://{Request.Host}/Fees/Receipt/{id}?download=1";
+            return Json(new { success = true, pdfUrl = downloadUrl });
+        }
+
+        ViewBag.RemainingBalance = remainingBalance;
+        ViewBag.DueDate = dueDate;
 
         return View(paymentData);
     }
 
-    private IActionResult GenerateReceiptPDF(FeePayment payment)
+    // Shared by the on-screen receipt and the PDF export so both show the same Due Date / Due Fees
+    private (DateTime? DueDate, decimal RemainingBalance) ComputeDueInfo(FeePayment paymentData)
+    {
+        var student = studentSvc.GetById(paymentData.StudentId);
+        if (student == null) return (null, 0);
+
+        var structures = feeStructureSvc.GetAllForStudent(paymentData.StudentId);
+        if (!structures.Any() && student.AcademicYearId.HasValue && student.ClassId.HasValue)
+        {
+            structures = feeStructureSvc.GetAll(student.AcademicYearId, student.ClassId, student.SectionId);
+            if (!structures.Any() && student.SectionId.HasValue)
+                structures = feeStructureSvc.GetAll(student.AcademicYearId, student.ClassId, null);
+            if (!structures.Any())
+                structures = feeStructureSvc.GetAll(null, student.ClassId, student.SectionId);
+            if (!structures.Any())
+                structures = feeStructureSvc.GetAll(null, student.ClassId, null);
+        }
+
+        decimal totalFee = structures.Sum(x => x.Amount);
+        var history = svc.GetStudentHistory(paymentData.StudentId);
+        decimal totalPaid = history.Sum(x => x.NetAmount);
+        decimal totalDiscount = history.Sum(x => x.Discount);
+
+        // Extract additional charges from all payment remarks
+        decimal totalAdditionalCharges = 0;
+        foreach (var payment in history)
+        {
+            if (!string.IsNullOrEmpty(payment.Remarks) && payment.Remarks.Contains("Additional Charges:"))
+            {
+                var parts = payment.Remarks.Split("|");
+                foreach (var part in parts)
+                {
+                    if (part.Contains("Additional Charges:"))
+                    {
+                        var chargeStr = part.Replace("Additional Charges:", "").Replace("₹", "").Trim();
+                        if (decimal.TryParse(chargeStr, out decimal charge))
+                            totalAdditionalCharges += charge;
+                    }
+                }
+            }
+        }
+
+        decimal netFeeAmount = (totalFee + totalAdditionalCharges) - totalDiscount;
+        decimal remainingBalance = Math.Max(0, netFeeAmount - totalPaid);
+
+        DateTime? dueDate = null;
+        var firstDue = structures.FirstOrDefault(x => x.DueDay > 0);
+        if (firstDue != null)
+            dueDate = new DateTime(paymentData.PaymentDate.Year, paymentData.PaymentDate.Month, 1)
+                          .AddDays(firstDue.DueDay - 1);
+
+        return (dueDate, remainingBalance);
+    }
+
+    // Mirrors the on-screen / "Print Landscape" receipt (Views/Fees/Receipt.cshtml) so the
+    // PDF sent over WhatsApp looks the same as what staff see and print.
+    private IActionResult GenerateReceiptPDF(FeePayment payment, DateTime? dueDate, decimal remainingBalance)
     {
         try
         {
             var fileName = $"Receipt_{payment.ReceiptNo}.pdf";
             var ms = new MemoryStream();
 
-            var doc = new Document(PageSize.A5);
+            var doc = new Document(PageSize.A5.Rotate(), 18, 18, 14, 14);
             PdfWriter.GetInstance(doc, ms);
             doc.Open();
 
-            // Header - School Details
-            var headerFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD);
-            var titleFont = new Font(Font.FontFamily.HELVETICA, 11, Font.BOLD);
-            var normalFont = new Font(Font.FontFamily.HELVETICA, 10);
-            var smallFont = new Font(Font.FontFamily.HELVETICA, 9);
+            var titleFont  = new Font(Font.FontFamily.HELVETICA, 14, Font.BOLD);
+            var boldSmall  = new Font(Font.FontFamily.HELVETICA, 9,  Font.BOLD);
+            var labelFont  = new Font(Font.FontFamily.HELVETICA, 8,  Font.BOLD);
+            var cellFont   = new Font(Font.FontFamily.HELVETICA, 8);
+            var addrFont   = new Font(Font.FontFamily.HELVETICA, 7.5f);
+            var termsFont  = new Font(Font.FontFamily.HELVETICA, 7);
 
-            var schoolName = new Paragraph("Ramjeet Kalavati Educational Institute", headerFont);
-            schoolName.Alignment = Element.ALIGN_CENTER;
-            doc.Add(schoolName);
+            var outer = new PdfPTable(1) { WidthPercentage = 100 };
+            var outerCell = new PdfPCell { Border = Rectangle.BOX_BORDER, Padding = 0 };
 
-            var schoolTag = new Paragraph("RK CLASSES (Since 2002)", titleFont);
-            schoolTag.Alignment = Element.ALIGN_CENTER;
-            doc.Add(schoolTag);
+            // Top label row: "Kapil Sir's" | "SINCE : 2002"
+            var topLabel = new PdfPTable(2) { WidthPercentage = 100 };
+            topLabel.AddCell(new PdfPCell(new Phrase("Kapil Sir's", boldSmall))
+                { Border = Rectangle.BOTTOM_BORDER, Padding = 5 });
+            topLabel.AddCell(new PdfPCell(new Phrase("SINCE : 2002", boldSmall))
+                { Border = Rectangle.BOTTOM_BORDER, Padding = 5, HorizontalAlignment = Element.ALIGN_RIGHT });
+            outerCell.AddElement(topLabel);
 
-            var schoolAddr = new Paragraph("Sakinaka, Mumbai - 400072", smallFont);
-            schoolAddr.Alignment = Element.ALIGN_CENTER;
-            doc.Add(schoolAddr);
+            // Institute name
+            var instName = new Paragraph("RAMJEET KALAVATI EDUCATIONAL INSTITUTE", titleFont)
+                { Alignment = Element.ALIGN_CENTER, SpacingBefore = 5, SpacingAfter = 5 };
+            outerCell.AddElement(instName);
 
-            doc.Add(new Paragraph(" "));
+            // Header row: logos + address | student info
+            var header = new PdfPTable(2) { WidthPercentage = 100 };
+            header.SetWidths(new float[] { 1.6f, 1f });
 
-            // Receipt Details Table
-            var table = new PdfPTable(3);
-            table.WidthPercentage = 100;
+            var leftCell = new PdfPCell { Border = Rectangle.TOP_BORDER | Rectangle.BOTTOM_BORDER, Padding = 8 };
+            try
+            {
+                var logoPath = Path.Combine(env.WebRootPath, "images", "rkBw.png");
+                if (System.IO.File.Exists(logoPath))
+                {
+                    var logo = iTextSharp.text.Image.GetInstance(logoPath);
+                    logo.ScaleToFit(90, 55);
+                    logo.SpacingAfter = 4;
+                    leftCell.AddElement(logo);
+                }
+            }
+            catch { /* logo is decorative — skip if it can't be loaded */ }
+            leftCell.AddElement(new Paragraph(
+                "Shop No. 2, Santosh Society, Krishna Nagar,\n" +
+                "Near Eden School, Kajupada Pipe Line,\n" +
+                "Sakinaka, Mumbai 400072.\n" +
+                "E-Mail: rkclasseskapilsir2002@gmail.com\n" +
+                "Website: www.myrkclasses.com\n" +
+                "Mobile No: 9870375795 / 8108499214", addrFont));
+            header.AddCell(leftCell);
 
-            table.AddCell(new PdfPCell(new Phrase("Fees Receipt (2026-2027)", titleFont)));
-            table.AddCell(new PdfPCell(new Phrase($"Receipt Date: {payment.PaymentDate:dd-MM-yyyy}", normalFont)));
-            table.AddCell(new PdfPCell(new Phrase($"Receipt No.: {payment.ReceiptNo}", normalFont)));
+            var rightCell = new PdfPCell { Border = Rectangle.TOP_BORDER | Rectangle.BOTTOM_BORDER | Rectangle.LEFT_BORDER, Padding = 8 };
+            rightCell.AddElement(new Paragraph((payment.StudentName ?? "—").ToUpper(), boldSmall));
+            rightCell.AddElement(new Paragraph($"Address: {payment.StudentAddress ?? "-"}", cellFont));
+            rightCell.AddElement(new Paragraph($"Contact No.: {payment.FatherPhone ?? payment.StudentPhone ?? "-"}", cellFont));
+            rightCell.AddElement(new Paragraph($"E-Mail: {payment.StudentEmail ?? "-"}", cellFont));
+            header.AddCell(rightCell);
 
-            table.AddCell(new PdfPCell(new Phrase($"Course: {payment.ClassName}", normalFont)));
-            table.AddCell(new PdfPCell(new Phrase($"Stream: {payment.SectionName}", normalFont)));
-            table.AddCell(new PdfPCell(new Phrase($"Batch: {payment.BatchName}", normalFont)));
+            outerCell.AddElement(header);
 
-            var amountCell = new PdfPCell(new Phrase($"Amount Received: ₹{payment.NetAmount:N0}/-", normalFont));
-            amountCell.Colspan = 3;
-            table.AddCell(amountCell);
+            // Receipt details table (same fields as the on-screen receipt)
+            var payYear = payment.PaymentDate.Month >= 4
+                ? $"{payment.PaymentDate.Year}-{payment.PaymentDate.Year + 1}"
+                : $"{payment.PaymentDate.Year - 1}-{payment.PaymentDate.Year}";
+            var amtWords  = AmountInWords(payment.NetAmount) + " Only/-";
+            var isCheque  = payment.PaymentMode == "Cheque" || payment.PaymentMode == "Demand Draft";
+            var isOnline  = payment.PaymentMode == "Online Transfer" || payment.PaymentMode == "UPI";
+            var chequeNo  = isCheque ? (payment.TransactionRef ?? "") : "";
+            var onlineRef = isOnline ? (payment.TransactionRef ?? "") : "";
 
-            var amountWordsCell = new PdfPCell(new Phrase($"Amount (in words): {AmountInWords(payment.NetAmount)} Only/-", smallFont));
-            amountWordsCell.Colspan = 3;
-            table.AddCell(amountWordsCell);
+            PdfPCell Cell(string text, int colspan = 1) =>
+                new PdfPCell(new Phrase(text, cellFont)) { Colspan = colspan, Padding = 5 };
 
-            table.AddCell(new PdfPCell(new Phrase($"Payment Mode: {payment.PaymentMode}", normalFont)));
-            table.AddCell(new PdfPCell(new Phrase("Cheque No.: NA", normalFont)));
-            table.AddCell(new PdfPCell(new Phrase("", normalFont)));
+            var details = new PdfPTable(3) { WidthPercentage = 100 };
+            details.AddCell(new PdfPCell(new Phrase($"Fees Receipt ({payYear})", labelFont)) { Padding = 5 });
+            details.AddCell(Cell($"Receipt Date: {payment.PaymentDate:dd-MM-yyyy}"));
+            details.AddCell(Cell($"Receipt No.: {payment.ReceiptNo}"));
 
-            doc.Add(table);
-            doc.Add(new Paragraph(" "));
+            details.AddCell(Cell($"Course:- {payment.ClassName ?? "—"}"));
+            details.AddCell(Cell($"Stream / Medium:- {payment.SectionName ?? "—"}"));
+            details.AddCell(Cell($"Batch:- {payment.BatchName ?? "—"}"));
 
-            // Student Info
-            var studentInfo = new Paragraph($"Student: {payment.StudentName}\nAdmission No: {payment.AdmissionNo}", normalFont);
-            doc.Add(studentInfo);
+            details.AddCell(Cell($"Amount received:- ₹{payment.NetAmount:N0}/-", 3));
+            details.AddCell(Cell($"Amount received (in words):- {amtWords}", 3));
 
-            doc.Add(new Paragraph(" "));
+            details.AddCell(Cell($"Payment Mode:- {payment.PaymentMode}"));
+            details.AddCell(Cell($"Cheque No.: {(string.IsNullOrWhiteSpace(chequeNo) ? "NA" : chequeNo)}", 2));
 
-            // Terms
-            var termsFont = new Font(Font.FontFamily.HELVETICA, 8);
-            var terms = new Paragraph("Terms & Conditions: This receipt is an acknowledgement of the payment made. This is a computer generated receipt, signature is not required.", termsFont);
-            doc.Add(terms);
+            details.AddCell(Cell($"Cheque Dated:- {(string.IsNullOrWhiteSpace(chequeNo) ? "NA" : "-")}"));
+            details.AddCell(Cell($"Bank Name:- {(string.IsNullOrWhiteSpace(chequeNo) ? "NA" : "-")}", 2));
+
+            details.AddCell(Cell($"IFSC Code:- {(string.IsNullOrWhiteSpace(chequeNo) ? "NA" : "-")}"));
+            details.AddCell(Cell($"Online Tranx. No.:- {(string.IsNullOrWhiteSpace(onlineRef) ? "NA" : onlineRef)}", 2));
+
+            details.AddCell(Cell($"Due Date:- {(dueDate.HasValue ? dueDate.Value.ToString("dd-MM-yyyy") : "Nil")}"));
+            details.AddCell(Cell($"Due fees:- {(remainingBalance > 0 ? "₹" + remainingBalance.ToString("N0") : "Nil")}", 2));
+
+            outerCell.AddElement(details);
+
+            // Terms & conditions
+            var terms = new Paragraph { SpacingBefore = 6 };
+            terms.Add(new Chunk("Term and Conditions:\n", labelFont));
+            terms.Add(new Chunk(
+                "1) This receipt of fees is an acknowledgement of the payment made to\n" +
+                "2) Present this receipt of fees whenever demanded.\n" +
+                "3) Fees once paid is neither refundable nor transferable under any circumstances\n" +
+                "4) This is a computer generated voucher, signature is not required", termsFont));
+            var termsCell = new PdfPCell { Border = Rectangle.TOP_BORDER, Padding = 8 };
+            termsCell.AddElement(terms);
+            var termsTable = new PdfPTable(1) { WidthPercentage = 100 };
+            termsTable.AddCell(termsCell);
+            outerCell.AddElement(termsTable);
+
+            outer.AddCell(outerCell);
+            doc.Add(outer);
 
             doc.Close();
 
@@ -465,15 +583,34 @@ public class FeesController(FeesService svc, LookupService lookup,
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
     [RequireLogin]
     public IActionResult DeletePayment(int id, int? returnStudentId)
     {
-        int uid = HttpContext.Session.GetUserId() ?? 1;
-        svc.DeletePayment(id, uid);
-        TempData["Success"] = "Payment deleted — balance has been reversed.";
-        // If called from Pay page, go back to that student's Pay page
-        if (returnStudentId.HasValue)
-            return RedirectToAction("Pay", new { id = returnStudentId.Value });
-        return RedirectToAction("Summary");
+        try
+        {
+            int? sessionUserId = HttpContext.Session.GetUserId();
+            if (!sessionUserId.HasValue)
+            {
+                TempData["Error"] = "Your session has expired. Please login again.";
+                return RedirectToAction("Login", "Auth");
+            }
+            int uid = sessionUserId.Value;
+
+            svc.DeletePayment(id, uid);
+            TempData["Success"] = "Payment deleted — balance has been reversed.";
+            // If called from Pay page, go back to that student's Pay page
+            if (returnStudentId.HasValue)
+                return RedirectToAction("Pay", new { id = returnStudentId.Value });
+            return RedirectToAction("Summary");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DeletePayment Error] PaymentId={id}, Error: {ex.Message}");
+            TempData["Error"] = "Error deleting payment: " + ex.Message;
+            if (returnStudentId.HasValue)
+                return RedirectToAction("Pay", new { id = returnStudentId.Value });
+            return RedirectToAction("Summary");
+        }
     }
 }
