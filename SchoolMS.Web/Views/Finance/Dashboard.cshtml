@@ -36,17 +36,17 @@ body { background: #f5f7fa; }
 
 .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
     margin-bottom: 40px;
 }
 
 .card {
     background: white;
-    border-radius: 8px;
-    padding: 28px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border-left: 5px solid #667eea;
+    border-radius: 6px;
+    padding: 18px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    border-left: 4px solid #667eea;
     transition: transform 0.3s, box-shadow 0.3s;
 }
 
@@ -63,72 +63,36 @@ body { background: #f5f7fa; }
 .card.collection-rate { border-left-color: #17a2b8; }
 
 .card-label {
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 600;
     color: #6b7280;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 12px;
+    letter-spacing: 0.3px;
+    margin-bottom: 8px;
 }
 
 .card-value {
-    font-size: 36px;
+    font-size: 26px;
     font-weight: 800;
     color: #1f2937;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 .card-value.rupee:before {
     content: "₹";
-    font-size: 24px;
-    margin-right: 4px;
+    font-size: 18px;
+    margin-right: 2px;
 }
 
 .card-subtext {
-    font-size: 12px;
+    font-size: 10px;
     color: #9ca3af;
 }
 
 .icon {
-    font-size: 32px;
-    margin-bottom: 10px;
+    font-size: 24px;
+    margin-bottom: 6px;
     opacity: 0.8;
-}
-
-.summary-section {
-    background: white;
-    padding: 28px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.summary-section h3 {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 20px;
-    color: #1f2937;
-}
-
-.summary-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 16px 0;
-    border-bottom: 1px solid #e5e7eb;
-    font-size: 15px;
-}
-
-.summary-row:last-child {
-    border-bottom: none;
-}
-
-.summary-label {
-    color: #6b7280;
-    font-weight: 500;
-}
-
-.summary-value {
-    color: #1f2937;
-    font-weight: 700;
 }
 
 .progress-bar {
@@ -196,29 +160,5 @@ body { background: #f5f7fa; }
         <div class="progress-bar">
             <div class="progress-fill" style="width: @ViewBag.CollectionPercentage%"></div>
         </div>
-    </div>
-</div>
-
-<div class="summary-section">
-    <h3>📈 Financial Summary</h3>
-    <div class="summary-row">
-        <span class="summary-label">Total Fee Amount (All Students)</span>
-        <span class="summary-value">₹@ViewBag.TotalFees.ToString("N0")</span>
-    </div>
-    <div class="summary-row">
-        <span class="summary-label">Fees Collected</span>
-        <span class="summary-value">₹@ViewBag.TotalCollected.ToString("N0")</span>
-    </div>
-    <div class="summary-row">
-        <span class="summary-label">Discounts Provided</span>
-        <span class="summary-value">₹@ViewBag.TotalDiscount.ToString("N0")</span>
-    </div>
-    <div class="summary-row">
-        <span class="summary-label">Outstanding Balance</span>
-        <span class="summary-value" style="color: #dc3545;">₹@ViewBag.TotalBalance.ToString("N0")</span>
-    </div>
-    <div class="summary-row">
-        <span class="summary-label">Collection Percentage</span>
-        <span class="summary-value">@ViewBag.CollectionPercentage%</span>
     </div>
 </div>
