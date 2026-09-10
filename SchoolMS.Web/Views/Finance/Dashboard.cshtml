@@ -1,6 +1,5 @@
 @{
     ViewData["Title"] = "Finance Dashboard";
-    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 @if (!string.IsNullOrEmpty(ViewBag.Error))
@@ -10,136 +9,45 @@
     </div>
 }
 
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #f5f7fa; }
-
-.dashboard-header {
-    color: #333;
-    padding: 30px 0;
-    margin-bottom: 20px;
-}
-
-.dashboard-header h1 {
-    font-size: 28px;
-    font-weight: 700;
-    margin-bottom: 5px;
-}
-
-.dashboard-header p {
-    font-size: 13px;
-    color: #666;
-    opacity: 0.9;
-}
-
-.cards-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 16px;
-    padding: 10px 0;
-}
-
-.card {
-    background: white;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 12px;
-    border-top: 4px solid #ddd;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
-.card.border-green { border-top-color: #10b981; }
-.card.border-red { border-top-color: #ef4444; }
-.card.border-orange { border-top-color: #f97316; }
-.card.border-teal { border-top-color: #14b8a6; }
-
-.card-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-}
-
-.card-icon.blue { background: #dbeafe; }
-.card-icon.green { background: #dcfce7; }
-.card-icon.purple { background: #f3e8ff; }
-.card-icon.teal { background: #ccf7f3; }
-.card-icon.orange { background: #fed7aa; }
-.card-icon.pink { background: #fce7f3; }
-
-.card-value {
-    font-size: 28px;
-    font-weight: 800;
-    color: #1f2937;
-}
-
-.card-value.rupee:before {
-    content: "₹";
-    font-size: 20px;
-    margin-right: 2px;
-}
-
-.card-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: #666;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-}
-</style>
-
-<div class="dashboard-header">
+<div class="pg-hdr">
     <h1>💰 Finance Dashboard</h1>
     <p>Overall fees collection and financial overview for all students</p>
 </div>
 
-<div class="cards-container">
-    <div class="card border-teal">
-        <div class="card-icon teal">👥</div>
-        <div class="card-value">@ViewBag.TotalStudents</div>
-        <div class="card-label">Total Students</div>
+<div class="kpi-grid">
+    <div class="kpi green">
+        <div class="kpi-ico green">👥</div>
+        <div class="kpi-val">@ViewBag.TotalStudents</div>
+        <div class="kpi-lbl">Total Students</div>
     </div>
 
-    <div class="card border-green">
-        <div class="card-icon green">💳</div>
-        <div class="card-value rupee">@ViewBag.TotalFees.ToString("N0")</div>
-        <div class="card-label">Total Fees</div>
+    <div class="kpi teal">
+        <div class="kpi-ico teal">💳</div>
+        <div class="kpi-val">@ViewBag.TotalFees.ToString("N0")</div>
+        <div class="kpi-lbl">Total Fees</div>
     </div>
 
-    <div class="card border-green">
-        <div class="card-icon green">✅</div>
-        <div class="card-value rupee">@ViewBag.TotalCollected.ToString("N0")</div>
-        <div class="card-label">Collected Fees</div>
+    <div class="kpi indigo">
+        <div class="kpi-ico indigo">✅</div>
+        <div class="kpi-val">@ViewBag.TotalCollected.ToString("N0")</div>
+        <div class="kpi-lbl">Collected Fees</div>
     </div>
 
-    <div class="card border-orange">
-        <div class="card-icon orange">🎁</div>
-        <div class="card-value rupee">@ViewBag.TotalDiscount.ToString("N0")</div>
-        <div class="card-label">Discount</div>
+    <div class="kpi amber">
+        <div class="kpi-ico amber">🎁</div>
+        <div class="kpi-val">@ViewBag.TotalDiscount.ToString("N0")</div>
+        <div class="kpi-lbl">Discount</div>
     </div>
 
-    <div class="card border-red">
-        <div class="card-icon orange">⚠️</div>
-        <div class="card-value rupee">@ViewBag.TotalBalance.ToString("N0")</div>
-        <div class="card-label">Balance Due</div>
+    <div class="kpi red">
+        <div class="kpi-ico red">⚠️</div>
+        <div class="kpi-val">@ViewBag.TotalBalance.ToString("N0")</div>
+        <div class="kpi-lbl">Balance Due</div>
     </div>
 
-    <div class="card border-teal">
-        <div class="card-icon teal">📊</div>
-        <div class="card-value">@ViewBag.CollectionPercentage%</div>
-        <div class="card-label">Collection Rate</div>
+    <div class="kpi pink">
+        <div class="kpi-ico pink">📊</div>
+        <div class="kpi-val">@ViewBag.CollectionPercentage%</div>
+        <div class="kpi-lbl">Collection Rate</div>
     </div>
 </div>
