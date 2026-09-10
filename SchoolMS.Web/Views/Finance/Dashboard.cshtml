@@ -33,44 +33,35 @@ body { background: #f5f7fa; }
 }
 
 .cards-container {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 16px;
-    overflow-x: auto;
     padding: 10px 0;
-    scroll-behavior: smooth;
-}
-
-.cards-container::-webkit-scrollbar {
-    height: 6px;
-}
-
-.cards-container::-webkit-scrollbar-track {
-    background: #f0f0f0;
-    border-radius: 3px;
-}
-
-.cards-container::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 3px;
 }
 
 .card {
     background: white;
     border-radius: 12px;
-    padding: 18px;
+    padding: 24px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 14px;
-    min-width: 220px;
+    text-align: center;
+    gap: 12px;
+    border-top: 4px solid #ddd;
     transition: transform 0.2s, box-shadow 0.2s;
-    flex-shrink: 0;
 }
 
 .card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
+
+.card.border-green { border-top-color: #10b981; }
+.card.border-red { border-top-color: #ef4444; }
+.card.border-orange { border-top-color: #f97316; }
+.card.border-teal { border-top-color: #14b8a6; }
 
 .card-icon {
     width: 56px;
@@ -80,39 +71,33 @@ body { background: #f5f7fa; }
     align-items: center;
     justify-content: center;
     font-size: 28px;
-    flex-shrink: 0;
 }
 
-.card-icon.blue { background: #3b82f6; }
-.card-icon.green { background: #10b981; }
-.card-icon.purple { background: #8b5cf6; }
-.card-icon.teal { background: #14b8a6; }
-.card-icon.orange { background: #f97316; }
-.card-icon.pink { background: #ec4899; }
-
-.card-content {
-    flex: 1;
-}
+.card-icon.blue { background: #dbeafe; }
+.card-icon.green { background: #dcfce7; }
+.card-icon.purple { background: #f3e8ff; }
+.card-icon.teal { background: #ccf7f3; }
+.card-icon.orange { background: #fed7aa; }
+.card-icon.pink { background: #fce7f3; }
 
 .card-value {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 800;
     color: #1f2937;
-    margin-bottom: 4px;
 }
 
 .card-value.rupee:before {
     content: "₹";
-    font-size: 18px;
+    font-size: 20px;
     margin-right: 2px;
 }
 
 .card-label {
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
     color: #666;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.4px;
 }
 </style>
 
@@ -122,51 +107,39 @@ body { background: #f5f7fa; }
 </div>
 
 <div class="cards-container">
-    <div class="card">
-        <div class="card-icon blue">👥</div>
-        <div class="card-content">
-            <div class="card-value">@ViewBag.TotalStudents</div>
-            <div class="card-label">Total Students</div>
-        </div>
+    <div class="card border-teal">
+        <div class="card-icon teal">👥</div>
+        <div class="card-value">@ViewBag.TotalStudents</div>
+        <div class="card-label">Total Students</div>
     </div>
 
-    <div class="card">
+    <div class="card border-green">
         <div class="card-icon green">💳</div>
-        <div class="card-content">
-            <div class="card-value rupee">@ViewBag.TotalFees.ToString("N0")</div>
-            <div class="card-label">Total Fees</div>
-        </div>
+        <div class="card-value rupee">@ViewBag.TotalFees.ToString("N0")</div>
+        <div class="card-label">Total Fees</div>
     </div>
 
-    <div class="card">
-        <div class="card-icon purple">✅</div>
-        <div class="card-content">
-            <div class="card-value rupee">@ViewBag.TotalCollected.ToString("N0")</div>
-            <div class="card-label">Collected</div>
-        </div>
+    <div class="card border-green">
+        <div class="card-icon green">✅</div>
+        <div class="card-value rupee">@ViewBag.TotalCollected.ToString("N0")</div>
+        <div class="card-label">Collected Fees</div>
     </div>
 
-    <div class="card">
-        <div class="card-icon teal">🎁</div>
-        <div class="card-content">
-            <div class="card-value rupee">@ViewBag.TotalDiscount.ToString("N0")</div>
-            <div class="card-label">Discount</div>
-        </div>
+    <div class="card border-orange">
+        <div class="card-icon orange">🎁</div>
+        <div class="card-value rupee">@ViewBag.TotalDiscount.ToString("N0")</div>
+        <div class="card-label">Discount</div>
     </div>
 
-    <div class="card">
+    <div class="card border-red">
         <div class="card-icon orange">⚠️</div>
-        <div class="card-content">
-            <div class="card-value rupee">@ViewBag.TotalBalance.ToString("N0")</div>
-            <div class="card-label">Balance Due</div>
-        </div>
+        <div class="card-value rupee">@ViewBag.TotalBalance.ToString("N0")</div>
+        <div class="card-label">Balance Due</div>
     </div>
 
-    <div class="card">
-        <div class="card-icon pink">📊</div>
-        <div class="card-content">
-            <div class="card-value">@ViewBag.CollectionPercentage%</div>
-            <div class="card-label">Collection Rate</div>
-        </div>
+    <div class="card border-teal">
+        <div class="card-icon teal">📊</div>
+        <div class="card-value">@ViewBag.CollectionPercentage%</div>
+        <div class="card-label">Collection Rate</div>
     </div>
 </div>
