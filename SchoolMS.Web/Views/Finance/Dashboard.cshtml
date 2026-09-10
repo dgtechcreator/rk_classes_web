@@ -15,64 +15,87 @@
 body { background: #f5f7fa; }
 
 .dashboard-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 40px 20px;
-    margin-bottom: 30px;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    color: #333;
+    padding: 30px 0;
+    margin-bottom: 20px;
 }
 
 .dashboard-header h1 {
-    font-size: 32px;
+    font-size: 28px;
     font-weight: 700;
     margin-bottom: 5px;
 }
 
 .dashboard-header p {
-    font-size: 14px;
-    opacity: 0.95;
+    font-size: 13px;
+    color: #666;
+    opacity: 0.9;
 }
 
-.cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+.cards-container {
+    display: flex;
     gap: 16px;
-    margin-bottom: 40px;
+    overflow-x: auto;
+    padding: 10px 0;
+    scroll-behavior: smooth;
+}
+
+.cards-container::-webkit-scrollbar {
+    height: 6px;
+}
+
+.cards-container::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 3px;
+}
+
+.cards-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
 }
 
 .card {
     background: white;
-    border-radius: 6px;
+    border-radius: 12px;
     padding: 18px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-    border-left: 4px solid #667eea;
-    transition: transform 0.3s, box-shadow 0.3s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 220px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    flex-shrink: 0;
 }
 
 .card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
-.card.total-students { border-left-color: #667eea; }
-.card.total-fees { border-left-color: #00b4db; }
-.card.collected { border-left-color: #28a745; }
-.card.discount { border-left-color: #ffc107; }
-.card.balance { border-left-color: #dc3545; }
-.card.collection-rate { border-left-color: #17a2b8; }
+.card-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+}
 
-.card-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-bottom: 8px;
+.card-icon.blue { background: #3b82f6; }
+.card-icon.green { background: #10b981; }
+.card-icon.purple { background: #8b5cf6; }
+.card-icon.teal { background: #14b8a6; }
+.card-icon.orange { background: #f97316; }
+.card-icon.pink { background: #ec4899; }
+
+.card-content {
+    flex: 1;
 }
 
 .card-value {
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 800;
     color: #1f2937;
     margin-bottom: 4px;
@@ -84,31 +107,12 @@ body { background: #f5f7fa; }
     margin-right: 2px;
 }
 
-.card-subtext {
-    font-size: 10px;
-    color: #9ca3af;
-}
-
-.icon {
-    font-size: 24px;
-    margin-bottom: 6px;
-    opacity: 0.8;
-}
-
-.progress-bar {
-    width: 100%;
-    height: 8px;
-    background: #e5e7eb;
-    border-radius: 4px;
-    overflow: hidden;
-    margin-top: 12px;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #667eea, #764ba2);
-    border-radius: 4px;
-    transition: width 0.3s ease;
+.card-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 </style>
 
@@ -117,48 +121,52 @@ body { background: #f5f7fa; }
     <p>Overall fees collection and financial overview for all students</p>
 </div>
 
-<div class="cards-grid">
-    <div class="card total-students">
-        <div class="icon">👥</div>
-        <div class="card-label">Total Students</div>
-        <div class="card-value">@ViewBag.TotalStudents</div>
-        <div class="card-subtext">Active students this year</div>
+<div class="cards-container">
+    <div class="card">
+        <div class="card-icon blue">👥</div>
+        <div class="card-content">
+            <div class="card-value">@ViewBag.TotalStudents</div>
+            <div class="card-label">Total Students</div>
+        </div>
     </div>
 
-    <div class="card total-fees">
-        <div class="icon">💳</div>
-        <div class="card-label">Total Fees</div>
-        <div class="card-value rupee">@ViewBag.TotalFees.ToString("N0")</div>
-        <div class="card-subtext">Overall fee structure amount</div>
+    <div class="card">
+        <div class="card-icon green">💳</div>
+        <div class="card-content">
+            <div class="card-value rupee">@ViewBag.TotalFees.ToString("N0")</div>
+            <div class="card-label">Total Fees</div>
+        </div>
     </div>
 
-    <div class="card collected">
-        <div class="icon">✅</div>
-        <div class="card-label">Collected Fees</div>
-        <div class="card-value rupee">@ViewBag.TotalCollected.ToString("N0")</div>
-        <div class="card-subtext">Amount received so far</div>
+    <div class="card">
+        <div class="card-icon purple">✅</div>
+        <div class="card-content">
+            <div class="card-value rupee">@ViewBag.TotalCollected.ToString("N0")</div>
+            <div class="card-label">Collected</div>
+        </div>
     </div>
 
-    <div class="card discount">
-        <div class="icon">🎁</div>
-        <div class="card-label">Total Discount</div>
-        <div class="card-value rupee">@ViewBag.TotalDiscount.ToString("N0")</div>
-        <div class="card-subtext">Discounts given</div>
+    <div class="card">
+        <div class="card-icon teal">🎁</div>
+        <div class="card-content">
+            <div class="card-value rupee">@ViewBag.TotalDiscount.ToString("N0")</div>
+            <div class="card-label">Discount</div>
+        </div>
     </div>
 
-    <div class="card balance">
-        <div class="icon">⚠️</div>
-        <div class="card-label">Balance Due</div>
-        <div class="card-value rupee">@ViewBag.TotalBalance.ToString("N0")</div>
-        <div class="card-subtext">Pending collection</div>
+    <div class="card">
+        <div class="card-icon orange">⚠️</div>
+        <div class="card-content">
+            <div class="card-value rupee">@ViewBag.TotalBalance.ToString("N0")</div>
+            <div class="card-label">Balance Due</div>
+        </div>
     </div>
 
-    <div class="card collection-rate">
-        <div class="icon">📊</div>
-        <div class="card-label">Collection Rate</div>
-        <div class="card-value">@ViewBag.CollectionPercentage%</div>
-        <div class="progress-bar">
-            <div class="progress-fill" style="width: @ViewBag.CollectionPercentage%"></div>
+    <div class="card">
+        <div class="card-icon pink">📊</div>
+        <div class="card-content">
+            <div class="card-value">@ViewBag.CollectionPercentage%</div>
+            <div class="card-label">Collection Rate</div>
         </div>
     </div>
 </div>
