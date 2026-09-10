@@ -122,3 +122,18 @@ public class RequireAdminOrParentAttribute : ActionFilterAttribute
         }
     }
 }
+
+// ── Finance Dashboard — Only for user ID 10 (Sunil) ──────────────────────────────
+public class RequireFinanceAdminAttribute : ActionFilterAttribute
+{
+    public override void OnActionExecuting(ActionExecutingContext ctx)
+    {
+        var userId = ctx.HttpContext.Session.GetInt32("UserId");
+
+        if (userId != 10)
+        {
+            ctx.Result = new RedirectToActionResult("Index", "Dashboard",
+                new { msg = "access_denied" });
+        }
+    }
+}

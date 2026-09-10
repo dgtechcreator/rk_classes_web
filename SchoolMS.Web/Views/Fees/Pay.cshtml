@@ -285,28 +285,7 @@
                         <td colspan="3" style="padding:8px 12px;font-weight:700;color:#15803d;">Total Paid</td>
                         <td style="padding:8px 12px;text-align:right;font-weight:800;color:#15803d;font-size:15px;">₹@Model.TotalPaid.ToString("N0")</td>
                         <td colspan="4" style="padding:8px 12px;font-weight:700;color:#dc2626;">
-                            Balance Due: <span id="balanceDueFooter">₹@{
-                                decimal additionalCharges = 0;
-                                foreach (var p in Model.PaymentHistory)
-                                {
-                                    if (!string.IsNullOrEmpty(p.Remarks) && p.Remarks.Contains("Additional Charges:"))
-                                    {
-                                        var parts = p.Remarks.Split("|");
-                                        foreach (var part in parts)
-                                        {
-                                            if (part.Contains("Additional Charges:"))
-                                            {
-                                                var chargeStr = part.Replace("Additional Charges:", "").Replace("₹", "").Trim();
-                                                if (decimal.TryParse(chargeStr, out decimal charge))
-                                                    additionalCharges += charge;
-                                            }
-                                        }
-                                    }
-                                }
-                                decimal totalWithAdditional = Model.ActualFee + additionalCharges;
-                                decimal balanceDue = Math.Max(0, totalWithAdditional - Model.ExistingDiscount - Model.TotalPaid);
-                                <text>@balanceDue.ToString("N0")</text>
-                            }</span>
+                            Balance Due:  ₹ @Model.Balance.ToString("N0")
                         </td>
                     </tr>
                 </tfoot>
@@ -317,6 +296,7 @@
     <!-- Payment Form -->
     <div class="fp-panel">
         <form method="post" action="/Fees/SavePay">
+            @Html.AntiForgeryToken()
             <input type="hidden" name="studentId" value="@Model.Student.StudentId" />
 
             <div class="fp-grid">

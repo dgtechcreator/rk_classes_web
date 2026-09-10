@@ -1,0 +1,217 @@
+@{
+    ViewData["Title"] = "Finance Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #f5f7fa; }
+
+.dashboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px 20px;
+    margin-bottom: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.dashboard-header p {
+    font-size: 14px;
+    opacity: 0.95;
+}
+
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+.card {
+    background: white;
+    border-radius: 8px;
+    padding: 28px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-left: 5px solid #667eea;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+.card.total-students { border-left-color: #667eea; }
+.card.total-fees { border-left-color: #00b4db; }
+.card.collected { border-left-color: #28a745; }
+.card.discount { border-left-color: #ffc107; }
+.card.balance { border-left-color: #dc3545; }
+.card.collection-rate { border-left-color: #17a2b8; }
+
+.card-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.card-value {
+    font-size: 36px;
+    font-weight: 800;
+    color: #1f2937;
+    margin-bottom: 8px;
+}
+
+.card-value.rupee:before {
+    content: "₹";
+    font-size: 24px;
+    margin-right: 4px;
+}
+
+.card-subtext {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+.icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+    opacity: 0.8;
+}
+
+.summary-section {
+    background: white;
+    padding: 28px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.summary-section h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #1f2937;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 15px;
+}
+
+.summary-row:last-child {
+    border-bottom: none;
+}
+
+.summary-label {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.summary-value {
+    color: #1f2937;
+    font-weight: 700;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 12px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+</style>
+
+<div class="dashboard-header">
+    <h1>💰 Finance Dashboard</h1>
+    <p>Overall fees collection and financial overview for all students</p>
+</div>
+
+<div class="cards-grid">
+    <div class="card total-students">
+        <div class="icon">👥</div>
+        <div class="card-label">Total Students</div>
+        <div class="card-value">@ViewBag.TotalStudents</div>
+        <div class="card-subtext">Active students this year</div>
+    </div>
+
+    <div class="card total-fees">
+        <div class="icon">💳</div>
+        <div class="card-label">Total Fees</div>
+        <div class="card-value rupee">@ViewBag.TotalFees.ToString("N0")</div>
+        <div class="card-subtext">Overall fee structure amount</div>
+    </div>
+
+    <div class="card collected">
+        <div class="icon">✅</div>
+        <div class="card-label">Collected Fees</div>
+        <div class="card-value rupee">@ViewBag.TotalCollected.ToString("N0")</div>
+        <div class="card-subtext">Amount received so far</div>
+    </div>
+
+    <div class="card discount">
+        <div class="icon">🎁</div>
+        <div class="card-label">Total Discount</div>
+        <div class="card-value rupee">@ViewBag.TotalDiscount.ToString("N0")</div>
+        <div class="card-subtext">Discounts given</div>
+    </div>
+
+    <div class="card balance">
+        <div class="icon">⚠️</div>
+        <div class="card-label">Balance Due</div>
+        <div class="card-value rupee">@ViewBag.TotalBalance.ToString("N0")</div>
+        <div class="card-subtext">Pending collection</div>
+    </div>
+
+    <div class="card collection-rate">
+        <div class="icon">📊</div>
+        <div class="card-label">Collection Rate</div>
+        <div class="card-value">@ViewBag.CollectionPercentage%</div>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: @ViewBag.CollectionPercentage%"></div>
+        </div>
+    </div>
+</div>
+
+<div class="summary-section">
+    <h3>📈 Financial Summary</h3>
+    <div class="summary-row">
+        <span class="summary-label">Total Fee Amount (All Students)</span>
+        <span class="summary-value">₹@ViewBag.TotalFees.ToString("N0")</span>
+    </div>
+    <div class="summary-row">
+        <span class="summary-label">Fees Collected</span>
+        <span class="summary-value">₹@ViewBag.TotalCollected.ToString("N0")</span>
+    </div>
+    <div class="summary-row">
+        <span class="summary-label">Discounts Provided</span>
+        <span class="summary-value">₹@ViewBag.TotalDiscount.ToString("N0")</span>
+    </div>
+    <div class="summary-row">
+        <span class="summary-label">Outstanding Balance</span>
+        <span class="summary-value" style="color: #dc3545;">₹@ViewBag.TotalBalance.ToString("N0")</span>
+    </div>
+    <div class="summary-row">
+        <span class="summary-label">Collection Percentage</span>
+        <span class="summary-value">@ViewBag.CollectionPercentage%</span>
+    </div>
+</div>

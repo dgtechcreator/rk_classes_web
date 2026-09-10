@@ -127,11 +127,11 @@
 </div>
 
 <div class="kpi-grid">
-    <div class="kpi purple">
+    @* <div class="kpi purple">
         <div class="kpi-ico purple"><i class="fas fa-users"></i></div>
         <div class="kpi-val">@Model.TotalStudents</div>
         <div class="kpi-lbl">Total Students</div>
-    </div>
+    </div> *@
     <div class="kpi green">
         <div class="kpi-ico green"><i class="fas fa-check-circle"></i></div>
         <div class="kpi-val">@Model.PresentToday</div>
@@ -147,7 +147,7 @@
         <div class="kpi-val">@Model.NewToday</div>
         <div class="kpi-lbl">New Admissions Today</div>
     </div>
-    <div class="kpi indigo" onclick="openFeesPopup()" style="cursor:pointer;">
+  @*   <div class="kpi indigo" onclick="openFeesPopup()" style="cursor:pointer;">
         <div class="kpi-ico indigo"><i class="fas fa-rupee-sign"></i></div>
         <div class="kpi-val">₹@Model.FeesThisMonth.ToString("N0")</div>
         <div class="kpi-lbl">Fees This Month <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
@@ -156,7 +156,7 @@
         <div class="kpi-ico pink"><i class="fas fa-receipt"></i></div>
         <div class="kpi-val">₹@Model.ExpensesThisMonth.ToString("N0")</div>
         <div class="kpi-lbl">Expenses This Month</div>
-    </div>
+    </div> *@
     <div class="kpi teal">
         <div class="kpi-ico teal"><i class="fas fa-chalkboard-teacher"></i></div>
         <div class="kpi-val">@Model.TotalStaff</div>
@@ -227,7 +227,7 @@
 </div>
 
 <!-- Overall Fees Summary -->
-@{
+@* @{
     var overallFees = (SchoolMS.Domain.OverallFeesSummary)ViewBag.OverallFeesSummary ??
         new SchoolMS.Domain.OverallFeesSummary { TotalFeesOwed = 0, TotalCollected = 0, TotalDiscount = 0, Balance = 0 };
 }
@@ -264,7 +264,7 @@
             <div class="kpi-lbl">Balance Due</div>
         </div>
     </div>
-</div>
+</div> *@
 
 <!-- Fixed Contact Footer -->
 <div class="contact-footer" style="flex-wrap:nowrap;overflow-x:auto;">
