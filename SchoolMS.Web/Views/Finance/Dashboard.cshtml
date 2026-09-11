@@ -76,9 +76,9 @@
                             <td>@row.ClassName</td>
                             <td>@row.BatchName</td>
                             <td style="text-align: center; font-weight: 600;">@row.StudentCount</td>
-                            <td style="text-align: right;">₹@((decimal)row.EstimatedCollected).ToString("N0")</td>
-                            <td style="text-align: right;">₹@((decimal)row.EstimatedDiscount).ToString("N0")</td>
-                            <td style="text-align: right; font-weight: 600;">₹@((decimal)row.TotalFees).ToString("N0")</td>
+                            <td style="text-align: right;">₹@row.EstimatedCollected.ToString("N0")</td>
+                            <td style="text-align: right;">₹@row.EstimatedDiscount.ToString("N0")</td>
+                            <td style="text-align: right; font-weight: 600;">₹@row.TotalFees.ToString("N0")</td>
                         </tr>
                     }
                 }
