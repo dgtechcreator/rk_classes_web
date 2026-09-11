@@ -41,11 +41,11 @@
                         <td style="padding: 12px 0; color: #6b7280; font-size: 14px;"><strong>Rate:</strong></td>
                         <td style="padding: 12px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">₹@p.Rate.ToString("N0")</td>
                     </tr>
-                    @if (p.Quantity.HasValue)
+                    @if (p.Quantity != null && (decimal)p.Quantity > 0)
                     {
                         <tr style="border-bottom: 1px solid #e5e7eb;">
                             <td style="padding: 12px 0; color: #6b7280; font-size: 14px;"><strong>Quantity:</strong></td>
-                            <td style="padding: 12px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">@p.Quantity.Value.ToString("N1")</td>
+                            <td style="padding: 12px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">@((decimal)p.Quantity).ToString("N1")</td>
                         </tr>
                     }
                     <tr style="border-bottom: 1px solid #e5e7eb;">
