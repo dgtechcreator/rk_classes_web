@@ -86,7 +86,7 @@ public class TeacherPaymentRepo(CommonConnectivity db)
             WHERE TeacherPaymentId = {paymentId}
         ";
 
-        db.Exec(query);
+        db.Sql(query, r => true);
     }
 
     public void Delete(int paymentId, int deletedBy)
@@ -97,7 +97,7 @@ public class TeacherPaymentRepo(CommonConnectivity db)
             WHERE TeacherPaymentId = {paymentId}
         ";
 
-        db.Exec(query);
+        db.Sql(query, r => true);
     }
 
     private string GenerateReceiptNo()
