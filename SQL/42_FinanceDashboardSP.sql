@@ -98,6 +98,9 @@ BEGIN
     WHERE s.Status = 'Active'
       AND s.AcademicYearId = @AcademicYearId
     GROUP BY c.ClassId, c.ClassName, b.BatchId, b.BatchName, b.SequenceNo
-    ORDER BY c.ClassId, ISNULL(b.SequenceNo, 0), b.BatchName;
+    ORDER BY
+        CAST(LEFT(c.ClassName, CHARINDEX(' ', c.ClassName + ' ') - 1) AS INT),
+        ISNULL(b.SequenceNo, 0),
+        b.BatchName;
 END
 GO
