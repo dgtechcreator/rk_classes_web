@@ -44,6 +44,7 @@ public class FinanceAcademicBreakdown
     public decimal TotalFees{get;set;}
     public decimal EstimatedCollected{get;set;}
     public decimal EstimatedDiscount{get;set;}
+    public int? SequenceNo{get;set;}
 
     public int ClassOrder
     {

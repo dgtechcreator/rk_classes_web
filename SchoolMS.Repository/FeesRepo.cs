@@ -219,7 +219,10 @@ public class FeesRepo(CommonConnectivity db)
             MapAcademicData
         );
 
-        return data.OrderBy(x => x.ClassOrder).ThenBy(x => x.BatchName).ToList();
+        return data.OrderBy(x => x.ClassOrder)
+                   .ThenBy(x => x.SequenceNo ?? 999)
+                   .ThenBy(x => x.BatchName)
+                   .ToList();
     }
 
     static FinanceAcademicBreakdown MapAcademicData(SqlDataReader r) => new()
@@ -229,6 +232,7 @@ public class FeesRepo(CommonConnectivity db)
         StudentCount = G.G<int>(r, "StudentCount"),
         TotalFees = G.G<decimal>(r, "TotalFees"),
         EstimatedCollected = G.G<decimal>(r, "EstimatedCollected"),
-        EstimatedDiscount = G.G<decimal>(r, "EstimatedDiscount")
+        EstimatedDiscount = G.G<decimal>(r, "EstimatedDiscount"),
+        SequenceNo = G.G<int?>(r, "SequenceNo")
     };
 }
