@@ -213,11 +213,13 @@ public class FeesRepo(CommonConnectivity db)
 
     public List<FinanceAcademicBreakdown> GetFinanceDashboardAcademic(int? yearId = null)
     {
-        return db.Read(
+        var data = db.Read(
             "sp_GetFinanceDashboardAcademic",
             new() { { "@AcademicYearId", (object?)yearId ?? DBNull.Value } },
             MapAcademicData
         );
+
+        return data.OrderBy(x => x.ClassOrder).ThenBy(x => x.BatchName).ToList();
     }
 
     static FinanceAcademicBreakdown MapAcademicData(SqlDataReader r) => new()
