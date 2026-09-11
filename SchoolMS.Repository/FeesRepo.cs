@@ -188,4 +188,41 @@ public class FeesRepo(CommonConnectivity db)
         DeletedAt      = G.G<DateTime?>(r,"DeletedAt"),
         DeletedByName  = G.G<string>(r,"DeletedByName")
     };
+
+    public (int TotalStudents, decimal TotalFees, decimal TotalCollected, decimal TotalDiscount, decimal TotalBalance, decimal CollectionPercentage) GetFinanceDashboardSummary(int? yearId = null)
+    {
+        var reader = db.ExecReader("sp_GetFinanceDashboardSummary", new() { { "@AcademicYearId", (object?)yearId ?? DBNull.Value } });
+        if (reader.Read())
+        {
+            return (
+                TotalStudents: G.G<int>(reader, "TotalStudents"),
+                TotalFees: G.G<decimal>(reader, "TotalFees"),
+                TotalCollected: G.G<decimal>(reader, "TotalCollected"),
+                TotalDiscount: G.G<decimal>(reader, "TotalDiscount"),
+                TotalBalance: G.G<decimal>(reader, "TotalBalance"),
+                CollectionPercentage: G.G<decimal>(reader, "CollectionPercentage")
+            );
+        }
+        return (0, 0, 0, 0, 0, 0);
+    }
+
+    public List<dynamic> GetFinanceDashboardAcademic(int? yearId = null)
+    {
+        var data = new List<dynamic>();
+        var reader = db.ExecReader("sp_GetFinanceDashboardSummary", new() { { "@AcademicYearId", (object?)yearId ?? DBNull.Value } });
+        reader.NextResult(); // Skip first result set (summary)
+        while (reader.Read())
+        {
+            data.Add(new
+            {
+                ClassName = G.G<string>(reader, "ClassName"),
+                BatchName = G.G<string>(reader, "BatchName"),
+                StudentCount = G.G<int>(reader, "StudentCount"),
+                TotalFees = G.G<decimal>(reader, "TotalFees"),
+                EstimatedCollected = G.G<decimal>(reader, "EstimatedCollected"),
+                EstimatedDiscount = G.G<decimal>(reader, "EstimatedDiscount")
+            });
+        }
+        return data;
+    }
 }

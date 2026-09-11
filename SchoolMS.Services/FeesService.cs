@@ -23,4 +23,10 @@ public class FeesService(FeesRepo repo)
 
     public decimal GetTotalAdditionalCharges()
         => repo.GetTotalAdditionalCharges();
+
+    public (int TotalStudents, decimal TotalFees, decimal TotalCollected, decimal TotalDiscount, decimal TotalBalance, decimal CollectionPercentage) GetFinanceDashboardSummary(int? yearId = null)
+        => repo.GetFinanceDashboardSummary(yearId);
+
+    public List<dynamic> GetFinanceDashboardAcademic(int? yearId = null)
+        => repo.GetFinanceDashboardAcademic(yearId);
 }
