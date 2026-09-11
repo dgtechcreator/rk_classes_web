@@ -213,10 +213,13 @@ public class FeesRepo(CommonConnectivity db)
 
     public List<dynamic> GetFinanceDashboardAcademic(int? yearId = null)
     {
+        if (!yearId.HasValue)
+            yearId = 1;
+
         var query = $@"
             SELECT
-                c.ClassName,
-                b.BatchName,
+                ISNULL(c.ClassName, 'N/A') AS ClassName,
+                ISNULL(b.BatchName, 'N/A') AS BatchName,
                 COUNT(DISTINCT s.StudentId) AS StudentCount,
                 ISNULL(SUM(fs.Amount), 0) AS TotalFees,
                 0 AS EstimatedCollected,
@@ -226,20 +229,22 @@ public class FeesRepo(CommonConnectivity db)
             LEFT JOIN Batches b ON s.BatchId = b.BatchId
             LEFT JOIN FeeStructure fs ON s.ClassId = fs.ClassId
                 AND s.SectionId = fs.SectionId
-                AND fs.AcademicYearId = {(yearId.HasValue ? yearId.Value : "(SELECT ISNULL(TOP 1 YearId, 1) FROM AcademicYears WHERE IsCurrent = 1)")}
+                AND fs.AcademicYearId = {yearId}
             WHERE s.Status = 'Active'
-              AND s.AcademicYearId = {(yearId.HasValue ? yearId.Value : "(SELECT ISNULL(TOP 1 YearId, 1) FROM AcademicYears WHERE IsCurrent = 1)")}
+              AND s.AcademicYearId = {yearId}
             GROUP BY c.ClassId, c.ClassName, b.BatchId, b.BatchName
             ORDER BY c.ClassName, b.BatchName
         ";
 
-        return db.Sql(query, r => new {
-            ClassName = G.G<string>(r, "ClassName") ?? "",
-            BatchName = G.G<string>(r, "BatchName") ?? "",
+        var result = db.Sql(query, r => new {
+            ClassName = G.G<string>(r, "ClassName"),
+            BatchName = G.G<string>(r, "BatchName"),
             StudentCount = G.G<int>(r, "StudentCount"),
             TotalFees = G.G<decimal>(r, "TotalFees"),
             EstimatedCollected = G.G<decimal>(r, "EstimatedCollected"),
             EstimatedDiscount = G.G<decimal>(r, "EstimatedDiscount")
         }).Cast<dynamic>().ToList();
+
+        return result;
     }
 }
