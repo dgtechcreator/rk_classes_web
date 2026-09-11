@@ -26,19 +26,9 @@ public class FinanceController(FeesService feesSvc, StudentService studentSvc,
             ViewBag.TotalBalance = summary.TotalBalance;
             ViewBag.CollectionPercentage = summary.CollectionPercentage;
 
-            // Get academic breakdown from same SP (already run)
+            // Get academic breakdown
             var academicData = feesSvc.GetFinanceDashboardAcademic(yearId);
             System.Diagnostics.Debug.WriteLine($"Academic Data Count: {academicData?.Count ?? 0}");
-            if (academicData != null && academicData.Count > 0)
-            {
-                var first = academicData.FirstOrDefault();
-                System.Diagnostics.Debug.WriteLine($"First item type: {first?.GetType().Name}");
-                if (first != null)
-                {
-                    var props = first.GetType().GetProperties();
-                    System.Diagnostics.Debug.WriteLine($"Properties: {string.Join(", ", props.Select(p => p.Name))}");
-                }
-            }
             ViewBag.AcademicData = academicData;
 
             return View();
