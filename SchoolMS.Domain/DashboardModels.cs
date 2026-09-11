@@ -44,17 +44,4 @@ public class FinanceAcademicBreakdown
     public decimal TotalFees{get;set;}
     public decimal EstimatedCollected{get;set;}
     public decimal EstimatedDiscount{get;set;}
-    public int? SequenceNo{get;set;}
-
-    public int ClassOrder
-    {
-        get
-        {
-            if (string.IsNullOrEmpty(ClassName)) return 999;
-            var parts = ClassName.Split(' ');
-            if (int.TryParse(parts[0], out var num))
-                return num;
-            return 999;
-        }
-    }
 }

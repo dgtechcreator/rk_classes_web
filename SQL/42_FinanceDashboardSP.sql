@@ -84,7 +84,6 @@ BEGIN
     SELECT
         c.ClassName,
         b.BatchName,
-        ISNULL(b.SequenceNo, 0) AS SequenceNo,
         COUNT(DISTINCT s.StudentId) AS StudentCount,
         ISNULL(SUM(sf.TotalFees), 0) AS TotalFees,
         ISNULL(SUM(CASE WHEN fp.IsDeleted = 0 THEN fp.Amount ELSE 0 END), 0) AS EstimatedCollected,
@@ -97,10 +96,7 @@ BEGIN
         AND fp.IsDeleted = 0
     WHERE s.Status = 'Active'
       AND s.AcademicYearId = @AcademicYearId
-    GROUP BY c.ClassId, c.ClassName, b.BatchId, b.BatchName, b.SequenceNo
-    ORDER BY
-        CAST(LEFT(c.ClassName, CHARINDEX(' ', c.ClassName + ' ') - 1) AS INT),
-        ISNULL(b.SequenceNo, 0),
-        b.BatchName;
+    GROUP BY c.ClassId, c.ClassName, b.BatchId, b.BatchName
+    ORDER BY c.ClassId, b.BatchName;
 END
 GO
