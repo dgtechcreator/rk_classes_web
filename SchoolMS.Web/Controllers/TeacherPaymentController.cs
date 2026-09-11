@@ -6,7 +6,7 @@ using SchoolMS.Web.Filters;
 namespace SchoolMS.Web.Controllers;
 
 [RequireTeacherPaymentAccess]
-public class TeacherPaymentController(TeacherPaymentService paymentSvc, StudentService studentSvc) : Controller
+public class TeacherPaymentController(TeacherPaymentService paymentSvc, FacultyService facultySvc) : Controller
 {
     [HttpGet]
     public IActionResult Index()
@@ -23,7 +23,7 @@ public class TeacherPaymentController(TeacherPaymentService paymentSvc, StudentS
             ViewBag.MonthlyPayments = monthlyPayments;
             ViewBag.CurrentMonth = currentMonth;
             ViewBag.CurrentYear = currentYear;
-            ViewBag.AllFaculty = studentSvc.GetAllFaculty();
+            ViewBag.AllFaculty = facultySvc.GetAllActive();
 
             return View();
         }
