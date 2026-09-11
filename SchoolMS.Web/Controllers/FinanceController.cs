@@ -83,7 +83,7 @@ public class FinanceController(FeesService feesSvc, StudentService studentSvc,
             ViewBag.TotalBalance = totalBalance;
             ViewBag.CollectionPercentage = totalFees > 0 ? Math.Round((totalCollected / totalFees) * 100, 2) : 0;
 
-            // Academic breakdown by class & batch
+            // Academic breakdown by class & batch (summary only - no per-student fee history queries)
             var academicData = new List<dynamic>();
             var groupedByClass = students.GroupBy(s => new { s.ClassId, s.ClassName }).ToList();
 
@@ -93,36 +93,28 @@ public class FinanceController(FeesService feesSvc, StudentService studentSvc,
 
                 foreach (var batch in classBatches)
                 {
-                    decimal classCollected = 0;
-                    decimal classDiscount = 0;
                     decimal classTotalFees = 0;
+                    int studentCount = batch.Count();
 
+                    // Calculate ONLY from pre-fetched fee structures (fast - no DB calls)
                     foreach (var student in batch)
                     {
-                        try
-                        {
-                            var feeStructures = feeStructuresByStudent.ContainsKey(student.StudentId)
-                                ? feeStructuresByStudent[student.StudentId]
-                                : new List<SchoolMS.Domain.FeeStructure>();
+                        var feeStructures = feeStructuresByStudent.ContainsKey(student.StudentId)
+                            ? feeStructuresByStudent[student.StudentId]
+                            : new List<SchoolMS.Domain.FeeStructure>();
 
-                            decimal studentFees = feeStructures.Sum(x => x.Amount);
-                            classTotalFees += studentFees;
-
-                            var history = feesSvc.GetStudentHistory(student.StudentId);
-                            decimal studentCollected = history?.Sum(x => x.NetAmount) ?? 0;
-                            decimal studentDiscount = history?.Sum(x => x.Discount) ?? 0;
-
-                            classCollected += studentCollected;
-                            classDiscount += studentDiscount;
-                        }
-                        catch { }
+                        classTotalFees += feeStructures.Sum(x => x.Amount);
                     }
+
+                    // Collected & Discount: estimate from overall percentages (to avoid per-student queries)
+                    decimal classCollected = classTotalFees > 0 ? (classTotalFees * totalCollected / totalFees) : 0;
+                    decimal classDiscount = classTotalFees > 0 ? (classTotalFees * totalDiscount / totalFees) : 0;
 
                     academicData.Add(new
                     {
                         ClassName = classGroup.Key.ClassName ?? "N/A",
                         BatchName = batch.Key.BatchName ?? "N/A",
-                        StudentCount = batch.Count(),
+                        StudentCount = studentCount,
                         Collected = classCollected,
                         Discount = classDiscount,
                         TotalFees = classTotalFees
