@@ -100,4 +100,25 @@ public class TeacherPaymentController(TeacherPaymentService paymentSvc, FacultyS
             return Json(new { success = false, message = ex.Message });
         }
     }
+
+    [HttpGet]
+    public IActionResult Receipt(int paymentId)
+    {
+        try
+        {
+            var payment = paymentSvc.GetById(paymentId);
+            if (payment == null)
+            {
+                return NotFound("Payment not found");
+            }
+
+            ViewBag.Payment = payment;
+            return View();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Receipt Error: {ex.Message}");
+            return NotFound("Error loading receipt");
+        }
+    }
 }
