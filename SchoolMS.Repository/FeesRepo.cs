@@ -213,8 +213,7 @@ public class FeesRepo(CommonConnectivity db)
 
     public List<dynamic> GetFinanceDashboardAcademic(int? yearId = null)
     {
-        return db.Sql(
-            $@"
+        var query = $@"
             SELECT
                 c.ClassName,
                 b.BatchName,
@@ -232,16 +231,15 @@ public class FeesRepo(CommonConnectivity db)
               AND s.AcademicYearId = {(yearId.HasValue ? yearId.Value : "(SELECT ISNULL(TOP 1 YearId, 1) FROM AcademicYears WHERE IsCurrent = 1)")}
             GROUP BY c.ClassId, c.ClassName, b.BatchId, b.BatchName
             ORDER BY c.ClassName, b.BatchName
-            ",
-            r => (dynamic)new
-            {
-                ClassName = G.G<string>(r, "ClassName"),
-                BatchName = G.G<string>(r, "BatchName"),
-                StudentCount = G.G<int>(r, "StudentCount"),
-                TotalFees = G.G<decimal>(r, "TotalFees"),
-                EstimatedCollected = G.G<decimal>(r, "EstimatedCollected"),
-                EstimatedDiscount = G.G<decimal>(r, "EstimatedDiscount")
-            }
-        );
+        ";
+
+        return db.Sql(query, r => new {
+            ClassName = G.G<string>(r, "ClassName") ?? "",
+            BatchName = G.G<string>(r, "BatchName") ?? "",
+            StudentCount = G.G<int>(r, "StudentCount"),
+            TotalFees = G.G<decimal>(r, "TotalFees"),
+            EstimatedCollected = G.G<decimal>(r, "EstimatedCollected"),
+            EstimatedDiscount = G.G<decimal>(r, "EstimatedDiscount")
+        }).Cast<dynamic>().ToList();
     }
 }
