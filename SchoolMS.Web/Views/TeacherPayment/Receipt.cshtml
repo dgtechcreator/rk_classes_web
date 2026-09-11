@@ -50,7 +50,7 @@
                     }
                     <tr style="border-bottom: 1px solid #e5e7eb;">
                         <td style="padding: 12px 0; color: #6b7280; font-size: 14px;"><strong>Payment Month:</strong></td>
-                        <td style="padding: 12px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">@new System.Globalization.CultureInfo("en-US").DateTimeFormat.GetMonthName(p.PaymentMonth) @p.PaymentYear</td>
+                        <td style="padding: 12px 0; text-align: right; color: #1f2937; font-weight: 600; font-size: 14px;">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(p.PaymentMonth) @p.PaymentYear</td>
                     </tr>
                     <tr style="border-bottom: 2px solid #1e40af;">
                         <td style="padding: 16px 0; color: #1f2937; font-size: 16px;"><strong>Payment Amount:</strong></td>
