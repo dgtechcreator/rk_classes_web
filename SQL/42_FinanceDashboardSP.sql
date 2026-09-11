@@ -85,15 +85,13 @@ BEGIN
         c.ClassName,
         b.BatchName,
         COUNT(DISTINCT s.StudentId) AS StudentCount,
-        ISNULL(SUM(fs.Amount), 0) AS TotalFees,
+        ISNULL(SUM(sf.TotalFees), 0) AS TotalFees,
         ISNULL(SUM(CASE WHEN fp.IsDeleted = 0 THEN fp.Amount ELSE 0 END), 0) AS EstimatedCollected,
         ISNULL(SUM(CASE WHEN fp.IsDeleted = 0 THEN fp.Discount ELSE 0 END), 0) AS EstimatedDiscount
     FROM Students s
     LEFT JOIN Classes c ON s.ClassId = c.ClassId
     LEFT JOIN Batches b ON s.BatchId = b.BatchId
-    LEFT JOIN FeeStructure fs ON s.ClassId = fs.ClassId
-        AND s.SectionId = fs.SectionId
-        AND fs.AcademicYearId = @AcademicYearId
+    LEFT JOIN StudentFees sf ON s.StudentId = sf.StudentId
     LEFT JOIN FeePayments fp ON s.StudentId = fp.StudentId
         AND fp.IsDeleted = 0
     WHERE s.Status = 'Active'

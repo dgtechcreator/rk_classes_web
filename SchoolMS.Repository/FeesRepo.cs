@@ -220,7 +220,8 @@ public class FeesRepo(CommonConnectivity db)
         );
     }
 
-    static FinanceAcademicBreakdown MapAcademicData(SqlDataReader r) => new() {
+    static FinanceAcademicBreakdown MapAcademicData(SqlDataReader r) => new()
+    {
         ClassName = G.G<string>(r, "ClassName") ?? "",
         BatchName = G.G<string>(r, "BatchName") ?? "",
         StudentCount = G.G<int>(r, "StudentCount"),
