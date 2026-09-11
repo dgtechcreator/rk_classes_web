@@ -14,4 +14,9 @@ public class FacultyService(FacultyRepo repo)
     public void                 Restore(int id)                      => repo.Restore(id);
     public List<Designation>    GetDesignations()                    => repo.GetDesignations();
     public int                  SaveDesignation(Designation d)       => repo.SaveDesignation(d);
+    public List<Faculty>        GetAllActive()
+    {
+        var (data, _) = GetAll(null, "Active", null, 1, 1000);
+        return data;
+    }
 }
