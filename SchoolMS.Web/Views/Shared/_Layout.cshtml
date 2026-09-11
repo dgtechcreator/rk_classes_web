@@ -326,6 +326,10 @@ z<title>@ViewData["Title"] — RK Classes</title>
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Finance"?"active":"")" href="/Finance/Dashboard">
       <span class="nav-ic"><i class="fas fa-chart-line"></i></span> Finance Dashboard
     </a>}
+    @if(Context.Session.HasPerm("teacher_payment")){
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="TeacherPayment"?"active":"")" href="/TeacherPayment/Index">
+      <span class="nav-ic"><i class="fas fa-money-bill-wave"></i></span> Teachers Payment
+    </a>}
   </div>
 
   <div class="nav-grp">

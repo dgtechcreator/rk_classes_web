@@ -54,6 +54,7 @@ builder.Services.AddScoped<ParentRepo>();
 builder.Services.AddScoped<TaskRepo>();
 builder.Services.AddScoped<NotificationRepo>();
 builder.Services.AddScoped<AttendanceBatchRepo>();
+builder.Services.AddScoped<TeacherPaymentRepo>();
 
 // Services
 builder.Services.AddScoped<AuthService>();
@@ -72,6 +73,7 @@ builder.Services.AddScoped<ParentService>();
 builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<AttendanceBatchService>();
+builder.Services.AddScoped<TeacherPaymentService>();
 
 var app = builder.Build();
 
