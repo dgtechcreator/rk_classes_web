@@ -236,15 +236,15 @@ public class FeesRepo(CommonConnectivity db)
             ORDER BY c.ClassName, b.BatchName
         ";
 
-        var result = db.Sql(query, r => new {
-            ClassName = G.G<string>(r, "ClassName"),
-            BatchName = G.G<string>(r, "BatchName"),
-            StudentCount = G.G<int>(r, "StudentCount"),
-            TotalFees = G.G<decimal>(r, "TotalFees"),
-            EstimatedCollected = G.G<decimal>(r, "EstimatedCollected"),
-            EstimatedDiscount = G.G<decimal>(r, "EstimatedDiscount")
-        }).Cast<dynamic>().ToList();
-
-        return result;
+        return db.Sql(query, MapAcademicData).Cast<dynamic>().ToList();
     }
+
+    static dynamic MapAcademicData(SqlDataReader r) => new {
+        ClassName = G.G<string>(r, "ClassName"),
+        BatchName = G.G<string>(r, "BatchName"),
+        StudentCount = G.G<int>(r, "StudentCount"),
+        TotalFees = G.G<decimal>(r, "TotalFees"),
+        EstimatedCollected = G.G<decimal>(r, "EstimatedCollected"),
+        EstimatedDiscount = G.G<decimal>(r, "EstimatedDiscount")
+    };
 }
