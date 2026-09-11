@@ -1,0 +1,268 @@
+@{
+    ViewData["Title"] = "Teachers Payment";
+}
+
+@if (!string.IsNullOrEmpty(ViewBag.Error))
+{
+    <div style="background: #fee; color: #c33; padding: 20px; border-radius: 8px; margin: 20px;">
+        <strong>⚠️ Error:</strong> @ViewBag.Error
+    </div>
+}
+
+<div class="pg-hdr">
+    <h1>💳 Teachers Payment</h1>
+    <p>Manage teacher salary and hourly payment records</p>
+</div>
+
+<!-- Payment Entry Section -->
+<div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 32px;">
+    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px; color: #1f2937;">➕ New Payment Entry</h3>
+
+    <form id="paymentForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <!-- Teacher Name -->
+        <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Teacher Name</label>
+            <select id="facultyId" name="facultyId" required style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                <option value="">-- Select Teacher --</option>
+                @if (ViewBag.AllFaculty != null)
+                {
+                    @foreach (var faculty in ViewBag.AllFaculty)
+                    {
+                        <option value="@faculty.FacultyId">@faculty.FullName</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <!-- Payment Type -->
+        <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Payment Type</label>
+            <select id="paymentType" name="paymentType" required style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" onchange="updatePaymentFields()">
+                <option value="">-- Select Type --</option>
+                <option value="Hourly">Hourly</option>
+                <option value="Topic">Topic</option>
+                <option value="Fixed">Fixed Salary</option>
+            </select>
+        </div>
+
+        <!-- Quantity (Hours/Topics) -->
+        <div id="quantityDiv" style="display: none;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;" id="quantityLabel">Hours</label>
+            <input type="number" id="quantity" name="quantity" placeholder="0" step="0.5" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" onchange="calculateTotal()">
+        </div>
+
+        <!-- Rate -->
+        <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;" id="rateLabel">Rate</label>
+            <input type="number" id="rate" name="rate" placeholder="0.00" step="0.01" required style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" onchange="calculateTotal()">
+        </div>
+
+        <!-- Total Amount -->
+        <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Total Amount</label>
+            <div style="padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; background: #f9fafb; font-size: 14px; font-weight: 600; color: #1f2937;">₹<span id="totalAmount">0</span></div>
+        </div>
+
+        <!-- Payment Month -->
+        <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Payment Month</label>
+            <select id="paymentMonth" name="paymentMonth" required style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+            </select>
+            <script>
+                document.getElementById('paymentMonth').value = new Date().getMonth() + 1;
+            </script>
+        </div>
+
+        <!-- Payment Year -->
+        <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Payment Year</label>
+            <input type="number" id="paymentYear" name="paymentYear" value="2026" min="2020" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+        </div>
+
+        <!-- Remarks -->
+        <div style="grid-column: 1/-1;">
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Remarks</label>
+            <textarea id="remarks" name="remarks" rows="2" placeholder="Optional remarks" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; font-family: inherit;"></textarea>
+        </div>
+
+        <!-- Submit Button -->
+        <div style="grid-column: 1/-1;">
+            <button type="button" onclick="savePayment()" style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;">💾 Save Payment Entry</button>
+        </div>
+    </form>
+</div>
+
+<!-- Unpaid Payments Section -->
+<div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1f2937;">⏳ Pending Payments</h3>
+
+    <div class="tbl-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th style="text-align: left;">Teacher Name</th>
+                    <th style="text-align: center;">Type</th>
+                    <th style="text-align: right;">Rate</th>
+                    <th style="text-align: right;">Qty</th>
+                    <th style="text-align: right;">Total Amount</th>
+                    <th style="text-align: center;">Month</th>
+                    <th style="text-align: center;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (ViewBag.UnpaidPayments != null && ViewBag.UnpaidPayments.Count > 0)
+                {
+                    @foreach (var payment in ViewBag.UnpaidPayments)
+                    {
+                        <tr>
+                            <td>@payment.FacultyName</td>
+                            <td style="text-align: center;">
+                                <span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                    @payment.PaymentType
+                                </span>
+                            </td>
+                            <td style="text-align: right;">₹@payment.Rate.ToString("N0")</td>
+                            <td style="text-align: right;">@(payment.Quantity?.ToString("N1") ?? "-")</td>
+                            <td style="text-align: right; font-weight: 600;">₹@payment.TotalAmount.ToString("N0")</td>
+                            <td style="text-align: center;">@payment.PaymentMonth/@payment.PaymentYear</td>
+                            <td style="text-align: center;">
+                                <button onclick="payNow(@payment.TeacherPaymentId)" style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; margin-right: 4px;">Pay</button>
+                                <button onclick="deletePayment(@payment.TeacherPaymentId)" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: #999; padding: 20px;">No pending payments</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function updatePaymentFields() {
+        const type = document.getElementById('paymentType').value;
+        const quantityDiv = document.getElementById('quantityDiv');
+        const quantityLabel = document.getElementById('quantityLabel');
+        const rateLabel = document.getElementById('rateLabel');
+        const quantityInput = document.getElementById('quantity');
+
+        if (type === 'Hourly') {
+            quantityDiv.style.display = 'block';
+            quantityLabel.textContent = 'Hours';
+            rateLabel.textContent = 'Rate per Hour';
+            quantityInput.placeholder = 'Enter hours';
+        } else if (type === 'Topic') {
+            quantityDiv.style.display = 'block';
+            quantityLabel.textContent = 'Topics';
+            rateLabel.textContent = 'Rate per Topic';
+            quantityInput.placeholder = 'Enter number of topics';
+        } else if (type === 'Fixed') {
+            quantityDiv.style.display = 'none';
+            rateLabel.textContent = 'Fixed Salary';
+        }
+        calculateTotal();
+    }
+
+    function calculateTotal() {
+        const type = document.getElementById('paymentType').value;
+        const rate = parseFloat(document.getElementById('rate').value) || 0;
+        const quantity = parseFloat(document.getElementById('quantity').value) || 0;
+
+        let total = 0;
+        if (type === 'Fixed') {
+            total = rate;
+        } else {
+            total = rate * quantity;
+        }
+
+        document.getElementById('totalAmount').textContent = total.toFixed(2);
+    }
+
+    function savePayment() {
+        const facultyId = document.getElementById('facultyId').value;
+        const paymentType = document.getElementById('paymentType').value;
+        const rate = document.getElementById('rate').value;
+        const quantity = document.getElementById('quantity').value;
+        const paymentMonth = document.getElementById('paymentMonth').value;
+        const paymentYear = document.getElementById('paymentYear').value;
+        const remarks = document.getElementById('remarks').value;
+
+        if (!facultyId || !paymentType || !rate) {
+            alert('Please fill all required fields');
+            return;
+        }
+
+        fetch('/TeacherPayment/SavePayment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `facultyId=${facultyId}&paymentType=${paymentType}&rate=${rate}&quantity=${quantity || 0}&paymentMonth=${paymentMonth}&paymentYear=${paymentYear}&remarks=${remarks}`
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                alert('Payment entry saved successfully');
+                location.reload();
+            } else {
+                alert('Error: ' + d.message);
+            }
+        });
+    }
+
+    function payNow(paymentId) {
+        const mode = prompt('Payment Mode (Cash/Online Transfer/Cheque):');
+        if (!mode) return;
+
+        const txRef = prompt('Transaction Reference (optional):');
+
+        fetch('/TeacherPayment/MarkAsPaid', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `paymentId=${paymentId}&paymentMode=${mode}&transactionRef=${txRef || ''}`
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                alert(`Payment completed!\nReceipt: ${d.payment.receiptNo}\n${d.payment.facultyName}\n₹${d.payment.totalAmount}`);
+                location.reload();
+            } else {
+                alert('Error: ' + d.message);
+            }
+        });
+    }
+
+    function deletePayment(paymentId) {
+        if (!confirm('Delete this payment entry?')) return;
+
+        fetch('/TeacherPayment/DeletePayment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `paymentId=${paymentId}`
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                alert('Payment deleted');
+                location.reload();
+            } else {
+                alert('Error: ' + d.message);
+            }
+        });
+    }
+</script>

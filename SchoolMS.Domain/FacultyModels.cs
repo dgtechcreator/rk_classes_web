@@ -53,3 +53,27 @@ public class FacultySubject
     public int?    SectionId{get;set;}
     public string? SectionName{get;set;}
 }
+
+public class TeacherPayment
+{
+    public int TeacherPaymentId{get;set;}
+    public int FacultyId{get;set;}
+    public string? FacultyName{get;set;}
+    public string PaymentType{get;set;} = ""; // Hourly, Topic, Fixed
+    public decimal Rate{get;set;}
+    public decimal? Quantity{get;set;} // Hours or Topics
+    public decimal TotalAmount{get;set;}
+    public int PaymentMonth{get;set;} // 1-12
+    public int PaymentYear{get;set;}
+    public bool IsPaid{get;set;}
+    public DateTime? PaymentDate{get;set;}
+    public string? PaymentMode{get;set;}
+    public string? TransactionRef{get;set;}
+    public string? ReceiptNo{get;set;}
+    public string? Remarks{get;set;}
+    public DateTime CreatedAt{get;set;}
+    public int? CreatedBy{get;set;}
+    public DateTime? UpdatedAt{get;set;}
+    public int? UpdatedBy{get;set;}
+    public bool IsDeleted{get;set;}
+}
