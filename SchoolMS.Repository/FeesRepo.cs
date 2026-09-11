@@ -213,32 +213,11 @@ public class FeesRepo(CommonConnectivity db)
 
     public List<FinanceAcademicBreakdown> GetFinanceDashboardAcademic(int? yearId = null)
     {
-        if (!yearId.HasValue)
-            yearId = 1;
-
-        var query = $@"
-            SELECT
-                ISNULL(c.ClassName, 'N/A') AS ClassName,
-                ISNULL(b.BatchName, 'N/A') AS BatchName,
-                COUNT(DISTINCT s.StudentId) AS StudentCount,
-                ISNULL(SUM(fs.Amount), 0) AS TotalFees,
-                ISNULL(SUM(CASE WHEN fp.IsDeleted = 0 THEN fp.Amount ELSE 0 END), 0) AS EstimatedCollected,
-                ISNULL(SUM(CASE WHEN fp.IsDeleted = 0 THEN fp.Discount ELSE 0 END), 0) AS EstimatedDiscount
-            FROM Students s
-            LEFT JOIN Classes c ON s.ClassId = c.ClassId
-            LEFT JOIN Batches b ON s.BatchId = b.BatchId
-            LEFT JOIN FeeStructure fs ON s.ClassId = fs.ClassId
-                AND s.SectionId = fs.SectionId
-                AND fs.AcademicYearId = {yearId}
-            LEFT JOIN FeePayments fp ON s.StudentId = fp.StudentId
-                AND fp.IsDeleted = 0
-            WHERE s.Status = 'Active'
-              AND s.AcademicYearId = {yearId}
-            GROUP BY c.ClassId, c.ClassName, b.BatchId, b.BatchName, b.SequenceNo
-            ORDER BY c.ClassName, ISNULL(b.SequenceNo, 0), b.BatchName
-        ";
-
-        return db.Sql(query, MapAcademicData);
+        return db.Read(
+            "sp_GetFinanceDashboardAcademic",
+            new() { { "@AcademicYearId", (object?)yearId ?? DBNull.Value } },
+            MapAcademicData
+        );
     }
 
     static FinanceAcademicBreakdown MapAcademicData(SqlDataReader r) => new() {
