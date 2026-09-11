@@ -222,18 +222,16 @@ public class FeesRepo(CommonConnectivity db)
                 ISNULL(b.BatchName, 'N/A') AS BatchName,
                 COUNT(DISTINCT s.StudentId) AS StudentCount,
                 ISNULL(SUM(fs.Amount), 0) AS TotalFees,
-                (SELECT ISNULL(SUM(fp.Amount), 0) FROM FeePayments fp
-                 WHERE fp.StudentId IN (SELECT StudentId FROM Students WHERE BatchId = b.BatchId AND Status = 'Active')
-                 AND fp.IsDeleted = 0) AS EstimatedCollected,
-                (SELECT ISNULL(SUM(fp.Discount), 0) FROM FeePayments fp
-                 WHERE fp.StudentId IN (SELECT StudentId FROM Students WHERE BatchId = b.BatchId AND Status = 'Active')
-                 AND fp.IsDeleted = 0) AS EstimatedDiscount
+                ISNULL(SUM(CASE WHEN fp.IsDeleted = 0 THEN fp.Amount ELSE 0 END), 0) AS EstimatedCollected,
+                ISNULL(SUM(CASE WHEN fp.IsDeleted = 0 THEN fp.Discount ELSE 0 END), 0) AS EstimatedDiscount
             FROM Students s
             LEFT JOIN Classes c ON s.ClassId = c.ClassId
             LEFT JOIN Batches b ON s.BatchId = b.BatchId
             LEFT JOIN FeeStructure fs ON s.ClassId = fs.ClassId
                 AND s.SectionId = fs.SectionId
                 AND fs.AcademicYearId = {yearId}
+            LEFT JOIN FeePayments fp ON s.StudentId = fp.StudentId
+                AND fp.IsDeleted = 0
             WHERE s.Status = 'Active'
               AND s.AcademicYearId = {yearId}
             GROUP BY c.ClassId, c.ClassName, b.BatchId, b.BatchName, b.SequenceNo
