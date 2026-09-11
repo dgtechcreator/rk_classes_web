@@ -222,8 +222,12 @@ public class FeesRepo(CommonConnectivity db)
                 ISNULL(b.BatchName, 'N/A') AS BatchName,
                 COUNT(DISTINCT s.StudentId) AS StudentCount,
                 ISNULL(SUM(fs.Amount), 0) AS TotalFees,
-                0 AS EstimatedCollected,
-                0 AS EstimatedDiscount
+                (SELECT ISNULL(SUM(fp.Amount), 0) FROM FeePayments fp
+                 WHERE fp.StudentId IN (SELECT StudentId FROM Students WHERE BatchId = b.BatchId AND Status = 'Active')
+                 AND fp.IsDeleted = 0) AS EstimatedCollected,
+                (SELECT ISNULL(SUM(fp.Discount), 0) FROM FeePayments fp
+                 WHERE fp.StudentId IN (SELECT StudentId FROM Students WHERE BatchId = b.BatchId AND Status = 'Active')
+                 AND fp.IsDeleted = 0) AS EstimatedDiscount
             FROM Students s
             LEFT JOIN Classes c ON s.ClassId = c.ClassId
             LEFT JOIN Batches b ON s.BatchId = b.BatchId
@@ -232,8 +236,8 @@ public class FeesRepo(CommonConnectivity db)
                 AND fs.AcademicYearId = {yearId}
             WHERE s.Status = 'Active'
               AND s.AcademicYearId = {yearId}
-            GROUP BY c.ClassId, c.ClassName, b.BatchId, b.BatchName
-            ORDER BY c.ClassName, b.BatchName
+            GROUP BY c.ClassId, c.ClassName, b.BatchId, b.BatchName, b.SequenceNo
+            ORDER BY c.ClassName, ISNULL(b.SequenceNo, 0), b.BatchName
         ";
 
         return db.Sql(query, MapAcademicData);
