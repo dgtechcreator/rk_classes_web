@@ -1,6 +1,25 @@
 @{
     ViewData["Title"] = "Payment Receipt";
+    Layout = null;
 }
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Receipt</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f3f4f6; padding: 20px; }
+        @@media print {
+            body { margin: 0; padding: 0; background: white; }
+            div { box-shadow: none !important; border: none !important; }
+            button { display: none !important; }
+        }
+    </style>
+</head>
+<body>
 
 @if (ViewBag.Payment != null)
 {
@@ -85,14 +104,6 @@
             <button onclick="window.close()" style="padding: 12px 24px; background: #6b7280; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;">Close</button>
         </div>
     </div>
-
-    <style>
-        @@media print {
-            body { margin: 0; padding: 0; background: white; }
-            div { box-shadow: none !important; border: none !important; }
-            button { display: none !important; }
-        }
-    </style>
 }
 else
 {
@@ -100,3 +111,6 @@ else
         <p style="color: #ef4444; font-weight: 600;">Receipt not found</p>
     </div>
 }
+
+</body>
+</html>
