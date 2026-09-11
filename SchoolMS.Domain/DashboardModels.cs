@@ -35,3 +35,13 @@ public class ClassAllStat
     public int StudentCount{get;set;}
     public bool IsActive{get;set;} = true;
 }
+
+public class FinanceAcademicBreakdown
+{
+    public string ClassName{get;set;} = "";
+    public string BatchName{get;set;} = "";
+    public int StudentCount{get;set;}
+    public decimal TotalFees{get;set;}
+    public decimal EstimatedCollected{get;set;}
+    public decimal EstimatedDiscount{get;set;}
+}

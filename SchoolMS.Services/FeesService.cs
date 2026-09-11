@@ -27,6 +27,6 @@ public class FeesService(FeesRepo repo)
     public (int TotalStudents, decimal TotalFees, decimal TotalCollected, decimal TotalDiscount, decimal TotalBalance, decimal CollectionPercentage) GetFinanceDashboardSummary(int? yearId = null)
         => repo.GetFinanceDashboardSummary(yearId);
 
-    public List<dynamic> GetFinanceDashboardAcademic(int? yearId = null)
+    public List<FinanceAcademicBreakdown> GetFinanceDashboardAcademic(int? yearId = null)
         => repo.GetFinanceDashboardAcademic(yearId);
 }

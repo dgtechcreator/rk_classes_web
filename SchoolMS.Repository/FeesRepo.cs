@@ -211,7 +211,7 @@ public class FeesRepo(CommonConnectivity db)
         return (result.TotalStudents, result.TotalFees, result.TotalCollected, result.TotalDiscount, result.TotalBalance, result.CollectionPercentage);
     }
 
-    public List<dynamic> GetFinanceDashboardAcademic(int? yearId = null)
+    public List<FinanceAcademicBreakdown> GetFinanceDashboardAcademic(int? yearId = null)
     {
         if (!yearId.HasValue)
             yearId = 1;
@@ -236,12 +236,12 @@ public class FeesRepo(CommonConnectivity db)
             ORDER BY c.ClassName, b.BatchName
         ";
 
-        return db.Sql(query, MapAcademicData).Cast<dynamic>().ToList();
+        return db.Sql(query, MapAcademicData);
     }
 
-    static dynamic MapAcademicData(SqlDataReader r) => new {
-        ClassName = G.G<string>(r, "ClassName"),
-        BatchName = G.G<string>(r, "BatchName"),
+    static FinanceAcademicBreakdown MapAcademicData(SqlDataReader r) => new() {
+        ClassName = G.G<string>(r, "ClassName") ?? "",
+        BatchName = G.G<string>(r, "BatchName") ?? "",
         StudentCount = G.G<int>(r, "StudentCount"),
         TotalFees = G.G<decimal>(r, "TotalFees"),
         EstimatedCollected = G.G<decimal>(r, "EstimatedCollected"),
