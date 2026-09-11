@@ -214,7 +214,25 @@ public class FeesRepo(CommonConnectivity db)
     public List<dynamic> GetFinanceDashboardAcademic(int? yearId = null)
     {
         return db.Sql(
-            $@"EXEC sp_GetFinanceDashboardSummary @AcademicYearId = {(yearId.HasValue ? yearId.Value : "NULL")}",
+            $@"
+            SELECT
+                c.ClassName,
+                b.BatchName,
+                COUNT(DISTINCT s.StudentId) AS StudentCount,
+                ISNULL(SUM(fs.Amount), 0) AS TotalFees,
+                0 AS EstimatedCollected,
+                0 AS EstimatedDiscount
+            FROM Students s
+            LEFT JOIN Classes c ON s.ClassId = c.ClassId
+            LEFT JOIN Batches b ON s.BatchId = b.BatchId
+            LEFT JOIN FeeStructure fs ON s.ClassId = fs.ClassId
+                AND s.SectionId = fs.SectionId
+                AND fs.AcademicYearId = {(yearId.HasValue ? yearId.Value : "(SELECT ISNULL(TOP 1 YearId, 1) FROM AcademicYears WHERE IsCurrent = 1)")}
+            WHERE s.Status = 'Active'
+              AND s.AcademicYearId = {(yearId.HasValue ? yearId.Value : "(SELECT ISNULL(TOP 1 YearId, 1) FROM AcademicYears WHERE IsCurrent = 1)")}
+            GROUP BY c.ClassId, c.ClassName, b.BatchId, b.BatchName
+            ORDER BY c.ClassName, b.BatchName
+            ",
             r => (dynamic)new
             {
                 ClassName = G.G<string>(r, "ClassName"),
