@@ -51,3 +51,44 @@
         <div class="kpi-lbl">Collection Rate</div>
     </div>
 </div>
+
+<div style="margin-top: 32px;">
+    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1f2937;">📚 Academic Breakdown</h3>
+
+    <div class="tbl-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th style="text-align: left;">Standard</th>
+                    <th style="text-align: left;">Batch</th>
+                    <th style="text-align: center;">No. of Students</th>
+                    <th style="text-align: right;">Collected</th>
+                    <th style="text-align: right;">Discount</th>
+                    <th style="text-align: right;">Total Fees</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (ViewBag.AcademicData != null && ViewBag.AcademicData.Count > 0)
+                {
+                    @foreach (var row in ViewBag.AcademicData)
+                    {
+                        <tr>
+                            <td>@row.ClassName</td>
+                            <td>@row.BatchName</td>
+                            <td style="text-align: center; font-weight: 600;">@row.StudentCount</td>
+                            <td style="text-align: right;">₹@((decimal)row.Collected).ToString("N0")</td>
+                            <td style="text-align: right;">₹@((decimal)row.Discount).ToString("N0")</td>
+                            <td style="text-align: right; font-weight: 600;">₹@((decimal)row.TotalFees).ToString("N0")</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #999;">No data available</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -83,6 +83,55 @@ public class FinanceController(FeesService feesSvc, StudentService studentSvc,
             ViewBag.TotalBalance = totalBalance;
             ViewBag.CollectionPercentage = totalFees > 0 ? Math.Round((totalCollected / totalFees) * 100, 2) : 0;
 
+            // Academic breakdown by class & batch
+            var academicData = new List<dynamic>();
+            var groupedByClass = students.GroupBy(s => new { s.ClassId, s.ClassName }).ToList();
+
+            foreach (var classGroup in groupedByClass)
+            {
+                var classBatches = classGroup.GroupBy(s => new { s.BatchId, s.BatchName }).ToList();
+
+                foreach (var batch in classBatches)
+                {
+                    decimal classCollected = 0;
+                    decimal classDiscount = 0;
+                    decimal classTotalFees = 0;
+
+                    foreach (var student in batch)
+                    {
+                        try
+                        {
+                            var feeStructures = feeStructuresByStudent.ContainsKey(student.StudentId)
+                                ? feeStructuresByStudent[student.StudentId]
+                                : new List<SchoolMS.Domain.FeeStructure>();
+
+                            decimal studentFees = feeStructures.Sum(x => x.Amount);
+                            classTotalFees += studentFees;
+
+                            var history = feesSvc.GetStudentHistory(student.StudentId);
+                            decimal studentCollected = history?.Sum(x => x.NetAmount) ?? 0;
+                            decimal studentDiscount = history?.Sum(x => x.Discount) ?? 0;
+
+                            classCollected += studentCollected;
+                            classDiscount += studentDiscount;
+                        }
+                        catch { }
+                    }
+
+                    academicData.Add(new
+                    {
+                        ClassName = classGroup.Key.ClassName ?? "N/A",
+                        BatchName = batch.Key.BatchName ?? "N/A",
+                        StudentCount = batch.Count(),
+                        Collected = classCollected,
+                        Discount = classDiscount,
+                        TotalFees = classTotalFees
+                    });
+                }
+            }
+
+            ViewBag.AcademicData = academicData.OrderBy(x => x.ClassName).ThenBy(x => x.BatchName).ToList();
+
             return View();
         }
         catch (Exception ex)
