@@ -121,4 +121,28 @@ public class TeacherPaymentController(TeacherPaymentService paymentSvc, FacultyS
             return NotFound("Error loading receipt");
         }
     }
+
+    [HttpGet]
+    public IActionResult Summary()
+    {
+        try
+        {
+            var currentMonth = DateTime.Now.Month;
+            var currentYear = DateTime.Now.Year;
+
+            var monthlyPayments = paymentSvc.GetByMonth(currentMonth, currentYear);
+
+            ViewBag.MonthlyPayments = monthlyPayments;
+            ViewBag.CurrentMonth = currentMonth;
+            ViewBag.CurrentYear = currentYear;
+
+            return View();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Summary Error: {ex.Message}");
+            ViewBag.Error = $"Error loading page: {ex.Message}";
+            return View();
+        }
+    }
 }

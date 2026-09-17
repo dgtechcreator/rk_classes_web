@@ -119,10 +119,10 @@ a { text-decoration:none; color:inherit; }
 .card-ttl { font-size:14px; font-weight:800; color:var(--txt); }
 
 /* ── KPI GRID ────────────────────────────────────────────── */
-.kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(185px,1fr)); gap:14px; margin-bottom:22px; }
+.kpi-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin-bottom:22px; }
 .kpi {
   background:var(--sur); border:1.5px solid var(--bdr); border-radius:var(--r);
-  padding:18px; position:relative; overflow:hidden; transition:all .18s;
+  padding:12px; position:relative; overflow:hidden; transition:all .18s;
 }
 .kpi::before { content:''; position:absolute; top:0; left:0; right:0; height:3.5px; border-radius:var(--r) var(--r) 0 0; }
 .kpi:hover { transform:translateY(-3px); box-shadow:var(--sh2); border-color:var(--bdr2); }
@@ -134,7 +134,7 @@ a { text-decoration:none; color:inherit; }
 .kpi.pink::before   { background:linear-gradient(90deg,#db2777,#f472b6); }
 .kpi.indigo::before { background:linear-gradient(90deg,#4338ca,#818cf8); }
 .kpi.teal::before   { background:linear-gradient(90deg,#0d9488,#2dd4bf); }
-.kpi-ico { width:42px; height:42px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:19px; margin-bottom:10px; }
+.kpi-ico { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:6px; }
 .kpi-ico.purple { background:#f3f0ff; color:var(--p); }
 .kpi-ico.amber  { background:#fffbeb; color:#d97706; }
 .kpi-ico.blue   { background:#eff6ff; color:#2563eb; }
@@ -143,8 +143,8 @@ a { text-decoration:none; color:inherit; }
 .kpi-ico.pink   { background:#fdf2f8; color:#db2777; }
 .kpi-ico.indigo { background:#eef2ff; color:#4338ca; }
 .kpi-ico.teal   { background:#f0fdfa; color:#0d9488; }
-.kpi-val { font-size:26px; font-weight:800; color:var(--txt); font-family:'JetBrains Mono',monospace; line-height:1; }
-.kpi-lbl { font-size:11px; color:var(--mu); font-weight:700; margin-top:4px; text-transform:uppercase; letter-spacing:.5px; }
+.kpi-val { font-size:20px; font-weight:800; color:var(--txt); font-family:'JetBrains Mono',monospace; line-height:1; }
+.kpi-lbl { font-size:10px; color:var(--mu); font-weight:700; margin-top:3px; text-transform:uppercase; letter-spacing:.4px; }
 
 /* ── TABLE ───────────────────────────────────────────────── */
 .tbl-wrap { overflow-x:auto; border-radius:var(--rs); }

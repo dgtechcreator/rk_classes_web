@@ -1,11 +1,64 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using SchoolMS.DB;
 using SchoolMS.Repository;
 using SchoolMS.Services;
+using SchoolMS.Web.Auth;
+using SchoolMS.Web.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
+
+// JWT auth — mobile app only. Existing MVC controllers keep using session-cookie auth (Filters/AuthFilters.cs)
+// unaffected; this scheme only activates for requests carrying an Authorization: Bearer header (or ?token=
+// for PDF/file links opened directly in a browser, e.g. via url_launcher on mobile).
+builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(o => {
+        o.TokenValidationParameters = new TokenValidationParameters {
+            ValidateIssuer           = true,
+            ValidIssuer              = builder.Configuration["Jwt:Issuer"],
+            ValidateAudience         = true,
+            ValidAudience            = builder.Configuration["Jwt:Audience"],
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!)),
+            ValidateLifetime         = true,
+            ClockSkew                = TimeSpan.FromMinutes(2),
+        };
+        o.Events = new JwtBearerEvents {
+            OnMessageReceived = ctx => {
+                var path = ctx.HttpContext.Request.Path;
+                var qsToken = ctx.Request.Query["token"];
+                if (!string.IsNullOrEmpty(qsToken) && path.StartsWithSegments("/api"))
+                    ctx.Token = qsToken;
+
+                // SignalR: the WebSocket/SSE handshake can't carry an Authorization header, so the
+                // client sends the JWT via ?access_token= instead (standard ASP.NET Core SignalR pattern).
+                var accessToken = ctx.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                    ctx.Token = accessToken;
+
+                return Task.CompletedTask;
+            }
+        };
+    });
+builder.Services.AddAuthorization();
+builder.Services.AddSignalR();
+builder.Services.AddScoped<INotificationBroadcaster, SignalRNotificationBroadcaster>();
+
+// Dev-only CORS so the Flutter web build (used for local UI verification in a browser — native
+// Android/iOS builds don't need this, they aren't subject to browser CORS) can call the API from a
+// different localhost port. No-op in production (never registered as active middleware below).
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddCors(o => o.AddPolicy("DevMobileWeb", p => p
+        .SetIsOriginAllowed(origin => Uri.TryCreate(origin, UriKind.Absolute, out var u) && (u.Host == "localhost" || u.Host == "127.0.0.1"))
+        .AllowAnyMethod()
+        .AllowAnyHeader()));
+}
 
 // Trust reverse-proxy headers (IIS / Nginx forwarding HTTPS as HTTP internally)
 builder.Services.Configure<ForwardedHeadersOptions>(o => {
@@ -55,6 +108,7 @@ builder.Services.AddScoped<TaskRepo>();
 builder.Services.AddScoped<NotificationRepo>();
 builder.Services.AddScoped<AttendanceBatchRepo>();
 builder.Services.AddScoped<TeacherPaymentRepo>();
+builder.Services.AddScoped<TeacherAttendanceRepo>();
 
 // Services
 builder.Services.AddScoped<AuthService>();
@@ -74,6 +128,7 @@ builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<AttendanceBatchService>();
 builder.Services.AddScoped<TeacherPaymentService>();
+builder.Services.AddScoped<TeacherAttendanceService>();
 
 var app = builder.Build();
 
@@ -135,5 +190,9 @@ app.UseStatusCodePages(async ctx => {
 });
 
 app.UseRouting();
+if (app.Environment.IsDevelopment()) app.UseCors("DevMobileWeb");
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllerRoute("default", "{controller=Account}/{action=Login}/{id?}");
+app.MapHub<NotificationHub>("/hubs/notifications");
 app.Run();

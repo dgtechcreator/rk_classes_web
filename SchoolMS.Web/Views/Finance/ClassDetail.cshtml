@@ -1,0 +1,94 @@
+@{
+    ViewData["Title"] = $"{ViewBag.ClassName} {ViewBag.BatchName}";
+    decimal totalFees = ViewBag.TotalFees ?? 0m;
+    decimal totalCollected = ViewBag.TotalCollected ?? 0m;
+    decimal totalDiscount = ViewBag.TotalDiscount ?? 0m;
+    decimal totalBalance = ViewBag.TotalBalance ?? 0m;
+    int totalStudents = ViewBag.TotalStudents ?? 0;
+}
+
+@if (!string.IsNullOrEmpty(ViewBag.Error))
+{
+    <div style="background: #fee; color: #c33; padding: 20px; border-radius: 8px; margin: 20px;">
+        <strong>⚠️ Error:</strong> @ViewBag.Error
+    </div>
+}
+
+
+<!-- Summary Cards -->
+<div class="kpi-grid">
+    <div class="kpi green">
+        <div class="kpi-ico green">👥</div>
+        <div class="kpi-val">@totalStudents</div>
+        <div class="kpi-lbl">Total Students</div>
+    </div>
+
+    <div class="kpi teal">
+        <div class="kpi-ico teal">💳</div>
+        <div class="kpi-val">@((long)totalFees)</div>
+        <div class="kpi-lbl">Total Fees</div>
+    </div>
+
+    <div class="kpi indigo">
+        <div class="kpi-ico indigo">✅</div>
+        <div class="kpi-val">@((long)totalCollected)</div>
+        <div class="kpi-lbl">Collected</div>
+    </div>
+
+    <div class="kpi amber">
+        <div class="kpi-ico amber">🎁</div>
+        <div class="kpi-val">@((long)totalDiscount)</div>
+        <div class="kpi-lbl">Discount</div>
+    </div>
+
+    <div class="kpi red">
+        <div class="kpi-ico red">⚠️</div>
+        <div class="kpi-val">@((long)totalBalance)</div>
+        <div class="kpi-lbl">Balance Due</div>
+    </div>
+</div>
+
+<!-- Student Details Table -->
+<div style="margin-top: 32px; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 18px; font-weight: 700; color: #1f2937; margin: 0;">📋 Students Details</h3>
+        <a href="/Finance/ExportClassStudents?className=@Uri.EscapeDataString(ViewBag.ClassName)&batchName=@Uri.EscapeDataString(ViewBag.BatchName)" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600; display: inline-block;">📥 Download Excel</a>
+    </div>
+
+    <div class="tbl-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th style="text-align: left;">Student Name</th>
+                    <th style="text-align: right;">Total Fees</th>
+                    <th style="text-align: right;">Discount</th>
+                    <th style="text-align: right;">Collected</th>
+                    <th style="text-align: right;">Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (ViewBag.StudentDetails != null && ((System.Collections.ICollection)ViewBag.StudentDetails).Count > 0)
+                {
+                    @foreach (var student in ViewBag.StudentDetails)
+                    {
+                        decimal stdBalance = (decimal)student.Balance;
+                        <tr>
+                            <td>@student.StudentName</td>
+                            <td style="text-align: right; font-weight: 600;">₹@((long)student.TotalFees)</td>
+                            <td style="text-align: right;">₹@((long)student.Discount)</td>
+                            <td style="text-align: right;">₹@((long)student.Collected)</td>
+                            <td style="text-align: right; color: @(stdBalance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₹@((long)stdBalance)</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #999;">No students in this class</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+

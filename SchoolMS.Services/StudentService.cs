@@ -11,4 +11,6 @@ public class StudentService(StudentRepo repo)
     public int Save(Student s, string? pic, int by) => repo.Save(s, pic, by);
     public void Delete(int id)  => repo.Delete(id);
     public void Restore(int id) => repo.Restore(id);
+    public List<Student> GetByClassAndBatch(string className, string batchName)
+        => repo.GetByClassAndBatch(className, batchName);
 }

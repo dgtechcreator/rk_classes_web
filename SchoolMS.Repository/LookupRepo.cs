@@ -72,14 +72,17 @@ public class LookupRepo(CommonConnectivity db)
                 IsActive = G.G<bool>(r,"IsActive")
             });
 
-        // Calculate overall fees summary - Direct from database
+        // Calculate overall fees summary - Direct from database.
+        // TotalFees must come from StudentFees (each student's actual assigned fees), not FeeStructure
+        // (the per-class/batch rate catalog) — summing the catalog undercounts by orders of magnitude
+        // once there's more than one student per class, which made BalanceOverall always clamp to 0
+        // regardless of real outstanding dues. Matches FeesRepo.GetOverallFeesSummary()'s formula so the
+        // staff dashboard and the Finance dashboard agree on the same numbers.
         var feesSummary = db.Sql(@"
             SELECT
-                ISNULL(SUM(fs.Amount), 0) as TotalFees,
-                ISNULL((SELECT SUM(NetAmount) FROM FeePayments WHERE IsDeleted=0), 0) as TotalCollected,
-                ISNULL((SELECT SUM(Discount) FROM FeePayments WHERE IsDeleted=0), 0) as TotalDiscount
-            FROM FeeStructure fs
-            WHERE fs.IsActive=1",
+                ISNULL((SELECT SUM(Amount) FROM StudentFees), 0) as TotalFees,
+                ISNULL((SELECT SUM(Amount) FROM FeePayments WHERE IsDeleted=0), 0) as TotalCollected,
+                ISNULL((SELECT SUM(Discount) FROM FeePayments WHERE IsDeleted=0), 0) as TotalDiscount",
             r => new {
                 TotalFees = G.G<decimal>(r,"TotalFees"),
                 TotalCollected = G.G<decimal>(r,"TotalCollected"),
@@ -91,7 +94,7 @@ public class LookupRepo(CommonConnectivity db)
             stats.TotalFeesOverall = feesSummary.TotalFees;
             stats.TotalCollectedOverall = feesSummary.TotalCollected;
             stats.TotalDiscountOverall = feesSummary.TotalDiscount;
-            stats.BalanceOverall = Math.Max(0, stats.TotalFeesOverall - stats.TotalCollectedOverall - stats.TotalDiscountOverall);
+            stats.BalanceOverall = Math.Max(0, stats.TotalFeesOverall - stats.TotalCollectedOverall);
         }
 
         return stats;

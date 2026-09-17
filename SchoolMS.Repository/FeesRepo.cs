@@ -220,6 +220,45 @@ public class FeesRepo(CommonConnectivity db)
         );
     }
 
+    public (decimal TotalFees, decimal TotalCollected, decimal TotalDiscount) GetStudentFeeDetails(int studentId, int yearId)
+    {
+        var query = $@"
+            SELECT
+                COALESCE(SUM(fs.Amount), 0) AS TotalFees,
+                COALESCE(SUM(fs.PaidAmount), 0) AS TotalCollected,
+                COALESCE(SUM(fs.Discount), 0) AS TotalDiscount
+            FROM StudentFees fs
+            WHERE fs.StudentId = {studentId} AND fs.AcademicYearId = {yearId}
+        ";
+
+        var result = db.Sql(query, r => new
+        {
+            TotalFees = G.G<decimal>(r, "TotalFees"),
+            TotalCollected = G.G<decimal>(r, "TotalCollected"),
+            TotalDiscount = G.G<decimal>(r, "TotalDiscount")
+        }).FirstOrDefault();
+
+        if (result == null)
+            return (0, 0, 0);
+
+        return (result.TotalFees, result.TotalCollected, result.TotalDiscount);
+    }
+
+    public List<StudentFeeDetail> GetClassStudentFeeDetails(string className, string batchName)
+    {
+        return db.Read("sp_GetStudentsByClassAndBatch", new() {
+            { "@ClassName", className },
+            { "@BatchName", batchName }
+        }, r => new StudentFeeDetail
+        {
+            StudentName = G.G<string>(r, "FullName") ?? "",
+            TotalFees = G.G<decimal>(r, "TotalFees"),
+            Discount = G.G<decimal>(r, "Discount"),
+            Collected = G.G<decimal>(r, "Collected"),
+            Balance = G.G<decimal>(r, "Balance")
+        });
+    }
+
     static FinanceAcademicBreakdown MapAcademicData(SqlDataReader r) => new()
     {
         ClassName = G.G<string>(r, "ClassName") ?? "",

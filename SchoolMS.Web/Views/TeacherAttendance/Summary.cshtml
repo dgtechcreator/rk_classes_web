@@ -1,0 +1,117 @@
+@{
+    ViewData["Title"] = "My Attendance Summary";
+    var attendance = (List<SchoolMS.Domain.TeacherAttendance>)ViewBag.Attendance ?? new List<SchoolMS.Domain.TeacherAttendance>();
+    var totalHours = (decimal)ViewBag.TotalHours;
+    var totalDays = (int)ViewBag.TotalDays;
+}
+
+<style>
+    .sum-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+    .sum-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .sum-hdr h1 { margin: 0; font-size: 20px; font-weight: 700; }
+    .sum-hdr a { background: #2563eb; color: white; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; transition: background 0.2s; }
+    .sum-hdr a:hover { background: #1d4ed8; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+    .kpi-box { background: white; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; text-align: center; }
+    .kpi-icon { font-size: 22px; margin-bottom: 6px; }
+    .kpi-value { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
+    .kpi-label { font-size: 12px; color: #6b7280; font-weight: 500; }
+    .sum-tbl { width: 100%; border-collapse: collapse; background: white; }
+    .sum-tbl th { background: #f3f4f6; padding: 10px; text-align: left; font-weight: 600; font-size: 12px; border-bottom: 2px solid #e5e7eb; }
+    .sum-tbl td { padding: 10px; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
+    .sum-tbl tbody tr:hover { background: #f9fafb; }
+    .sum-tbl-wrapper { overflow-x: auto; }
+    .del-btn { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: background 0.2s; }
+    .del-btn:hover { background: #dc2626; }
+</style>
+
+<div class="sum-container">
+    <div class="sum-hdr">
+        <h1>My Attendance Summary</h1>
+        <a href="/TeacherAttendance/Index">← Back</a>
+    </div>
+
+    <div class="kpi-grid">
+        <div class="kpi-box">
+            <div class="kpi-icon">⏱️</div>
+            <div class="kpi-value">@totalHours.ToString("F2")</div>
+            <div class="kpi-label">Total Hours</div>
+        </div>
+
+        <div class="kpi-box">
+            <div class="kpi-icon">📅</div>
+            <div class="kpi-value">@totalDays</div>
+            <div class="kpi-label">Total Days</div>
+        </div>
+
+        <div class="kpi-box">
+            <div class="kpi-icon">📋</div>
+            <div class="kpi-value">@(attendance.Count)</div>
+            <div class="kpi-label">Records</div>
+        </div>
+    </div>
+
+    <div class="sum-tbl-wrapper">
+        <table class="sum-tbl">
+            <thead>
+                <tr>
+                    <th>Teacher</th>
+                    <th>Class</th>
+                    <th>Batch</th>
+                    <th>Subject</th>
+                    <th>Date</th>
+                    <th>In Time</th>
+                    <th>Out Time</th>
+                    <th>Hours</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (attendance != null && attendance.Count > 0)
+                {
+                    @foreach (var record in attendance)
+                    {
+                        <tr>
+                            <td>@record.FacultyName</td>
+                            <td>@record.ClassName</td>
+                            <td>@record.BatchName</td>
+                            <td>@record.SubjectName</td>
+                            <td>@record.AttendanceDate.ToString("dd-MMM-yyyy")</td>
+                            <td>@(record.InTime?.ToString(@"hh\:mm") ?? "-")</td>
+                            <td>@(record.OutTime?.ToString(@"hh\:mm") ?? "-")</td>
+                            <td>@(record.TotalHours?.ToString("F2") ?? "-")</td>
+                            <td><button class="del-btn" onclick="deleteAttendance(@record.AttendanceId)">Delete</button></td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: #6b7280; padding: 20px;">No records</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function deleteAttendance(attendanceId) {
+    if (!confirm('Delete this record?')) return;
+
+    fetch('/TeacherAttendance/DeleteAttendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'attendanceId=' + attendanceId
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            alert('Deleted successfully');
+            setTimeout(() => location.reload(), 300);
+        } else {
+            alert('Error: ' + res.message);
+        }
+    });
+}
+</script>

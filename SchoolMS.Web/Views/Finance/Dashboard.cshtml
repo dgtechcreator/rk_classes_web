@@ -23,25 +23,25 @@
 
     <div class="kpi teal">
         <div class="kpi-ico teal">💳</div>
-        <div class="kpi-val">@ViewBag.TotalFees.ToString("N0")</div>
+        <div class="kpi-val">@((long)(ViewBag.TotalFees ?? 0m))</div>
         <div class="kpi-lbl">Total Fees</div>
     </div>
 
     <div class="kpi indigo">
         <div class="kpi-ico indigo">✅</div>
-        <div class="kpi-val">@ViewBag.TotalCollected.ToString("N0")</div>
+        <div class="kpi-val">@((long)(ViewBag.TotalCollected ?? 0m))</div>
         <div class="kpi-lbl">Collected Fees</div>
     </div>
 
     <div class="kpi amber">
         <div class="kpi-ico amber">🎁</div>
-        <div class="kpi-val">@ViewBag.TotalDiscount.ToString("N0")</div>
+        <div class="kpi-val">@((long)(ViewBag.TotalDiscount ?? 0m))</div>
         <div class="kpi-lbl">Discount</div>
     </div>
 
     <div class="kpi red">
         <div class="kpi-ico red">⚠️</div>
-        <div class="kpi-val">@ViewBag.TotalBalance.ToString("N0")</div>
+        <div class="kpi-val">@((long)(ViewBag.TotalBalance ?? 0m))</div>
         <div class="kpi-lbl">Balance Due</div>
     </div>
 
@@ -53,7 +53,10 @@
 </div>
 
 <div style="margin-top: 32px; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; color: #1f2937;">📚 Academic Breakdown</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 18px; font-weight: 700; color: #1f2937; margin: 0;">📚 Academic Breakdown</h3>
+        <a href="/Finance/ExportAcademicBreakdown" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600; display: inline-block;">📥 Download Excel</a>
+    </div>
 
     <div class="tbl-wrap">
         <table>
@@ -62,9 +65,11 @@
                     <th style="text-align: left;">Standard</th>
                     <th style="text-align: left;">Batch</th>
                     <th style="text-align: center;">No. of Students</th>
-                    <th style="text-align: right;">Collected</th>
-                    <th style="text-align: right;">Discount</th>
                     <th style="text-align: right;">Total Fees</th>
+                    <th style="text-align: right;">Discount</th>
+                    <th style="text-align: right;">Collected</th>
+                    <th style="text-align: right;">Balance</th>
+                    <th style="text-align: center;">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -72,20 +77,25 @@
                 {
                     @foreach (var row in ViewBag.AcademicData)
                     {
+                        var balance = row.TotalFees - row.EstimatedCollected - row.EstimatedDiscount;
                         <tr>
                             <td>@row.ClassName</td>
                             <td>@row.BatchName</td>
                             <td style="text-align: center; font-weight: 600;">@row.StudentCount</td>
-                            <td style="text-align: right;">₹@row.EstimatedCollected.ToString("N0")</td>
-                            <td style="text-align: right;">₹@row.EstimatedDiscount.ToString("N0")</td>
-                            <td style="text-align: right; font-weight: 600;">₹@row.TotalFees.ToString("N0")</td>
+                            <td style="text-align: right; font-weight: 600;">₹@((long)row.TotalFees)</td>
+                            <td style="text-align: right;">₹@((long)row.EstimatedDiscount)</td>
+                            <td style="text-align: right;">₹@((long)row.EstimatedCollected)</td>
+                            <td style="text-align: right; color: @(balance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₹@((long)balance)</td>
+                            <td style="text-align: center;">
+                                <a href="/Finance/ClassDetail?className=@Uri.EscapeDataString(row.ClassName)&batchName=@Uri.EscapeDataString(row.BatchName)" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-block;">View</a>
+                            </td>
                         </tr>
                     }
                 }
                 else
                 {
                     <tr>
-                        <td colspan="6" style="text-align: center; color: #999;">No data available</td>
+                        <td colspan="8" style="text-align: center; color: #999;">No data available</td>
                     </tr>
                 }
             </tbody>

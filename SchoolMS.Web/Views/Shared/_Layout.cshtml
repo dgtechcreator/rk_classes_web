@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-z<title>@ViewData["Title"] — RK Classes</title>
+<title>@ViewData["Title"]</title>
 <!-- Favicon -->
 <link rel="icon" type="image/png" href="/icons/favicon.png?v=3"/>
 <link rel="shortcut icon" type="image/png" href="/icons/favicon.png?v=3"/>
@@ -329,6 +329,10 @@ z<title>@ViewData["Title"] — RK Classes</title>
     @if(Context.Session.HasPerm("teacher_payment")){
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="TeacherPayment"?"active":"")" href="/TeacherPayment/Index">
       <span class="nav-ic"><i class="fas fa-money-bill-wave"></i></span> Teachers Payment
+    </a>}
+    @if(Context.Session.HasPerm("teacher_attendance")){
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="TeacherAttendance"?"active":"")" href="/TeacherAttendance/Index">
+      <span class="nav-ic"><i class="fas fa-clock"></i></span> Teachers Attendance
     </a>}
   </div>
 

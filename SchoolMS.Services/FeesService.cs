@@ -29,4 +29,10 @@ public class FeesService(FeesRepo repo)
 
     public List<FinanceAcademicBreakdown> GetFinanceDashboardAcademic(int? yearId = null)
         => repo.GetFinanceDashboardAcademic(yearId);
+
+    public (decimal TotalFees, decimal TotalCollected, decimal TotalDiscount) GetStudentFeeDetails(int studentId, int yearId)
+        => repo.GetStudentFeeDetails(studentId, yearId);
+
+    public List<StudentFeeDetail> GetClassStudentFeeDetails(string className, string batchName)
+        => repo.GetClassStudentFeeDetails(className, batchName);
 }

@@ -123,21 +123,6 @@ public class RequireAdminOrParentAttribute : ActionFilterAttribute
     }
 }
 
-// ── Finance Dashboard — Only for user ID 10 (Sunil) ──────────────────────────────
-public class RequireFinanceAdminAttribute : ActionFilterAttribute
-{
-    public override void OnActionExecuting(ActionExecutingContext ctx)
-    {
-        var userId = ctx.HttpContext.Session.GetInt32("UserId");
-
-        if (userId != 10)
-        {
-            ctx.Result = new RedirectToActionResult("Index", "Dashboard",
-                new { msg = "access_denied" });
-        }
-    }
-}
-
 // ── Teacher Payments — Permission based ───────────────────────────────────────
 public class RequireTeacherPaymentAccessAttribute : ActionFilterAttribute
 {
@@ -155,6 +140,30 @@ public class RequireTeacherPaymentAccessAttribute : ActionFilterAttribute
 
         var perms = Sess.GetPermissions(ctx.HttpContext.Session);
         if (!perms.TryGetValue("teacher_payment", out var hasAccess) || !hasAccess)
+        {
+            ctx.Result = new RedirectToActionResult("Index", "Dashboard",
+                new { msg = "access_denied" });
+        }
+    }
+}
+
+// ── Teacher Attendance — Permission based ──────────────────────────────────────
+public class RequireTeacherAttendanceAccessAttribute : ActionFilterAttribute
+{
+    public override void OnActionExecuting(ActionExecutingContext ctx)
+    {
+        if (ctx.HttpContext.Session.GetInt32("UserId") == null)
+        {
+            ctx.Result = new RedirectToActionResult("Login", "Account",
+                new { returnUrl = ctx.HttpContext.Request.Path });
+            return;
+        }
+
+        var roleId = ctx.HttpContext.Session.GetInt32("RoleId");
+        if (roleId == 1) return; // Admin — full access
+
+        var perms = Sess.GetPermissions(ctx.HttpContext.Session);
+        if (!perms.TryGetValue("teacher_attendance", out var hasAccess) || !hasAccess)
         {
             ctx.Result = new RedirectToActionResult("Index", "Dashboard",
                 new { msg = "access_denied" });

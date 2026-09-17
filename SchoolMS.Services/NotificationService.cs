@@ -3,7 +3,7 @@ using SchoolMS.Repository;
 
 namespace SchoolMS.Services;
 
-public class NotificationService(NotificationRepo repo)
+public class NotificationService(NotificationRepo repo, INotificationBroadcaster broadcaster)
 {
     public List<Notification> GetUserNotifications(int userId, string status = "")
         => repo.GetUserNotifications(userId, status);
@@ -15,7 +15,10 @@ public class NotificationService(NotificationRepo repo)
         => repo.GetUnreadCount(userId);
 
     public void CreateNotification(Notification notif)
-        => repo.CreateNotification(notif);
+    {
+        repo.CreateNotification(notif);
+        broadcaster.NotifyUser(notif.UserId, notif);
+    }
 
     public void MarkAsRead(int notificationId)
         => repo.MarkAsRead(notificationId);

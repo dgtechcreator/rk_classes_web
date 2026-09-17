@@ -102,13 +102,16 @@ public class TeacherPaymentRepo(CommonConnectivity db)
 
     private string GenerateReceiptNo()
     {
-        var query = @"
-            SELECT ISNULL(MAX(CAST(SUBSTRING(ReceiptNo, 5, LEN(ReceiptNo)) AS INT)), 0) + 1 AS NextNo
+        var query = $@"
+            SELECT 'TPR-' + FORMAT(YEAR(GETDATE()), '0000') + '-' +
+                   FORMAT(MONTH(GETDATE()), '00') + '-' +
+                   FORMAT(ISNULL(MAX(CAST(RIGHT(ReceiptNo, 5) AS INT)), 0) + 1, '00001') AS ReceiptNo
             FROM TeacherPayments
+            WHERE YEAR(PaymentDate) = YEAR(GETDATE()) AND MONTH(PaymentDate) = MONTH(GETDATE())
         ";
 
-        var nextNo = db.Sql(query, r => G.G<int>(r, "NextNo")).FirstOrDefault();
-        return "TPR-" + nextNo;
+        return db.Sql(query, r => G.G<string>(r, "ReceiptNo")).FirstOrDefault() ??
+               "TPR-" + DateTime.Now.Year + "-" + DateTime.Now.Month.ToString("00") + "-00001";
     }
 
     static TeacherPayment MapTeacherPayment(SqlDataReader r) => new()

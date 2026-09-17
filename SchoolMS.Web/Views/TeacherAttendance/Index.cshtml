@@ -1,0 +1,229 @@
+@{
+    ViewData["Title"] = "Teachers Attendance";
+    var teachers = (dynamic)ViewBag.Teachers ?? new List<dynamic>();
+    var classes = (dynamic)ViewBag.Classes ?? new List<dynamic>();
+    var batches = (dynamic)ViewBag.Batches ?? new List<dynamic>();
+    var subjects = (dynamic)ViewBag.Subjects ?? new List<dynamic>();
+    var attendance = (List<SchoolMS.Domain.TeacherAttendance>)ViewBag.Attendance ?? new List<SchoolMS.Domain.TeacherAttendance>();
+}
+
+<style>
+    .att-container { max-width: 100%; margin: 0; padding: 20px 15px; }
+    .att-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .att-hdr h1 { margin: 0; font-size: 24px; font-weight: 700; }
+    .att-hdr a { background: #2563eb; color: white; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: 600; transition: background 0.2s; }
+    .att-hdr a:hover { background: #1d4ed8; }
+    .att-form { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 35px 40px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .att-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .att-group { display: flex; flex-direction: column; }
+    .att-group label { font-weight: 600; margin-bottom: 6px; font-size: 13px; color: #374151; }
+    .att-group input, .att-group select, .att-group textarea { padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; font-family: inherit; }
+    .att-group input:focus, .att-group select:focus, .att-group textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+    .att-group textarea { resize: vertical; min-height: 60px; }
+    .att-btn { background: #2563eb; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .att-btn:hover { background: #1d4ed8; }
+    .att-tbl { width: 100%; border-collapse: collapse; background: white; }
+    .att-tbl th { background: #f3f4f6; padding: 12px; text-align: left; font-weight: 600; font-size: 13px; border-bottom: 2px solid #e5e7eb; }
+    .att-tbl td { padding: 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+    .att-tbl tbody tr:hover { background: #f9fafb; }
+    .att-act { display: flex; gap: 8px; }
+    .att-del { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; transition: background 0.2s; }
+    .att-del:hover { background: #dc2626; }
+    .att-tbl-wrapper { overflow-x: auto; }
+</style>
+
+<div class="att-container">
+    <div class="att-hdr">
+        <div>
+            <h1>Teachers Attendance</h1>
+            <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 15px;">Manage teacher attendance and working hours</p>
+        </div>
+        <a href="/TeacherAttendance/Summary">+ Summary</a>
+    </div>
+
+    <div class="att-form">
+        <h3 style="margin-top: 0; margin-bottom: 16px; font-weight: 700; font-size: 16px;">New Attendance Entry</h3>
+        <form id="attendanceForm">
+            <div class="att-grid">
+                <div class="att-group">
+                    <label for="teacherSelect">Teacher Name *</label>
+                    <select id="teacherSelect" name="teacherId" required>
+                        <option value="">-- Select Teacher --</option>
+                        @foreach (var teacher in teachers)
+                        {
+                            <option value="@teacher.FacultyId">@teacher.FullName</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="att-group">
+                    <label for="classSelect">Class</label>
+                    <select id="classSelect" name="classId">
+                        <option value="">-- Select Class --</option>
+                        @foreach (var cls in classes)
+                        {
+                            <option value="@cls.ClassId">@cls.ClassName</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="att-group">
+                    <label for="batchSelect">Batch</label>
+                    <select id="batchSelect" name="batchId">
+                        <option value="">-- Select Batch --</option>
+                        @foreach (var batch in batches)
+                        {
+                            <option value="@batch.BatchId">@batch.BatchName</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="att-group">
+                    <label for="subjectInput">Subject</label>
+                    <input type="text" id="subjectInput" name="subject" placeholder="Enter subject name"/>
+                </div>
+
+                <div class="att-group">
+                    <label for="dateInput">Date *</label>
+                    <input type="date" id="dateInput" name="attendanceDate" required/>
+                </div>
+
+                <div class="att-group">
+                    <label for="inTimeInput">In Time</label>
+                    <input type="time" id="inTimeInput" name="inTime"/>
+                </div>
+
+                <div class="att-group">
+                    <label for="outTimeInput">Out Time</label>
+                    <input type="time" id="outTimeInput" name="outTime"/>
+                </div>
+
+                <div class="att-group">
+                    <label for="totalHoursDisplay">Total Hours</label>
+                    <input type="text" id="totalHoursDisplay" readonly style="background: #f3f4f6; color: #6b7280;"/>
+                </div>
+            </div>
+
+            <div class="att-group" style="margin-bottom: 16px;">
+                <label for="topicInput">Topic</label>
+                <textarea id="topicInput" name="topic" placeholder="Enter topic details..."></textarea>
+            </div>
+
+            <button type="submit" class="att-btn">Save Attendance</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Set today's date as default
+    window.addEventListener('load', function() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('dateInput').value = today;
+    });
+
+    document.getElementById('outTimeInput').addEventListener('change', function() {
+        const inTime = document.getElementById('inTimeInput').value;
+        const outTime = this.value;
+
+        if (inTime && outTime) {
+            const [inHours, inMinutes] = inTime.split(':').map(Number);
+            const [outHours, outMinutes] = outTime.split(':').map(Number);
+
+            const inTotalMinutes = inHours * 60 + inMinutes;
+            const outTotalMinutes = outHours * 60 + outMinutes;
+
+            const diffMinutes = outTotalMinutes - inTotalMinutes;
+            if (diffMinutes > 0) {
+                const hours = (diffMinutes / 60).toFixed(2);
+                document.getElementById('totalHoursDisplay').value = hours + ' hrs';
+            } else {
+                document.getElementById('totalHoursDisplay').value = 'Invalid time range';
+            }
+        } else {
+            document.getElementById('totalHoursDisplay').value = '';
+        }
+    });
+
+    document.getElementById('attendanceForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const teacherId = document.getElementById('teacherSelect').value;
+        const classId = document.getElementById('classSelect').value || null;
+        const batchId = document.getElementById('batchSelect').value || null;
+        const subject = document.getElementById('subjectInput').value;
+        const topic = document.getElementById('topicInput').value;
+        const attendanceDate = document.getElementById('dateInput').value;
+        let inTime = document.getElementById('inTimeInput').value;
+        let outTime = document.getElementById('outTimeInput').value;
+
+        if (!teacherId || !attendanceDate) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        // Format times - ensure HH:mm format
+        if (inTime && !inTime.includes(':')) {
+            inTime = null;
+        }
+        if (outTime && !outTime.includes(':')) {
+            outTime = null;
+        }
+
+        const params = new URLSearchParams();
+        params.append('facultyId', teacherId);
+        if (classId) params.append('classId', classId);
+        if (batchId) params.append('batchId', batchId);
+        if (subject) params.append('subject', subject);
+        if (topic) params.append('topic', topic);
+        params.append('attendanceDate', attendanceDate);
+        if (inTime) params.append('inTime', inTime);
+        if (outTime) params.append('outTime', outTime);
+
+        fetch('/TeacherAttendance/SaveAttendance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                alert('Attendance saved successfully');
+                document.getElementById('attendanceForm').reset();
+                document.getElementById('totalHoursDisplay').value = '';
+                setTimeout(() => location.reload(), 300);
+            } else {
+                alert('Error: ' + res.message);
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('An error occurred');
+        });
+    });
+
+    function deleteAttendance(attendanceId) {
+        if (!confirm('Are you sure you want to delete this attendance record?')) return;
+
+        const params = new URLSearchParams();
+        params.append('attendanceId', attendanceId);
+
+        fetch('/TeacherAttendance/DeleteAttendance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                alert('Attendance deleted successfully');
+                setTimeout(() => location.reload(), 300);
+            } else {
+                alert('Error: ' + res.message);
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            alert('An error occurred');
+        });
+    }
+</script>

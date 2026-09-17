@@ -3,7 +3,7 @@ using SchoolMS.Repository;
 
 namespace SchoolMS.Services;
 
-public class TaskService(TaskRepo repo, NotificationRepo notifRepo)
+public class TaskService(TaskRepo repo, NotificationService notifSvc)
 {
     public List<TaskItem> GetAllTasks() => repo.GetAllTasks();
     public List<TaskItem> GetUserTasks(int userId, string status = "") => repo.GetUserTasks(userId, status);
@@ -14,9 +14,7 @@ public class TaskService(TaskRepo repo, NotificationRepo notifRepo)
 
     public void SaveTask(TaskItem task)
     {
-        // Ensure TaskId is 0 for new tasks
-        if (task.TaskId == 0)
-            task.TaskId = 0; // SP will handle it
+        bool isNew = task.TaskId == 0;
 
         // Update status based on due date
         if (!task.IsCompleted)
@@ -25,6 +23,19 @@ public class TaskService(TaskRepo repo, NotificationRepo notifRepo)
         }
 
         repo.SaveTask(task);
+
+        // Notify the assignee in real time — only on creation, not every edit, and only when a task is
+        // actually assigned to someone (UserId is optional on TaskItem).
+        if (isNew && task.UserId.HasValue)
+        {
+            notifSvc.CreateNotification(new Notification {
+                UserId = task.UserId.Value,
+                Title = "New Task Assigned",
+                Message = task.Title,
+                Type = "Task",
+                Action = "/Task/Index",
+            });
+        }
     }
 
     public void CompleteTask(int taskId)
@@ -53,7 +64,7 @@ public class TaskService(TaskRepo repo, NotificationRepo notifRepo)
         repo.SaveTask(task);
 
         // Create notification
-        notifRepo.CreateNotification(new Notification
+        notifSvc.CreateNotification(new Notification
         {
             UserId = userId,
             Title = $"Fee Due Reminder",

@@ -22,6 +22,15 @@ public class StudentRepo(CommonConnectivity db)
         var l = db.Read("sp_GetStudentById", new() { { "@StudentId", id } }, MapStudent);
         return l.FirstOrDefault();
     }
+
+    public List<Student> GetByClassAndBatch(string className, string batchName)
+    {
+        var l = db.Read("sp_GetStudentsByClassAndBatch", new() {
+            { "@ClassName", className },
+            { "@BatchName", batchName }
+        }, MapStudent);
+        return l;
+    }
     public void Delete(int id)  => db.Exec("sp_DeleteStudent",  new() { { "@StudentId", id } });
     public void Restore(int id) => db.Exec("sp_RestoreStudent", new() { { "@StudentId", id } });
 
