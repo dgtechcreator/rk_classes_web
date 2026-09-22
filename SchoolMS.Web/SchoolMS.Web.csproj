@@ -14,4 +14,7 @@
     <ProjectReference Include="..\SchoolMS.Repository\SchoolMS.Repository.csproj" />
     <ProjectReference Include="..\SchoolMS.Services\SchoolMS.Services.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="{Controllers,Filters,ViewModels,Properties}\" />
+  </ItemGroup>
 </Project>

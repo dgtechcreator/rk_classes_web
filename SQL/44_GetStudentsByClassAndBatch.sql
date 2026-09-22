@@ -14,13 +14,19 @@ CREATE PROCEDURE sp_GetStudentsByClassAndBatch
 AS BEGIN
   SET NOCOUNT ON;
 
+  -- Fee columns are required by FeesRepo.GetClassStudentFeeDetails (Finance > Class Detail drill-down
+  -- and its CSV export) — without them every student silently shows ₹0 for fees/discount/collected/balance.
   SELECT s.*,
     c.ClassName,
     sec.SectionName,
     b.BatchName,
     ay.YearName,
     uc.FullName AS CreatedByName,
-    ud.FullName AS DeletedByName
+    ud.FullName AS DeletedByName,
+    COALESCE(f.TotalFees, 0) AS TotalFees,
+    COALESCE(f.Discount, 0) AS Discount,
+    COALESCE(f.Collected, 0) AS Collected,
+    COALESCE(f.TotalFees, 0) - COALESCE(f.Collected, 0) - COALESCE(f.Discount, 0) AS Balance
   FROM Students s
   LEFT JOIN Classes c ON c.ClassId = s.ClassId
   LEFT JOIN Sections sec ON sec.SectionId = s.SectionId
@@ -28,6 +34,11 @@ AS BEGIN
   LEFT JOIN AcademicYears ay ON ay.YearId = s.AcademicYearId
   LEFT JOIN Users uc ON uc.UserId = s.CreatedBy
   LEFT JOIN Users ud ON ud.UserId = s.DeletedBy
+  LEFT JOIN (
+    SELECT StudentId, SUM(Amount) AS TotalFees, SUM(PaidAmount) AS Collected, SUM(Discount) AS Discount
+    FROM StudentFees
+    GROUP BY StudentId
+  ) f ON f.StudentId = s.StudentId
   WHERE c.ClassName = @ClassName AND b.BatchName = @BatchName
   ORDER BY s.FullName;
 END
