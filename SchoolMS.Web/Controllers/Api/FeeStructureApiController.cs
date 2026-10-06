@@ -8,7 +8,7 @@ namespace SchoolMS.Web.Controllers.Api;
 [ApiController]
 [Route("api/fee-structure")]
 [ApiRequireStaff]
-public class FeeStructureApiController(FeeStructureService svc, LookupService lookup) : ControllerBase
+public class FeeStructureApiController(FeeStructureService svc, LookupService lookup, FeePositionService feePos) : ControllerBase
 {
     public record CollectFeeReq(int StudentFeeId, decimal PaidAmount, decimal Discount,
         decimal LateFine, string PaymentMode, string? TransactionRef, string? Remarks);
@@ -20,6 +20,7 @@ public class FeeStructureApiController(FeeStructureService svc, LookupService lo
         yearId ??= lookup.GetCurrentYearId();
         var list = svc.GetAll(yearId, classId, sectionId);
         var summary = svc.GetSummary(yearId);
+        if (yearId == lookup.GetCurrentYearId()) feePos.EnrichSummary(summary);
         return Ok(new { list, summary, yearId, classId, sectionId });
     }
 

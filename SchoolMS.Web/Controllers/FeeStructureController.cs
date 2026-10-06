@@ -6,13 +6,14 @@ using SchoolMS.Web.Filters;
 namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
-public class FeeStructureController(FeeStructureService svc, LookupService lookup) : Controller
+public class FeeStructureController(FeeStructureService svc, LookupService lookup, FeePositionService feePos) : Controller
 {
     public IActionResult Index(int? yearId, int? classId, int? sectionId)
     {
         yearId ??= lookup.GetCurrentYearId();
         var list    = svc.GetAll(yearId, classId, sectionId);
         var summary = svc.GetSummary(yearId);
+        if (yearId == lookup.GetCurrentYearId()) feePos.EnrichSummary(summary);
         ViewBag.Years     = lookup.GetYears();
         ViewBag.Classes   = lookup.GetClasses();
         ViewBag.Sections  = lookup.GetSections();

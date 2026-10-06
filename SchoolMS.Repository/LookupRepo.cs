@@ -35,6 +35,18 @@ public class LookupRepo(CommonConnectivity db)
         });
         var stats = l.FirstOrDefault() ?? new DashboardStats();
 
+        // Present / Absent today count ACTIVE students only, so the cards always equal the lists they open
+        // (sp_GetDashboardStats counted every attendance row, including those of inactive students).
+        var att = db.Sql(@"
+            SELECT SUM(CASE WHEN a.Status='Present' THEN 1 ELSE 0 END) AS P,
+                   SUM(CASE WHEN a.Status='Absent'  THEN 1 ELSE 0 END) AS A
+            FROM Attendance a
+            JOIN Students s ON s.StudentId = a.StudentId
+            WHERE a.AttendanceDate = CAST(GETDATE() AS DATE) AND s.Status = 'Active'",
+            r => (P: G.G<int>(r, "P"), A: G.G<int>(r, "A"))).FirstOrDefault();
+        stats.PresentToday = att.P;
+        stats.AbsentToday = att.A;
+
         // Populate dynamic class strengths
         var colors = new[] { "#6d28d9", "#db2777", "#2563eb", "#059669", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899" };
         var classStrengths = db.Sql(@"

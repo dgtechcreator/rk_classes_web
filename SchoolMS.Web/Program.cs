@@ -130,6 +130,7 @@ builder.Services.AddScoped<AttendanceBatchService>();
 builder.Services.AddScoped<TeacherPaymentService>();
 builder.Services.AddScoped<TeacherAttendanceService>();
 builder.Services.AddScoped<FeePositionService>();
+builder.Services.AddScoped<TeacherAccountLinker>();
 
 var app = builder.Build();
 

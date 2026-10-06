@@ -12,7 +12,8 @@ public class FeesService(FeesRepo repo)
     public FeePayment? GetPaymentById(int id) => repo.GetById(id);
     public List<FeePayment> GetStudentHistory(int sid) => repo.GetStudentHistory(sid);
     public List<FeePayment> GetPaymentsThisMonth() => repo.GetPaymentsThisMonth();
-    public List<FinanceStudentRow> GetFinanceStudents(string? className, string? batchName) => repo.GetFinanceStudents(className, batchName);
+    public List<FinanceStudentRow> GetFinanceStudents(string? className, string? batchName, string? sectionName = null, bool anyBatch = false)
+        => repo.GetFinanceStudents(className, batchName, sectionName, anyBatch);
     public void DeletePayment(int paymentId, int deletedBy) => repo.DeletePayment(paymentId, deletedBy);
     public void RestorePayment(int paymentId) => repo.RestorePayment(paymentId);
     public List<FeePayment> GetDeletedPayments() => repo.GetDeletedPayments();

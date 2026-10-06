@@ -451,7 +451,7 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
         try
         {
             var yearId = lookup.GetCurrentYearId();
-            var (students, _) = svc.GetAll(1, 999999, null, classId, null, null, yearId, null);
+            var (students, _) = svc.GetAll(1, 999999, null, classId, null, null, yearId, "Active");
 
             var batches = lookup.GetBatches();
             var sections = lookup.GetSections();

@@ -157,6 +157,7 @@ public class AttendanceRepo(CommonConnectivity db)
             LEFT JOIN Sections sec ON sec.SectionId = a.SectionId
             LEFT JOIN Batches b ON b.BatchId = a.BatchId
             WHERE CAST(a.AttendanceDate AS DATE) = '{today}'
+              AND s.Status = 'Active'
               AND a.Status = '{status}'
             ORDER BY s.FullName",
             r => (

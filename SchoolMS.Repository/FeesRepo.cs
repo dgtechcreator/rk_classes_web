@@ -271,7 +271,7 @@ public class FeesRepo(CommonConnectivity db)
 
     /// Active students of the current academic year with their fee position. When [className] is given the
     /// list is limited to that class + batch (an empty [batchName] means "no batch"); otherwise everyone.
-    public List<FinanceStudentRow> GetFinanceStudents(string? className, string? batchName)
+    public List<FinanceStudentRow> GetFinanceStudents(string? className, string? batchName, string? sectionName = null, bool anyBatch = false)
     {
         const string sql = @"
             DECLARE @Yr INT = (SELECT TOP 1 YearId FROM AcademicYears WHERE IsCurrent = 1 ORDER BY YearId DESC);
@@ -289,7 +289,8 @@ public class FeesRepo(CommonConnectivity db)
             LEFT JOIN Batches  b   ON b.BatchId     = s.BatchId
             WHERE s.Status = 'Active' AND s.AcademicYearId = @Yr
               AND (@ClassName IS NULL OR LTRIM(RTRIM(ISNULL(c.ClassName,''))) = @ClassName)
-              AND (@ClassName IS NULL OR LTRIM(RTRIM(ISNULL(b.BatchName,''))) = @BatchName)
+              AND (@SectionName IS NULL OR LTRIM(RTRIM(ISNULL(sec.SectionName,''))) = @SectionName)
+              AND (@ClassName IS NULL OR @AnyBatch = 1 OR LTRIM(RTRIM(ISNULL(b.BatchName,''))) = @BatchName)
             ORDER BY s.FullName";
 
         var list = new List<FinanceStudentRow>();
@@ -297,6 +298,8 @@ public class FeesRepo(CommonConnectivity db)
         using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 60 };
         cmd.Parameters.AddWithValue("@ClassName", string.IsNullOrWhiteSpace(className) ? DBNull.Value : className.Trim());
         cmd.Parameters.AddWithValue("@BatchName", (batchName ?? "").Trim());
+        cmd.Parameters.AddWithValue("@SectionName", string.IsNullOrWhiteSpace(sectionName) ? DBNull.Value : sectionName.Trim());
+        cmd.Parameters.AddWithValue("@AnyBatch", anyBatch ? 1 : 0);
         using var r = cmd.ExecuteReader();
         while (r.Read())
             list.Add(new FinanceStudentRow {

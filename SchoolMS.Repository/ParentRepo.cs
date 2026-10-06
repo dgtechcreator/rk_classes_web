@@ -44,8 +44,11 @@ public class ParentRepo(CommonConnectivity db)
                 LastLogin = G.G<DateTime?>(r, "LastLogin"),
             });
 
+    // sp_GetChildrenByParentPhone only excludes Status = 'Deleted', so Inactive students came through.
+    // A parent must only ever see current (Active) students.
     public List<Student> GetChildren(string phone)
-        => db.Read("sp_GetChildrenByParentPhone", new() { { "@Phone", phone } }, MapStudent);
+        => db.Read("sp_GetChildrenByParentPhone", new() { { "@Phone", phone } }, MapStudent)
+             .Where(s => string.Equals(s.Status, "Active", StringComparison.OrdinalIgnoreCase)).ToList();
 
     static Student MapStudent(SqlDataReader r) => new() {
         StudentId      = G.G<int>(r, "StudentId"),

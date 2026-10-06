@@ -6,7 +6,7 @@ using SchoolMS.Web.Filters;
 namespace SchoolMS.Web.Controllers;
 
 [RequireTeacherPaymentAccess]
-public class TeacherPaymentController(TeacherPaymentService paymentSvc, FacultyService facultySvc) : Controller
+public class TeacherPaymentController(TeacherPaymentService paymentSvc, FacultyService facultySvc, TeacherAccountLinker linker) : Controller
 {
     [HttpGet]
     public IActionResult Index()
@@ -122,26 +122,31 @@ public class TeacherPaymentController(TeacherPaymentService paymentSvc, FacultyS
         }
     }
 
+    // Filtered summary (admin / accountant): year, month (0 = whole year), teacher, status.
     [HttpGet]
-    public IActionResult Summary()
+    public IActionResult Summary(int? year = null, int month = 0, int? facultyId = null, string? status = null)
     {
         try
         {
-            var currentMonth = DateTime.Now.Month;
-            var currentYear = DateTime.Now.Year;
+            var y = year ?? DateTime.Now.Year;
+            var list = paymentSvc.Search(y, month > 0 ? month : null, facultyId, status);
+            var years = paymentSvc.Search(null, null, null, null).Select(p => p.PaymentYear).Append(DateTime.Now.Year).Distinct().OrderByDescending(v => v).ToList();
 
-            var monthlyPayments = paymentSvc.GetByMonth(currentMonth, currentYear);
-
-            ViewBag.MonthlyPayments = monthlyPayments;
-            ViewBag.CurrentMonth = currentMonth;
-            ViewBag.CurrentYear = currentYear;
-
+            ViewBag.Year = y; ViewBag.Month = month; ViewBag.FacultyId = facultyId; ViewBag.Status = (status ?? "all").ToLowerInvariant();
+            ViewBag.Years = years;
+            ViewBag.AllFaculty = facultySvc.GetAllActive();
+            ViewBag.Summary = paymentSvc.Summarize(list);
+            ViewBag.Payments = list;
             return View();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Summary Error: {ex.Message}");
             ViewBag.Error = $"Error loading page: {ex.Message}";
+            ViewBag.Years = new List<int> { DateTime.Now.Year };
+            ViewBag.AllFaculty = new List<SchoolMS.Domain.Faculty>();
+            ViewBag.Summary = new SchoolMS.Domain.TeacherPaymentSummary();
+            ViewBag.Payments = new List<SchoolMS.Domain.TeacherPayment>();
+            ViewBag.Year = DateTime.Now.Year; ViewBag.Month = 0; ViewBag.Status = "all";
             return View();
         }
     }

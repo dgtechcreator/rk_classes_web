@@ -1,0 +1,64 @@
+@using SchoolMS.Domain
+@{
+    ViewData["Title"] = "My Payments";
+    bool linked = (bool)(ViewBag.Linked ?? false);
+    bool isMine = true;
+    TeacherPaymentSummary sum = linked ? (TeacherPaymentSummary)ViewBag.Summary : new TeacherPaymentSummary();
+    var payments = linked ? (List<TeacherPayment>)ViewBag.Payments : new List<TeacherPayment>();
+    var years = linked ? (List<int>)ViewBag.Years : new List<int>();
+    int selYear = linked ? (int)ViewBag.Year : 0;
+}
+
+<div class="pg-hdr">
+  <h1>💰 My Payments</h1>
+  <p>@(linked ? (string)ViewBag.FacultyName + " — when each payment was made" : "")</p>
+</div>
+
+@if (!linked)
+{
+  <div class="card" style="text-align:center;padding:40px;color:var(--mu);">
+    <div style="font-size:40px;">🔗</div>
+    Your login is not linked to a faculty profile yet. Please ask the admin.
+  </div>
+}
+else
+{
+  <form method="get" action="/MyPayments/Index" class="filter-bar" style="margin-bottom:16px;">
+    <select name="year" class="fs" onchange="this.form.submit()">
+      <option value="0" selected="@(selYear == 0)">All years</option>
+      @foreach (var y in years){<option value="@y" selected="@(selYear == y)">@y</option>}
+    </select>
+  </form>
+
+<div class="kpi-grid" style="margin-bottom:18px;">
+  <div class="kpi indigo"><div class="kpi-ico indigo">💳</div><div class="kpi-val">₹@sum.TotalAmount.ToString("N0")</div><div class="kpi-lbl">TOTAL</div></div>
+  <div class="kpi green"><div class="kpi-ico green">✅</div><div class="kpi-val">₹@sum.PaidAmount.ToString("N0")</div><div class="kpi-lbl">Paid (@sum.PaidCount)</div></div>
+  <div class="kpi amber"><div class="kpi-ico amber">⏳</div><div class="kpi-val">₹@sum.PendingAmount.ToString("N0")</div><div class="kpi-lbl">Pending (@sum.PendingCount)</div></div>
+  <div class="kpi teal"><div class="kpi-ico teal">@(isMine ? "🧾" : "👩‍🏫")</div><div class="kpi-val">@(isMine ? sum.Count : sum.Teachers.Count)</div><div class="kpi-lbl">@(isMine ? "Entries" : "Teachers")</div></div>
+</div>
+
+<div class="card" style="padding:0;">
+  <div class="card-hdr" style="padding:16px 18px;"><span class="card-ttl">Payments (@payments.Count)</span></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>For month</th><th>Type</th><th style="text-align:right;">Amount</th><th>Status</th><th>Paid on</th><th>Mode</th><th>Receipt</th></tr></thead>
+      <tbody>
+      @foreach (var p in payments)
+      {
+        <tr>
+          <td class="fw7">@System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(p.PaymentMonth) @p.PaymentYear</td>
+          <td>@(p.PaymentType == "Fixed" ? "Fixed Salary" : p.PaymentType)@if (p.PaymentType != "Fixed" && p.Quantity.HasValue) {<div style="font-size:11px;color:var(--mu);">@p.Quantity.Value.ToString("0.##") × ₹@p.Rate.ToString("N0")</div>}</td>
+          <td style="text-align:right;font-weight:800;">₹@p.TotalAmount.ToString("N0")</td>
+          <td><span class="badge @(p.IsPaid ? "b-active" : "b-inactive")">@(p.IsPaid ? "Paid" : "Pending")</span></td>
+          <td>@(p.IsPaid && p.PaymentDate.HasValue ? p.PaymentDate.Value.ToString("dd-MM-yyyy") : "—")</td>
+          <td>@(p.PaymentMode ?? "—")</td>
+          <td>@(p.ReceiptNo ?? "—")</td>
+        </tr>
+      }
+      @if (!payments.Any())
+      {<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--mu);">No payments for this selection.</td></tr>}
+      </tbody>
+    </table>
+  </div>
+</div>
+}

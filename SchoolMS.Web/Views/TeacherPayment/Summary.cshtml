@@ -1,92 +1,103 @@
+@using SchoolMS.Domain
 @{
-    ViewData["Title"] = "Paid Payments Summary";
+    ViewData["Title"] = "Payment Summary";
+    var sum = (TeacherPaymentSummary)ViewBag.Summary;
+    var payments = (List<TeacherPayment>)ViewBag.Payments;
+    var years = (List<int>)ViewBag.Years;
+    var faculty = (List<Faculty>)ViewBag.AllFaculty;
+    int selYear = (int)ViewBag.Year, selMonth = (int)ViewBag.Month;
+    int? selFaculty = (int?)ViewBag.FacultyId;
+    string selStatus = (string)ViewBag.Status;
+    bool isMine = false;
+    string Month(int m) => System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m);
 }
 
-@if (!string.IsNullOrEmpty(ViewBag.Error))
+@if (!string.IsNullOrEmpty((string?)ViewBag.Error))
 {
-    <div style="background: #fee; color: #c33; padding: 20px; border-radius: 8px; margin: 20px;">
-        <strong>⚠️ Error:</strong> @ViewBag.Error
-    </div>
+    <div style="background:#fee;color:#c33;padding:16px;border-radius:8px;margin-bottom:14px;"><strong>⚠️ Error:</strong> @ViewBag.Error</div>
 }
 
 <div class="pg-hdr">
-    <h1>✅ Paid Payments Summary</h1>
-    <p>Payment records for @System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(ViewBag.CurrentMonth) @ViewBag.CurrentYear</p>
-</div>
-
-<div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-    <div class="tbl-wrap">
-        <table>
-            <thead>
-                <tr>
-                    <th style="text-align: left;">Teacher Name</th>
-                    <th style="text-align: center;">Type</th>
-                    <th style="text-align: right;">Amount</th>
-                    <th style="text-align: center;">Month</th>
-                    <th style="text-align: center;">Paid Date</th>
-                    <th style="text-align: center;">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                @{
-                    bool hasPaidPayments = false;
-                    if (ViewBag.MonthlyPayments != null && ViewBag.MonthlyPayments.Count > 0)
-                    {
-                        foreach (var payment in ViewBag.MonthlyPayments)
-                        {
-                            if (payment.IsPaid)
-                            {
-                                hasPaidPayments = true;
-                                <tr style="background: #f0fdf4;">
-                                    <td>@payment.FacultyName</td>
-                                    <td style="text-align: center;">
-                                        <span style="background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 600;">
-                                            @payment.PaymentType
-                                        </span>
-                                    </td>
-                                    <td style="text-align: right; font-weight: 600;">₹@payment.TotalAmount.ToString("N0")</td>
-                                    <td style="text-align: center;">@payment.PaymentMonth/@payment.PaymentYear</td>
-                                    <td style="text-align: center;">@payment.PaymentDate?.ToString("dd-MMM-yyyy")</td>
-                                    <td style="text-align: center;">
-                                        <button onclick="printReceipt(@payment.TeacherPaymentId)" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; margin-right: 4px;">🖨️ Print</button>
-                                        <button onclick="deletePayment(@payment.TeacherPaymentId)" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">Delete</button>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                    }
-                }
-                @if (!hasPaidPayments)
-                {
-                    <tr>
-                        <td colspan="6" style="text-align: center; color: #999; padding: 20px;">No paid payments this month</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+  <div class="pg-row" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h1>📊 Teacher Payment Summary</h1>
+      <p>@(selMonth > 0 ? Month(selMonth) + " " : "")@selYear · filter by month, teacher and status</p>
     </div>
+    <a href="/TeacherPayment/Index" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Teachers Payment</a>
+  </div>
 </div>
 
-<script>
-    function printReceipt(paymentId) {
-        window.open('/TeacherPayment/Receipt?paymentId=' + paymentId, 'receipt', 'width=900,height=1000,scrollbars=yes');
-    }
+<form method="get" action="/TeacherPayment/Summary" class="filter-bar" style="margin-bottom:16px;">
+  <select name="year" class="fs">@foreach (var y in years){<option value="@y" selected="@(y == selYear)">@y</option>}</select>
+  <select name="month" class="fs">
+    <option value="0" selected="@(selMonth == 0)">All months</option>
+    @for (var m = 1; m <= 12; m++){<option value="@m" selected="@(selMonth == m)">@Month(m)</option>}
+  </select>
+  <select name="facultyId" class="fs">
+    <option value="">All teachers</option>
+    @foreach (var f in faculty.OrderBy(x => x.FullName)){<option value="@f.FacultyId" selected="@(selFaculty == f.FacultyId)">@f.FullName.Trim()</option>}
+  </select>
+  <select name="status" class="fs">
+    <option value="all" selected="@(selStatus == "all")">All</option>
+    <option value="paid" selected="@(selStatus == "paid")">Paid</option>
+    <option value="pending" selected="@(selStatus == "pending")">Pending</option>
+  </select>
+  <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Apply</button>
+  <a href="/TeacherPayment/Summary" class="btn btn-outline">Reset</a>
+</form>
 
-    function deletePayment(paymentId) {
-        if (!confirm('Delete this payment entry?')) return;
+<div class="kpi-grid" style="margin-bottom:18px;">
+  <div class="kpi indigo"><div class="kpi-ico indigo">💳</div><div class="kpi-val">₹@sum.TotalAmount.ToString("N0")</div><div class="kpi-lbl">TOTAL</div></div>
+  <div class="kpi green"><div class="kpi-ico green">✅</div><div class="kpi-val">₹@sum.PaidAmount.ToString("N0")</div><div class="kpi-lbl">Paid (@sum.PaidCount)</div></div>
+  <div class="kpi amber"><div class="kpi-ico amber">⏳</div><div class="kpi-val">₹@sum.PendingAmount.ToString("N0")</div><div class="kpi-lbl">Pending (@sum.PendingCount)</div></div>
+  <div class="kpi teal"><div class="kpi-ico teal">@(isMine ? "🧾" : "👩‍🏫")</div><div class="kpi-val">@(isMine ? sum.Count : sum.Teachers.Count)</div><div class="kpi-lbl">@(isMine ? "Entries" : "Teachers")</div></div>
+</div>
 
-        fetch('/TeacherPayment/DeletePayment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `paymentId=${paymentId}`
-        })
-        .then(r => r.json())
-        .then(d => {
-            if (d.success) {
-                location.reload();
-            } else {
-                alert('Error: ' + d.message);
-            }
-        });
-    }
-</script>
+@if (sum.Teachers.Count > 0)
+{
+  <div class="card" style="padding:0;margin-bottom:18px;">
+    <div class="card-hdr" style="padding:16px 18px;"><span class="card-ttl">By teacher</span></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Teacher</th><th style="text-align:center;">Entries</th><th style="text-align:right;">Paid</th><th style="text-align:right;">Pending</th><th>Last paid</th></tr></thead>
+        <tbody>
+        @foreach (var t in sum.Teachers)
+        {
+          <tr onclick="location.href='/TeacherPayment/Summary?year=@selYear&month=@selMonth&facultyId=@t.FacultyId&status=@selStatus'" style="cursor:pointer;">
+            <td class="fw7">@t.FacultyName</td>
+            <td style="text-align:center;">@t.Count</td>
+            <td style="text-align:right;color:#059669;font-weight:700;">₹@t.PaidAmount.ToString("N0")</td>
+            <td style="text-align:right;color:@(t.PendingAmount > 0 ? "#d97706" : "inherit");">₹@t.PendingAmount.ToString("N0")</td>
+            <td>@(t.LastPaidOn.HasValue ? t.LastPaidOn.Value.ToString("dd-MM-yyyy") : "—")</td>
+          </tr>
+        }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
+
+<div class="card" style="padding:0;">
+  <div class="card-hdr" style="padding:16px 18px;"><span class="card-ttl">Payments (@payments.Count)</span></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Teacher</th><th>For month</th><th>Type</th><th style="text-align:right;">Amount</th><th>Status</th><th>Paid on</th><th>Mode</th><th>Receipt</th></tr></thead>
+      <tbody>
+      @foreach (var p in payments)
+      {
+        <tr><td class="fw7">@p.FacultyName</td>
+          <td class="fw7">@System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(p.PaymentMonth) @p.PaymentYear</td>
+          <td>@(p.PaymentType == "Fixed" ? "Fixed Salary" : p.PaymentType)@if (p.PaymentType != "Fixed" && p.Quantity.HasValue) {<div style="font-size:11px;color:var(--mu);">@p.Quantity.Value.ToString("0.##") × ₹@p.Rate.ToString("N0")</div>}</td>
+          <td style="text-align:right;font-weight:800;">₹@p.TotalAmount.ToString("N0")</td>
+          <td><span class="badge @(p.IsPaid ? "b-active" : "b-inactive")">@(p.IsPaid ? "Paid" : "Pending")</span></td>
+          <td>@(p.IsPaid && p.PaymentDate.HasValue ? p.PaymentDate.Value.ToString("dd-MM-yyyy") : "—")</td>
+          <td>@(p.PaymentMode ?? "—")</td>
+          <td>@(p.ReceiptNo ?? "—")</td>
+        </tr>
+      }
+      @if (!payments.Any())
+      {<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--mu);">No payments for this selection.</td></tr>}
+      </tbody>
+    </table>
+  </div>
+</div>

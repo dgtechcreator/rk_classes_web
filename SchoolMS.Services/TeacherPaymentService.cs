@@ -24,6 +24,30 @@ public class TeacherPaymentService(TeacherPaymentRepo repo, StudentService stude
 
     public List<TeacherPayment> GetByMonth(int month, int year) => repo.GetByMonth(month, year);
 
+    public List<TeacherPayment> Search(int? year, int? month, int? facultyId, string? status) => repo.Search(year, month, facultyId, status);
+
+    /// Totals + a per-teacher roll-up for a filtered list (used by the admin summary, web and app).
+    public TeacherPaymentSummary Summarize(List<TeacherPayment> list)
+    {
+        var s = new TeacherPaymentSummary {
+            Count = list.Count,
+            TotalAmount = list.Sum(p => p.TotalAmount),
+            PaidAmount = list.Where(p => p.IsPaid).Sum(p => p.TotalAmount),
+            PendingAmount = list.Where(p => !p.IsPaid).Sum(p => p.TotalAmount),
+            PaidCount = list.Count(p => p.IsPaid),
+            PendingCount = list.Count(p => !p.IsPaid),
+        };
+        s.Teachers = list.GroupBy(p => (p.FacultyId, Name: (p.FacultyName ?? "").Trim()))
+            .Select(g => new TeacherPaymentTeacherRow {
+                FacultyId = g.Key.FacultyId, FacultyName = g.Key.Name, Count = g.Count(),
+                PaidAmount = g.Where(p => p.IsPaid).Sum(p => p.TotalAmount),
+                PendingAmount = g.Where(p => !p.IsPaid).Sum(p => p.TotalAmount),
+                LastPaidOn = g.Where(p => p.IsPaid && p.PaymentDate.HasValue).Select(p => p.PaymentDate).Max(),
+            })
+            .OrderByDescending(t => t.PaidAmount + t.PendingAmount).ThenBy(t => t.FacultyName).ToList();
+        return s;
+    }
+
     public TeacherPayment? GetById(int paymentId) => repo.GetById(paymentId);
 
     public void MarkAsPaid(int paymentId, string? paymentMode, string? transactionRef, int paidBy) => repo.MarkAsPaid(paymentId, paymentMode, transactionRef, paidBy);

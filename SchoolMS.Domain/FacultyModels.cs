@@ -77,3 +77,24 @@ public class TeacherPayment
     public int? UpdatedBy{get;set;}
     public bool IsDeleted{get;set;}
 }
+
+public class TeacherPaymentTeacherRow
+{
+    public int FacultyId{get;set;}
+    public string FacultyName{get;set;} = "";
+    public int Count{get;set;}
+    public decimal PaidAmount{get;set;}
+    public decimal PendingAmount{get;set;}
+    public DateTime? LastPaidOn{get;set;}
+}
+
+public class TeacherPaymentSummary
+{
+    public int Count{get;set;}
+    public int PaidCount{get;set;}
+    public int PendingCount{get;set;}
+    public decimal TotalAmount{get;set;}
+    public decimal PaidAmount{get;set;}
+    public decimal PendingAmount{get;set;}
+    public List<TeacherPaymentTeacherRow> Teachers{get;set;} = new();
+}

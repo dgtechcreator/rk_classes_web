@@ -44,9 +44,9 @@ public class FinanceController(FeesService feesSvc, StudentService studentSvc,
     // Student-wise fee position behind the dashboard tiles / class rows. Same rule as the dashboard totals
     // (fees - collected - discount), so the rows add up to the tile that was clicked.
     [HttpGet]
-    public IActionResult Students(string? className = null, string? batchName = null, string view = "all")
+    public IActionResult Students(string? className = null, string? batchName = null, string view = "all", string? sectionName = null, bool anyBatch = false)
     {
-        var rows = feesSvc.GetFinanceStudents(className, batchName);
+        var rows = feesSvc.GetFinanceStudents(className, batchName, sectionName, anyBatch);
         view = (view ?? "all").ToLowerInvariant();
         rows = view switch
         {
@@ -59,7 +59,7 @@ public class FinanceController(FeesService feesSvc, StudentService studentSvc,
         ViewBag.BatchName = batchName;
         ViewBag.View = view;
         ViewBag.Title2 = !string.IsNullOrWhiteSpace(className)
-            ? string.IsNullOrWhiteSpace(batchName) ? className!.Trim() : $"{className!.Trim()} · {batchName!.Trim()}"
+            ? string.Join(" · ", new[] { className!.Trim(), sectionName?.Trim(), batchName?.Trim() }.Where(x => !string.IsNullOrWhiteSpace(x)))
             : view switch { "fees" => "Total Fees", "collected" => "Collected Fees", "due" => "Pending Dues", _ => "All Students" };
         return View(rows);
     }

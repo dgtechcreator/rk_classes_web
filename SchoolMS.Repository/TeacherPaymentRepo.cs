@@ -42,6 +42,40 @@ public class TeacherPaymentRepo(CommonConnectivity db)
         return db.Sql(query, MapTeacherPayment);
     }
 
+    /// Filtered list for the summary screens. [year]/[month] are the period the payment is FOR (PaymentMonth /
+    /// PaymentYear); month 0 or null = whole year, year null = all years. [status]: "paid", "pending" or null = all.
+    public List<TeacherPayment> Search(int? year, int? month, int? facultyId, string? status)
+    {
+        const string sql = @"
+            SELECT tp.TeacherPaymentId, tp.FacultyId, f.FullName AS FacultyName,
+                tp.PaymentType, tp.Rate, tp.Quantity, tp.TotalAmount,
+                tp.PaymentMonth, tp.PaymentYear, tp.IsPaid, tp.PaymentDate,
+                tp.PaymentMode, tp.TransactionRef, tp.ReceiptNo, tp.Remarks,
+                tp.CreatedAt, tp.CreatedBy, tp.UpdatedAt, tp.UpdatedBy, tp.IsDeleted
+            FROM TeacherPayments tp
+            LEFT JOIN Faculty f ON tp.FacultyId = f.FacultyId
+            WHERE tp.IsDeleted = 0
+              AND (@Year IS NULL OR tp.PaymentYear = @Year)
+              AND (@Month IS NULL OR tp.PaymentMonth = @Month)
+              AND (@FacultyId IS NULL OR tp.FacultyId = @FacultyId)
+              AND (@Paid IS NULL OR tp.IsPaid = @Paid)
+            ORDER BY tp.PaymentYear DESC, tp.PaymentMonth DESC, ISNULL(tp.PaymentDate, '9999-12-31') DESC, f.FullName";
+
+        var list = new List<TeacherPayment>();
+        using var conn = db.Open();
+        using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 60 };
+        cmd.Parameters.AddWithValue("@Year", year.HasValue ? year.Value : DBNull.Value);
+        cmd.Parameters.AddWithValue("@Month", month.HasValue && month.Value > 0 ? month.Value : DBNull.Value);
+        cmd.Parameters.AddWithValue("@FacultyId", facultyId.HasValue && facultyId.Value > 0 ? facultyId.Value : DBNull.Value);
+        object paid = DBNull.Value;
+        if (string.Equals(status, "paid", StringComparison.OrdinalIgnoreCase)) paid = true;
+        else if (string.Equals(status, "pending", StringComparison.OrdinalIgnoreCase)) paid = false;
+        cmd.Parameters.AddWithValue("@Paid", paid);
+        using var r = cmd.ExecuteReader();
+        while (r.Read()) list.Add(MapTeacherPayment(r));
+        return list;
+    }
+
     public List<TeacherPayment> GetByMonth(int month, int year)
     {
         var query = $@"

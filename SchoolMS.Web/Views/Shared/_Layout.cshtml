@@ -330,6 +330,10 @@
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="TeacherPayment"?"active":"")" href="/TeacherPayment/Index">
       <span class="nav-ic"><i class="fas fa-money-bill-wave"></i></span> Teachers Payment
     </a>}
+    @if(Context.Session.GetInt32("RoleId") != 1 && (Context.Session.GetString("RoleName") ?? "").Contains("teacher", StringComparison.OrdinalIgnoreCase)){
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="MyPayments"?"active":"")" href="/MyPayments/Index">
+      <span class="nav-ic"><i class="fas fa-wallet"></i></span> My Payments
+    </a>}
     @if(Context.Session.HasPerm("teacher_attendance")){
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="TeacherAttendance"?"active":"")" href="/TeacherAttendance/Index">
       <span class="nav-ic"><i class="fas fa-clock"></i></span> Teachers Attendance

@@ -89,6 +89,8 @@ public class FeeStructureSummary
     public int     FeeHeads{get;set;}
     public decimal CollectedAmt{get;set;}
     public decimal PendingAmt{get;set;}
+    public decimal TotalFees{get;set;}     // sum of student fees (before discount)
+    public decimal Discount{get;set;}
 }
 
 public class ClassFeeSetup
