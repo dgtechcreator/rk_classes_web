@@ -117,4 +117,18 @@ public class MastersRepo(CommonConnectivity db)
     }, "@NewId");
 
     public void DeleteExpenseCat(int id) => db.Exec("sp_DeleteExpenseCategory", new(){{"@CategoryId",id}});
+
+    // ── Message Templates ─────────────────────────────────────
+    public List<MessageTemplate> GetMessageTemplates() => db.Read("sp_GetMessageTemplates", new(),
+        r => new MessageTemplate {
+            TemplateId=G.G<int>(r,"TemplateId"), Category=G.G<string>(r,"Category")??"General",
+            Title=G.G<string>(r,"Title")??"", Body=G.G<string>(r,"Body")??"", IsActive=G.G<bool>(r,"IsActive")
+        });
+
+    public int SaveMessageTemplate(MessageTemplate m) => db.ExecOut("sp_SaveMessageTemplate", new() {
+        {"@TemplateId",m.TemplateId}, {"@Category",m.Category}, {"@Title",m.Title},
+        {"@Body",m.Body}, {"@IsActive",m.IsActive}
+    }, "@NewId");
+
+    public void DeleteMessageTemplate(int id) => db.Exec("sp_DeleteMessageTemplate", new(){{"@TemplateId",id}});
 }

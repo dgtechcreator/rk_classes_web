@@ -22,6 +22,15 @@ public class Class
     public string? DeletedByName{get;set;}
 }
 
+public class MessageTemplate
+{
+    public int    TemplateId{get;set;}
+    public string Category{get;set;}="General";
+    public string Title{get;set;}="";
+    public string Body{get;set;}="";
+    public bool   IsActive{get;set;}=true;
+}
+
 public class Section
 {
     public int    SectionId{get;set;}

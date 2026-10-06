@@ -139,6 +139,13 @@ public class AttendanceRepo(CommonConnectivity db)
         });
 
     public List<(int StudentId, string FullName, string AdmissionNo, string Phone, string FatherPhone, string MotherPhone, string Medium, string ClassName, string SectionName, string BatchName)> GetAbsentStudentsToday()
+        => GetStudentsTodayByStatus("Absent");
+
+    public List<(int StudentId, string FullName, string AdmissionNo, string Phone, string FatherPhone, string MotherPhone, string Medium, string ClassName, string SectionName, string BatchName)> GetPresentStudentsToday()
+        => GetStudentsTodayByStatus("Present");
+
+    // status is only ever one of the two fixed literals above (never user input).
+    private List<(int StudentId, string FullName, string AdmissionNo, string Phone, string FatherPhone, string MotherPhone, string Medium, string ClassName, string SectionName, string BatchName)> GetStudentsTodayByStatus(string status)
     {
         var today = DateTime.Today.ToString("yyyy-MM-dd");
         return db.Sql($@"
@@ -150,7 +157,7 @@ public class AttendanceRepo(CommonConnectivity db)
             LEFT JOIN Sections sec ON sec.SectionId = a.SectionId
             LEFT JOIN Batches b ON b.BatchId = a.BatchId
             WHERE CAST(a.AttendanceDate AS DATE) = '{today}'
-              AND a.Status = 'Absent'
+              AND a.Status = '{status}'
             ORDER BY s.FullName",
             r => (
                 G.G<int>(r, "StudentId"),

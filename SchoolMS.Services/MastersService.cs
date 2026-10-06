@@ -32,4 +32,8 @@ public class MastersService(MastersRepo repo)
     public List<ExpenseCat> GetExpenseCategories()    => repo.GetExpenseCategories();
     public int  SaveExpenseCat(ExpenseCat m)          => repo.SaveExpenseCat(m);
     public void DeleteExpenseCat(int id)              => repo.DeleteExpenseCat(id);
+
+    public List<MessageTemplate> GetMessageTemplates() => repo.GetMessageTemplates();
+    public int  SaveMessageTemplate(MessageTemplate m) => repo.SaveMessageTemplate(m);
+    public void DeleteMessageTemplate(int id)          => repo.DeleteMessageTemplate(id);
 }

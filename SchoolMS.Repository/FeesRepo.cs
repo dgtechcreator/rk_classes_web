@@ -50,6 +50,20 @@ public class FeesRepo(CommonConnectivity db)
     public List<FeePayment> GetDeletedPayments()
         => db.Read("sp_GetDeletedFeePayments", new(), MapFee);
 
+    // Same rule as sp_GetDashboardStats.FeesThisMonth: PaymentDate in the current month, not deleted.
+    public List<FeePayment> GetPaymentsThisMonth()
+        => db.Sql(@"SELECT fp.*,s.FullName AS StudentName,s.AdmissionNo,s.RollNo,
+            c.ClassName,sec.SectionName,ft.TypeName AS FeeTypeName,u.FullName AS CollectorName
+            FROM FeePayments fp
+            LEFT JOIN Students s   ON s.StudentId  = fp.StudentId
+            LEFT JOIN Classes  c   ON c.ClassId    = s.ClassId
+            LEFT JOIN Sections sec ON sec.SectionId= s.SectionId
+            LEFT JOIN FeeTypes ft  ON ft.FeeTypeId = fp.FeeTypeId
+            LEFT JOIN Users    u   ON u.UserId     = fp.CollectedBy
+            WHERE fp.IsDeleted=0
+              AND MONTH(fp.PaymentDate)=MONTH(GETDATE()) AND YEAR(fp.PaymentDate)=YEAR(GETDATE())
+            ORDER BY fp.PaymentDate DESC, fp.CreatedAt DESC", MapFee);
+
     public List<FeePayment> GetStudentHistory(int studentId)
         => db.Sql($@"SELECT fp.*,s.FullName AS StudentName,s.AdmissionNo,s.RollNo,
             c.ClassName,sec.SectionName,ft.TypeName AS FeeTypeName,u.FullName AS CollectorName
@@ -257,6 +271,49 @@ public class FeesRepo(CommonConnectivity db)
             Collected = G.G<decimal>(r, "Collected"),
             Balance = G.G<decimal>(r, "Balance")
         });
+    }
+
+    /// Active students of the current academic year with their fee position. When [className] is given the
+    /// list is limited to that class + batch (an empty [batchName] means "no batch"); otherwise everyone.
+    public List<FinanceStudentRow> GetFinanceStudents(string? className, string? batchName)
+    {
+        const string sql = @"
+            DECLARE @Yr INT = (SELECT TOP 1 YearId FROM AcademicYears WHERE IsCurrent = 1 ORDER BY YearId DESC);
+            SELECT s.StudentId, s.FullName, s.AdmissionNo,
+                   ISNULL(s.Phone,'') AS Phone, ISNULL(s.FatherPhone,'') AS FatherPhone, ISNULL(s.MotherPhone,'') AS MotherPhone,
+                   LTRIM(RTRIM(ISNULL(c.ClassName,''))) AS ClassName,
+                   LTRIM(RTRIM(ISNULL(sec.SectionName,''))) AS SectionName,
+                   LTRIM(RTRIM(ISNULL(b.BatchName,''))) AS BatchName,
+                   ISNULL((SELECT SUM(sf.Amount) FROM StudentFees sf WHERE sf.StudentId = s.StudentId), 0) AS TotalFees,
+                   ISNULL((SELECT SUM(fp.Amount) FROM FeePayments fp WHERE fp.StudentId = s.StudentId AND fp.IsDeleted = 0), 0) AS Collected,
+                   ISNULL((SELECT SUM(fp.Discount) FROM FeePayments fp WHERE fp.StudentId = s.StudentId AND fp.IsDeleted = 0), 0) AS Discount
+            FROM Students s
+            LEFT JOIN Classes  c   ON c.ClassId     = s.ClassId
+            LEFT JOIN Sections sec ON sec.SectionId = s.SectionId
+            LEFT JOIN Batches  b   ON b.BatchId     = s.BatchId
+            WHERE s.Status = 'Active' AND s.AcademicYearId = @Yr
+              AND (@ClassName IS NULL OR LTRIM(RTRIM(ISNULL(c.ClassName,''))) = @ClassName)
+              AND (@ClassName IS NULL OR LTRIM(RTRIM(ISNULL(b.BatchName,''))) = @BatchName)
+            ORDER BY s.FullName";
+
+        var list = new List<FinanceStudentRow>();
+        using var conn = db.Open();
+        using var cmd = new SqlCommand(sql, conn) { CommandTimeout = 60 };
+        cmd.Parameters.AddWithValue("@ClassName", string.IsNullOrWhiteSpace(className) ? DBNull.Value : className.Trim());
+        cmd.Parameters.AddWithValue("@BatchName", (batchName ?? "").Trim());
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+            list.Add(new FinanceStudentRow {
+                StudentId = G.G<int>(r, "StudentId"), FullName = G.G<string>(r, "FullName") ?? "",
+                AdmissionNo = G.G<string>(r, "AdmissionNo") ?? "",
+                ClassName = G.G<string>(r, "ClassName") ?? "", SectionName = G.G<string>(r, "SectionName") ?? "",
+                BatchName = G.G<string>(r, "BatchName") ?? "",
+                Phone = G.G<string>(r, "Phone") ?? "", FatherPhone = G.G<string>(r, "FatherPhone") ?? "",
+                MotherPhone = G.G<string>(r, "MotherPhone") ?? "",
+                TotalFees = G.G<decimal>(r, "TotalFees"), Collected = G.G<decimal>(r, "Collected"),
+                Discount = G.G<decimal>(r, "Discount"),
+            });
+        return list;
     }
 
     static FinanceAcademicBreakdown MapAcademicData(SqlDataReader r) => new()

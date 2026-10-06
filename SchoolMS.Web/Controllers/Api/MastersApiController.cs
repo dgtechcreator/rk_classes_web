@@ -16,6 +16,7 @@ public class MastersApiController(MastersService svc, StudentService studentSvc,
     public record SaveBatchReq(int BatchId, string BatchName, bool IsActive = true);
     public record SaveSubjectReq(int SubjectId, string SubjectName, string? SubjectCode, int ClassId = 0, int MaxMarks = 100, int PassMarks = 35, bool IsActive = true);
     public record SaveExpenseCatReq(int CategoryId, string CategoryName, bool IsActive = true);
+    public record SaveMessageTemplateReq(int TemplateId, string Category, string Title, string Body, bool IsActive = true);
     public record CreateAttendanceBatchReq(string BatchName, List<int> StudentIds);
     public record SaveAttendanceBatchReq(int BatchId, string BatchName, List<int> StudentIds);
 
@@ -134,6 +135,36 @@ public class MastersApiController(MastersService svc, StudentService studentSvc,
     public IActionResult DeleteExpenseCat(int id)
     {
         try { svc.DeleteExpenseCat(id); return Ok(new { success = true }); }
+        catch (Exception ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
+    // ── Message Templates ─────────────────────────────────────
+    // Read is open to any staff (attendance/fee screens need the texts); writes need Masters edit rights.
+    [HttpGet("message-templates")]
+    public IActionResult MessageTemplates() => Ok(svc.GetMessageTemplates());
+
+    [HttpPost("message-templates/save")]
+    [ApiRequirePermission("masters_view", requireEdit: true)]
+    public IActionResult SaveMessageTemplate([FromBody] SaveMessageTemplateReq req)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(req.Title) || string.IsNullOrWhiteSpace(req.Body))
+                return BadRequest(new { error = "Title and message are required." });
+            svc.SaveMessageTemplate(new MessageTemplate {
+                TemplateId = req.TemplateId, Category = string.IsNullOrWhiteSpace(req.Category) ? "General" : req.Category.Trim(),
+                Title = req.Title.Trim(), Body = req.Body.Trim(), IsActive = req.IsActive
+            });
+            return Ok(new { success = true });
+        }
+        catch (Exception ex) { return BadRequest(new { error = ex.Message }); }
+    }
+
+    [HttpPost("message-templates/{id:int}/delete")]
+    [ApiRequirePermission("masters_view", requireEdit: true)]
+    public IActionResult DeleteMessageTemplate(int id)
+    {
+        try { svc.DeleteMessageTemplate(id); return Ok(new { success = true }); }
         catch (Exception ex) { return BadRequest(new { error = ex.Message }); }
     }
 

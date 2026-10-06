@@ -38,6 +38,34 @@ public class FinanceApiController(FeesService feesSvc, StudentService studentSvc
         }
     }
 
+    // Student-wise fee position behind the Finance dashboard tiles / class rows. Same rule as the dashboard
+    // totals, so the rows always add up to the tile that was tapped.
+    [HttpGet("students")]
+    public IActionResult Students(string? className = null, string? batchName = null)
+    {
+        try
+        {
+            var rows = feesSvc.GetFinanceStudents(className, batchName);
+            return Ok(new {
+                count = rows.Count,
+                totalFees = rows.Sum(r => r.TotalFees),
+                totalCollected = rows.Sum(r => r.Collected),
+                totalDiscount = rows.Sum(r => r.Discount),
+                totalBalance = rows.Sum(r => r.Balance),
+                students = rows.Select(r => new {
+                    studentId = r.StudentId, fullName = r.FullName, admissionNo = r.AdmissionNo,
+                    className = r.ClassName, sectionName = r.SectionName, batchName = r.BatchName,
+                    phone = r.Phone, fatherPhone = r.FatherPhone, motherPhone = r.MotherPhone,
+                    totalFees = r.TotalFees, collected = r.Collected, discount = r.Discount, balance = r.Balance,
+                }),
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = $"Error loading students: {ex.Message}" });
+        }
+    }
+
     [HttpGet("class-detail")]
     public IActionResult ClassDetail(string className, string batchName)
     {

@@ -54,6 +54,20 @@ public class LookupRepo(CommonConnectivity db)
             classStrengths[i].Color = colors[i % colors.Length];
         }
 
+        // Split each class by Section (Medium) so the dashboard can show "5th English Medium: 30".
+        var sectionSplit = db.Sql(@"
+            SELECT c.ClassName, ISNULL(sec.SectionName,'') AS SectionName, COUNT(DISTINCT s.StudentId) AS StudentCount
+            FROM Students s
+            JOIN Classes c ON c.ClassId = s.ClassId AND c.IsActive = 1
+            LEFT JOIN Sections sec ON sec.SectionId = s.SectionId
+            WHERE s.Status = 'Active'
+            GROUP BY c.ClassName, sec.SectionName
+            ORDER BY c.ClassName, sec.SectionName",
+            r => (ClassName: G.G<string>(r,"ClassName")??"", SectionName: G.G<string>(r,"SectionName")??"", Count: G.G<int>(r,"StudentCount")));
+        foreach (var cs in classStrengths)
+            cs.Sections = sectionSplit.Where(x => x.ClassName == cs.ClassName && x.Count > 0)
+                .Select(x => new ClassSectionStat { SectionName = x.SectionName, StudentCount = x.Count }).ToList();
+
         stats.ClassStrengths = classStrengths.Where(c => c.StudentCount > 0).ToList();
 
         // Populate all classes
@@ -72,29 +86,24 @@ public class LookupRepo(CommonConnectivity db)
                 IsActive = G.G<bool>(r,"IsActive")
             });
 
-        // Calculate overall fees summary - Direct from database.
-        // TotalFees must come from StudentFees (each student's actual assigned fees), not FeeStructure
-        // (the per-class/batch rate catalog) — summing the catalog undercounts by orders of magnitude
-        // once there's more than one student per class, which made BalanceOverall always clamp to 0
-        // regardless of real outstanding dues. Matches FeesRepo.GetOverallFeesSummary()'s formula so the
-        // staff dashboard and the Finance dashboard agree on the same numbers.
-        var feesSummary = db.Sql(@"
-            SELECT
-                ISNULL((SELECT SUM(Amount) FROM StudentFees), 0) as TotalFees,
-                ISNULL((SELECT SUM(Amount) FROM FeePayments WHERE IsDeleted=0), 0) as TotalCollected,
-                ISNULL((SELECT SUM(Discount) FROM FeePayments WHERE IsDeleted=0), 0) as TotalDiscount",
-            r => new {
-                TotalFees = G.G<decimal>(r,"TotalFees"),
-                TotalCollected = G.G<decimal>(r,"TotalCollected"),
-                TotalDiscount = G.G<decimal>(r,"TotalDiscount")
-            }).FirstOrDefault();
+        // Overall fee figures come from the SAME stored procedure the Finance dashboard uses
+        // (sp_GetFinanceDashboardSummary: active students of the current academic year only, balance =
+        // fees - collected - discount) so the Home "Balance Overall" card and the Finance dashboard it
+        // opens can never disagree. The old query summed StudentFees of ALL students (including
+        // inactive/deleted ones) and ignored discount, which overstated the balance.
+        var feesSummary = db.Read("sp_GetFinanceDashboardSummary", new(), r => new {
+            TotalFees = G.G<decimal>(r,"TotalFees"),
+            TotalCollected = G.G<decimal>(r,"TotalCollected"),
+            TotalDiscount = G.G<decimal>(r,"TotalDiscount"),
+            TotalBalance = G.G<decimal>(r,"TotalBalance")
+        }).FirstOrDefault();
 
         if (feesSummary != null)
         {
             stats.TotalFeesOverall = feesSummary.TotalFees;
             stats.TotalCollectedOverall = feesSummary.TotalCollected;
             stats.TotalDiscountOverall = feesSummary.TotalDiscount;
-            stats.BalanceOverall = Math.Max(0, stats.TotalFeesOverall - stats.TotalCollectedOverall);
+            stats.BalanceOverall = Math.Max(0, feesSummary.TotalBalance);
         }
 
         return stats;
