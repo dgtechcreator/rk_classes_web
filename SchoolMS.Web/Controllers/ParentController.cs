@@ -10,7 +10,8 @@ public class ParentController(
     AttendanceService attSvc,
     MarksService marksSvc,
     FeesService feesSvc,
-    FeeStructureService feeStructureSvc) : Controller
+    FeeStructureService feeStructureSvc,
+    FeePositionService feePos) : Controller
 {
     // ── Login ────────────────────────────────────────────────────
     [HttpGet]
@@ -81,23 +82,11 @@ public class ParentController(
             vm.Attendance = attSvc.GetStudentAttendanceSummary(sid);
             vm.AttDetail  = attSvc.GetStudentAttendanceDetail(sid);
             vm.Marks      = marksSvc.GetStudentAllMarks(sid);
-            vm.FeeHistory = feesSvc.GetStudentHistory(sid);
-            vm.TotalPaid  = vm.FeeHistory.Sum(x => x.NetAmount);
-
-            // Get actual fee from structure
-            var structures = feeStructureSvc.GetAllForStudent(sid);
-            if (!structures.Any() && selected.AcademicYearId.HasValue && selected.ClassId.HasValue)
-            {
-                structures = feeStructureSvc.GetAll(selected.AcademicYearId, selected.ClassId, selected.SectionId);
-                if (!structures.Any() && selected.SectionId.HasValue)
-                    structures = feeStructureSvc.GetAll(selected.AcademicYearId, selected.ClassId, null);
-                if (!structures.Any())
-                    structures = feeStructureSvc.GetAll(null, selected.ClassId, selected.SectionId);
-                if (!structures.Any())
-                    structures = feeStructureSvc.GetAll(null, selected.ClassId, null);
-            }
-            vm.ActualFee = structures.Sum(x => x.Amount);
-            vm.Balance   = vm.ActualFee - vm.TotalPaid;
+            var pos = feePos.Calculate(selected);
+            vm.FeeHistory = pos.History;
+            vm.TotalPaid  = pos.Paid;
+            vm.ActualFee  = pos.NetTotal;     // fee + additional charges - discount
+            vm.Balance    = pos.Balance;
 
             // Get class fees summary for all students
             if (selected.ClassId.HasValue)

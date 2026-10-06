@@ -126,16 +126,20 @@
     </div>
 </div>
 
+@{
+    var overallFees = (SchoolMS.Domain.OverallFeesSummary?)ViewBag.OverallFeesSummary ??
+        new SchoolMS.Domain.OverallFeesSummary { TotalFeesOwed = 0, TotalCollected = 0, TotalDiscount = 0, Balance = 0 };
+}
 <div class="kpi-grid">
-    @* <div class="kpi purple">
+    <div class="kpi purple" onclick="location.href='/Student/Index'" style="cursor:pointer;">
         <div class="kpi-ico purple"><i class="fas fa-users"></i></div>
         <div class="kpi-val">@Model.TotalStudents</div>
-        <div class="kpi-lbl">Total Students</div>
-    </div> *@
-    <div class="kpi green">
+        <div class="kpi-lbl">Total Students <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
+    </div>
+    <div class="kpi green" onclick="openPresentPopup()" style="cursor:pointer;">
         <div class="kpi-ico green"><i class="fas fa-check-circle"></i></div>
         <div class="kpi-val">@Model.PresentToday</div>
-        <div class="kpi-lbl">Present Today</div>
+        <div class="kpi-lbl">Present Today <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
     </div>
     <div class="kpi red" onclick="openAbsentPopup()" style="cursor:pointer;">
         <div class="kpi-ico red"><i class="fas fa-times-circle"></i></div>
@@ -147,20 +151,20 @@
         <div class="kpi-val">@Model.NewToday</div>
         <div class="kpi-lbl">New Admissions Today</div>
     </div>
-  @*   <div class="kpi indigo" onclick="openFeesPopup()" style="cursor:pointer;">
+    <div class="kpi teal" onclick="location.href='/Users/Index'" style="cursor:pointer;">
+        <div class="kpi-ico teal"><i class="fas fa-chalkboard-teacher"></i></div>
+        <div class="kpi-val">@Model.TotalStaff</div>
+        <div class="kpi-lbl">Staff Members <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
+    </div>
+    <div class="kpi indigo" onclick="location.href='/Dashboard/FeesThisMonth'" style="cursor:pointer;">
         <div class="kpi-ico indigo"><i class="fas fa-rupee-sign"></i></div>
         <div class="kpi-val">₹@Model.FeesThisMonth.ToString("N0")</div>
         <div class="kpi-lbl">Fees This Month <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
     </div>
-    <div class="kpi pink">
-        <div class="kpi-ico pink"><i class="fas fa-receipt"></i></div>
-        <div class="kpi-val">₹@Model.ExpensesThisMonth.ToString("N0")</div>
-        <div class="kpi-lbl">Expenses This Month</div>
-    </div> *@
-    <div class="kpi teal">
-        <div class="kpi-ico teal"><i class="fas fa-chalkboard-teacher"></i></div>
-        <div class="kpi-val">@Model.TotalStaff</div>
-        <div class="kpi-lbl">Staff Members</div>
+    <div class="kpi pink" onclick="location.href='/Finance/Dashboard'" style="cursor:pointer;">
+        <div class="kpi-ico pink"><i class="fas fa-exclamation-circle"></i></div>
+        <div class="kpi-val">₹@overallFees.Balance.ToString("N0")</div>
+        <div class="kpi-lbl">Balance Overall <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
     </div>
 </div>
 
@@ -183,15 +187,20 @@
             {
                 int pct = tot > 0 ? cls.StudentCount * 100 / tot : 0;
                 string clr = colors[idx % colors.Length];
+                var split = Model.ClassStrengths.FirstOrDefault(c => c.ClassName.Trim() == cls.ClassName.Trim())?.Sections ?? new List<SchoolMS.Domain.ClassSectionStat>();
                 <div onclick="openClassStudentsPopup(@cls.ClassId)" style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--bdr);cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='#f9f8ff'" onmouseout="this.style.background='transparent'">
                     <div style="width:40px;height:40px;border-radius:10px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:@clr;flex-shrink:0;">@cls.StudentCount</div>
                     <div style="flex:1;">
                         <div style="font-size:13px;font-weight:700;margin-bottom:5px;">@cls.ClassName @(cls.IsActive ? "" : "(Inactive)")</div>
-                        <div style="height:6px;background:#f3f0ff;border-radius:3px;">
-                            <div style="height:6px;border-radius:3px;background:@clr;width:@pct%;"></div>
+                        <div style="display:flex;flex-wrap:wrap;gap:5px;">
+                            @foreach (var sec in split)
+                            {
+                                var sl = sec.SectionName.ToLower();
+                                var pc = sl.Contains("semi") ? "#0d9488" : sl.Contains("english") ? "#2563eb" : sl.Contains("hindi") ? "#d97706" : "#7c3aed";
+                                <span style="font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:99px;background:@(pc)1c;color:@pc;">@sec.SectionName.Trim() <b style="font-weight:800;">@sec.StudentCount</b></span>
+                            }
                         </div>
                     </div>
-                    <span style="font-size:12px;color:var(--mu);font-weight:600;">@pct%</span>
                 </div>
             }
         }
@@ -331,6 +340,22 @@
     </div>
 </div>
 
+<!-- Present Students Popup -->
+<div id="presentModal" onclick="if(event.target===this)closePresentModal()"
+     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:9999;justify-content:center;align-items:center;">
+    <div style="background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);width:90%;max-width:760px;height:80vh;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e5e7eb;background:#f8fafc;border-radius:12px 12px 0 0;flex-shrink:0;">
+            <div>
+                <div style="font-size:16px;font-weight:800;color:#111;"><i class="fas fa-check-circle" style="color:#059669;margin-right:8px;"></i>Present Students Today <span id="presentCount" style="color:#059669;"></span></div>
+            </div>
+            <button onclick="closePresentModal()" style="background:#dcfce7;color:#166534;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:700;font-size:13px;"><i class="fas fa-times"></i> Close</button>
+        </div>
+        <div id="presentBody" style="overflow-y:auto;padding:16px 20px;flex:1;min-height:0;">
+            <div style="text-align:center;padding:40px;color:#888;"><i class="fas fa-spinner fa-spin" style="font-size:24px;"></i></div>
+        </div>
+    </div>
+</div>
+
 <!-- Absent Students Popup -->
 <div id="absentModal" onclick="handleAbsentModalClick(event)"
      style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
@@ -411,6 +436,46 @@
 
 <!-- DASHBOARD - JAVASCRIPT CALL FIX -->
 <script>
+        // ===== MESSAGE TEMPLATES (Masters -> Templates) =====
+        const RK_FALLBACK = {
+          Absent: "Dear Parent, {student} ({class}) was absent today ({date}). Please send the reason for absence. - {school}"
+        };
+        let rkTemplates = [];
+        fetch('/Masters/MessageTemplatesJson').then(r => r.json()).then(t => { rkTemplates = t || []; }).catch(() => {});
+        function rkEsc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+        function rkVars(s, extra) {
+          return Object.assign({
+            student: s.fullName || '', class: (s.className || '').trim(), medium: (s.medium || s.sectionName || '').trim(),
+            date: new Date().toLocaleDateString('en-GB').replace(/\//g, '-'), school: 'RK Classes'
+          }, extra || {});
+        }
+        function rkMessage(category, vars) {
+          const t = rkTemplates.find(x => (x.category || '').toLowerCase() === category.toLowerCase());
+          const body = t ? t.body : (RK_FALLBACK[category] || '');
+          return body.replace(/\{(\w+)\}/g, (m, k) => (vars[k.toLowerCase()] !== undefined ? vars[k.toLowerCase()] : m));
+        }
+        const rkWaMessages = {};
+
+        // ===== PRESENT STUDENTS POPUP =====
+        function openPresentPopup() {
+          document.getElementById('presentModal').style.display = 'flex';
+          fetch('/Dashboard/GetPresentStudents').then(r => r.json()).then(data => {
+            document.getElementById('presentCount').textContent = '(' + data.length + ')';
+            if (!data.length) {
+              document.getElementById('presentBody').innerHTML = '<div style="padding:40px;text-align:center;color:#999;">No attendance marked as present yet today.</div>';
+              return;
+            }
+            let h = '<table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f3f4f6;"><th style="padding:10px;text-align:left;font-size:13px;">Student</th><th style="padding:10px;text-align:left;font-size:13px;">Class</th><th style="padding:10px;text-align:left;font-size:13px;">Medium</th></tr></thead><tbody>';
+            data.forEach(s => {
+              h += `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:10px;"><div style="font-weight:600;font-size:13px;">${rkEsc(s.fullName)}</div><div style="font-size:11px;color:#666;">${rkEsc(s.admissionNo)}</div></td><td style="padding:10px;font-size:13px;">${rkEsc(s.className)}${s.batchName ? ' - ' + rkEsc(s.batchName) : ''}</td><td style="padding:10px;font-size:13px;">${rkEsc(s.medium) || '—'}</td></tr>`;
+            });
+            document.getElementById('presentBody').innerHTML = h + '</tbody></table>';
+          }).catch(() => {
+            document.getElementById('presentBody').innerHTML = '<div style="padding:40px;text-align:center;color:#b91c1c;">Could not load the list.</div>';
+          });
+        }
+        function closePresentModal() { document.getElementById('presentModal').style.display = 'none'; }
+
         // ===== PHONE NUMBER SANITIZER =====
         function sanitizePhone(phone) {
           if (!phone) return '';
@@ -552,30 +617,6 @@
                 return;
               }
 
-              const absenceMessage = `*Dear Parent,*
-
-    This is to inform you that your ward was absent from today's classes. Kindly inform us of the reason for the absence.
-
-    *Regards,*
-    *R K CLASSES*
-    *Kapil Sir*
-    *M. Sc., B. Ed*
-    *9870375795*
-    *8108499214*
-
-    ......….................................
-
-    *प्रिय अभिभावक,*
-
-    यह सूचित किया जाता है कि आपका वार्ड आज की कक्षाओं में अनुपस्थित था। कृपया अनुपस्थिति का कारण हमें बताने की कृपा करें।
-
-    *सादर,*
-    *R K CLASSES*
-    *Kapil Sir*
-    *M. Sc., B. Ed*
-    *9870375795*
-    *8108499214*`;
-
               // Clear old WhatsApp modals
               document.querySelectorAll('[id^="whatsappmsg_"]').forEach(m => m.remove());
 
@@ -597,6 +638,8 @@
               data.forEach(s => {
                 const callMenuId = 'callmenu_' + Math.random().toString(36).substr(2, 9);
                 const whatsappModalId = 'whatsappmsg_' + Math.random().toString(36).substr(2, 9);
+                const absenceMessage = rkMessage('Absent', rkVars(s));
+                rkWaMessages[whatsappModalId] = absenceMessage;
 
                 html += `<tr style="border-bottom:1px solid #e5e7eb;">
                   <td style="padding:12px;"><div style="font-weight:600;font-size:13px;">${s.fullName}</div><div style="font-size:11px;color:#666;margin-top:2px;">${s.admissionNo}</div></td>
@@ -625,7 +668,7 @@
                 wModal.innerHTML = `
                   <div style="background:#fff;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.3);width:90%;max-width:500px;padding:24px;max-height:80vh;overflow-y:auto;">
                     <div style="font-size:14px;color:#666;margin-bottom:16px;line-height:1.5;"><strong>Send message to parents of ${s.fullName}?</strong></div>
-                    <div style="background:#f3f4f6;border-radius:8px;padding:16px;margin-bottom:20px;font-size:12px;color:#333;text-align:left;line-height:1.7;white-space:pre-wrap;font-family:Arial,sans-serif;">${absenceMessage}</div>
+                    <div style="background:#f3f4f6;border-radius:8px;padding:16px;margin-bottom:20px;font-size:12px;color:#333;text-align:left;line-height:1.7;white-space:pre-wrap;font-family:Arial,sans-serif;">${rkEsc(absenceMessage)}</div>
                     <div style="display:flex;gap:10px;margin-bottom:10px;">
                       ${s.fatherPhone ? `<button onclick="sendWhatsappDirect('${s.fatherPhone}', '${whatsappModalId}')" style="flex:1;background:#25d366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;"><i class="fab fa-whatsapp"></i> Send to Father</button>` : ''}
                       ${s.motherPhone ? `<button onclick="sendWhatsappDirect('${s.motherPhone}', '${whatsappModalId}')" style="flex:1;background:#25d366;color:#fff;border:none;padding:12px;border-radius:6px;cursor:pointer;font-weight:700;font-size:13px;"><i class="fab fa-whatsapp"></i> Send to Mother</button>` : ''}
@@ -671,29 +714,7 @@
         }
 
         function sendWhatsappDirect(phone, modalId) {
-          const absenceMessage = `*Dear Parent,*
-
-    This is to inform you that your ward was absent from today's classes. Kindly inform us of the reason for the absence.
-
-    *Regards,*
-    *R K CLASSES*
-    *Kapil Sir*
-    *M. Sc., B. Ed*
-    *9870375795*
-    *8108499214*
-
-    ......….................................
-
-    *प्रिय अभिभावक,*
-
-    यह सूचित किया जाता है कि आपका वार्ड आज की कक्षाओं में अनुपस्थित था। कृपया अनुपस्थिति का कारण हमें बताने की कृपा करें।
-
-    *सादर,*
-    *R K CLASSES*
-    *Kapil Sir*
-    *M. Sc., B. Ed*
-    *9870375795*
-    *8108499214*`;
+          const absenceMessage = rkWaMessages[modalId] || rkMessage('Absent', {student: '', class: '', medium: '', date: '', school: 'RK Classes'});
 
           const cleanPhone = sanitizePhone(phone);
           const telNumber = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;

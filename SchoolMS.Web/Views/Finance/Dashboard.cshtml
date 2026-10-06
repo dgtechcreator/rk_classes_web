@@ -15,19 +15,19 @@
 </div>
 
 <div class="kpi-grid">
-    <div class="kpi green">
+    <div class="kpi green" onclick="location.href='/Finance/Students?view=all'" style="cursor:pointer;">
         <div class="kpi-ico green">👥</div>
         <div class="kpi-val">@ViewBag.TotalStudents</div>
         <div class="kpi-lbl">Total Students</div>
     </div>
 
-    <div class="kpi teal">
+    <div class="kpi teal" onclick="location.href='/Finance/Students?view=fees'" style="cursor:pointer;">
         <div class="kpi-ico teal">💳</div>
         <div class="kpi-val">@((long)(ViewBag.TotalFees ?? 0m))</div>
         <div class="kpi-lbl">Total Fees</div>
     </div>
 
-    <div class="kpi indigo">
+    <div class="kpi indigo" onclick="location.href='/Finance/Students?view=collected'" style="cursor:pointer;">
         <div class="kpi-ico indigo">✅</div>
         <div class="kpi-val">@((long)(ViewBag.TotalCollected ?? 0m))</div>
         <div class="kpi-lbl">Collected Fees</div>
@@ -39,7 +39,7 @@
         <div class="kpi-lbl">Discount</div>
     </div>
 
-    <div class="kpi red">
+    <div class="kpi red" onclick="location.href='/Finance/Students?view=due'" style="cursor:pointer;">
         <div class="kpi-ico red">⚠️</div>
         <div class="kpi-val">@((long)(ViewBag.TotalBalance ?? 0m))</div>
         <div class="kpi-lbl">Balance Due</div>
@@ -87,7 +87,7 @@
                             <td style="text-align: right;">₹@((long)row.EstimatedCollected)</td>
                             <td style="text-align: right; color: @(balance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₹@((long)balance)</td>
                             <td style="text-align: center;">
-                                <a href="/Finance/ClassDetail?className=@Uri.EscapeDataString(row.ClassName)&batchName=@Uri.EscapeDataString(row.BatchName)" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-block;">View</a>
+                                <a href="/Finance/Students?className=@Uri.EscapeDataString(((string)row.ClassName).Trim())&batchName=@Uri.EscapeDataString(((string)row.BatchName).Trim())&view=due" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-block;">Students</a>
                             </td>
                         </tr>
                     }

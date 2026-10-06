@@ -169,16 +169,22 @@ async function savePerms() {
   const btn = event.currentTarget;
   btn.disabled = true; btn.textContent = 'Saving...';
 
-  const res = await fetch('/Users/SavePermissions/@Model.UserId', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(entries)
-  });
-  const d = await res.json();
   const msg = document.getElementById('savedMsg');
+  let d;
+  try {
+    const res = await fetch('/Users/SavePermissions/@Model.UserId', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entries)
+    });
+    d = await res.json();
+  } catch (e) {
+    d = { success: false, message: 'Could not reach the server or your session expired. Please log in again.' };
+  }
+  const safe = t => String(t || '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
   msg.innerHTML = d.success
-    ? '<div class="alert alert-success"><i class="fas fa-check-circle"></i> ' + d.message + '</div>'
-    : '<div class="alert alert-danger">Error saving permissions</div>';
+    ? '<div class="alert alert-success"><i class="fas fa-check-circle"></i> ' + safe(d.message) + '</div>'
+    : '<div class="alert alert-danger">Error saving permissions: ' + safe(d.message) + '</div>';
   btn.disabled = false;
   btn.innerHTML = '<i class="fas fa-save"></i> Save Permissions';
   setTimeout(() => msg.innerHTML = '', 4000);

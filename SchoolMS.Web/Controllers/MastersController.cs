@@ -21,7 +21,48 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
         ViewBag.CurrentYearId     = currentYearId;
         ViewBag.CurrentYearName   = svc.GetYears().FirstOrDefault(y => y.IsCurrent)?.YearName ?? "";
         ViewBag.ExpenseCategories = svc.GetExpenseCategories();
+        // Message templates live in a table added by SQL/47_MessageTemplates.sql; if that script has not
+        // been run yet, keep the rest of Masters working and just flag it on the Templates tab.
+        try { ViewBag.MessageTemplates = svc.GetMessageTemplates(); ViewBag.TemplatesMissing = false; }
+        catch { ViewBag.MessageTemplates = new List<MessageTemplate>(); ViewBag.TemplatesMissing = true; }
         return View();
+    }
+
+    // ── Message Templates ─────────────────────────────────────
+    // JSON used by the dashboard / student profile / finance pages to build WhatsApp texts.
+    [HttpGet]
+    public IActionResult MessageTemplatesJson(string? category)
+    {
+        try
+        {
+            var list = svc.GetMessageTemplates()
+                .Where(t => string.IsNullOrWhiteSpace(category) || t.Category.Equals(category, StringComparison.OrdinalIgnoreCase))
+                .Select(t => new { templateId = t.TemplateId, category = t.Category, title = t.Title, body = t.Body });
+            return Json(list);
+        }
+        catch { return Json(Array.Empty<object>()); }
+    }
+
+    [HttpPost]
+    public IActionResult SaveMessageTemplate(int templateId, string category, string title, string body)
+    {
+        try {
+            if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(body))
+                throw new Exception("Title and message are required.");
+            svc.SaveMessageTemplate(new MessageTemplate {
+                TemplateId = templateId, Category = string.IsNullOrWhiteSpace(category) ? "General" : category.Trim(),
+                Title = title.Trim(), Body = body.Trim(), IsActive = true });
+            TempData["Success"] = $"Template '{title.Trim()}' saved.";
+        } catch (Exception ex) { TempData["Error"] = ex.Message; }
+        return RedirectToAction("Index", null, "templates");
+    }
+
+    [HttpPost]
+    public IActionResult DeleteMessageTemplate(int id)
+    {
+        try { svc.DeleteMessageTemplate(id); TempData["Success"] = "Template deleted."; }
+        catch (Exception ex) { TempData["Error"] = ex.Message; }
+        return RedirectToAction("Index", null, "templates");
     }
 
     // ── Academic Year ─────────────────────────────────────────

@@ -9,7 +9,7 @@ namespace SchoolMS.Web.Controllers.Api;
 [Route("api/fees")]
 [ApiRequireStaff]
 public class FeesApiController(FeesService svc, LookupService lookup,
-    ClassFeeSetupService feeSetupSvc, StudentService studentSvc, FeeStructureService feeStructureSvc) : ControllerBase
+    ClassFeeSetupService feeSetupSvc, StudentService studentSvc, FeeStructureService feeStructureSvc, FeePositionService feePos) : ControllerBase
 {
     public record SavePayReq(int StudentId, decimal PayingNow, decimal AdditionalDiscount,
         decimal AdditionalCharges, DateTime? PaymentDate, DateTime? DueDate,
@@ -51,54 +51,9 @@ public class FeesApiController(FeesService svc, LookupService lookup,
         var student = studentSvc.GetById(id);
         if (student == null) return NotFound();
 
-        decimal actualFee = 0;
-        DateTime? dueDate = null;
-        var structures = feeStructureSvc.GetAllForStudent(id);
-
-        if (!structures.Any() && student.AcademicYearId.HasValue && student.ClassId.HasValue)
-        {
-            structures = feeStructureSvc.GetAll(student.AcademicYearId, student.ClassId, student.SectionId);
-            if (!structures.Any() && student.SectionId.HasValue)
-                structures = feeStructureSvc.GetAll(student.AcademicYearId, student.ClassId, null);
-            if (!structures.Any())
-                structures = feeStructureSvc.GetAll(null, student.ClassId, student.SectionId);
-            if (!structures.Any())
-                structures = feeStructureSvc.GetAll(null, student.ClassId, null);
-        }
-
-        if (structures.Any())
-        {
-            actualFee = structures.Sum(x => x.Amount);
-            var firstDue = structures.FirstOrDefault(x => x.DueDay > 0);
-            if (firstDue != null)
-                dueDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddDays(firstDue.DueDay - 1);
-        }
-
-        var history = svc.GetStudentHistory(id);
-        var totalPaid = history.Sum(x => x.NetAmount);
-        var totalDiscount = history.Sum(x => x.Discount);
-
-        decimal totalAdditionalCharges = 0;
-        foreach (var payment in history)
-        {
-            if (!string.IsNullOrEmpty(payment.Remarks) && payment.Remarks.Contains("Additional Charges:"))
-            {
-                var parts = payment.Remarks.Split("|");
-                foreach (var part in parts)
-                {
-                    if (part.Contains("Additional Charges:"))
-                    {
-                        var chargeStr = part.Replace("Additional Charges:", "").Replace("₹", "").Trim();
-                        if (decimal.TryParse(chargeStr, out decimal charge))
-                            totalAdditionalCharges += charge;
-                    }
-                }
-            }
-        }
-
-        var totalFeeWithAdditional = actualFee + totalAdditionalCharges;
-        var netActualFee = totalFeeWithAdditional - totalDiscount;
-        var balance = netActualFee - totalPaid;
+        var fee = feePos.Calculate(student);
+        var structures = fee.Structures;
+        var history = fee.History;
 
         object? existingPayment = null;
         if (paymentId.HasValue)
@@ -113,8 +68,9 @@ public class FeesApiController(FeesService svc, LookupService lookup,
         }
 
         return Ok(new {
-            student, actualFee, totalPaid, balance = Math.Max(0, balance), dueDate,
-            feeStructures = structures, paymentHistory = history, existingDiscount = totalDiscount,
+            student, actualFee = fee.BaseFee, totalPaid = fee.Paid, balance = fee.Balance, dueDate = fee.DueDate,
+            additionalCharges = fee.AdditionalCharges, netTotal = fee.NetTotal,
+            feeStructures = structures, paymentHistory = history, existingDiscount = fee.Discount,
             existingPayment,
         });
     }

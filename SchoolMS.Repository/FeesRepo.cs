@@ -112,29 +112,25 @@ public class FeesRepo(CommonConnectivity db)
         }).Cast<dynamic>().ToList();
     }
 
+    // Same numbers as the Finance dashboard (sp_GetFinanceDashboardSummary: active students of the current
+    // academic year, balance = fees - collected - discount) so the Home card and Finance page always agree.
     public OverallFeesSummary GetOverallFeesSummary()
     {
-        var query = @"
-            SELECT
-                (SELECT ISNULL(SUM(Amount), 0) FROM StudentFees) AS TotalFeesOwed,
-                (SELECT ISNULL(SUM(Amount), 0) FROM FeePayments WHERE IsDeleted=0) AS TotalCollected,
-                (SELECT ISNULL(SUM(Discount), 0) FROM FeePayments WHERE IsDeleted=0) AS TotalDiscount
-        ";
-
-        var result = db.Sql(query, r => new {
-            TotalFeesOwed = G.G<decimal>(r, "TotalFeesOwed"),
+        var result = db.Read("sp_GetFinanceDashboardSummary", new(), r => new {
+            TotalFees = G.G<decimal>(r, "TotalFees"),
             TotalCollected = G.G<decimal>(r, "TotalCollected"),
-            TotalDiscount = G.G<decimal>(r, "TotalDiscount")
+            TotalDiscount = G.G<decimal>(r, "TotalDiscount"),
+            TotalBalance = G.G<decimal>(r, "TotalBalance")
         }).FirstOrDefault();
 
         if (result == null)
             return new OverallFeesSummary { TotalFeesOwed = 0, TotalCollected = 0, TotalDiscount = 0, Balance = 0 };
 
         return new OverallFeesSummary {
-            TotalFeesOwed = result.TotalFeesOwed,
+            TotalFeesOwed = result.TotalFees,
             TotalCollected = result.TotalCollected,
             TotalDiscount = result.TotalDiscount,
-            Balance = result.TotalFeesOwed - result.TotalCollected
+            Balance = Math.Max(0, result.TotalBalance)
         };
     }
 

@@ -134,6 +134,31 @@ body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
     <button class="btn-landscape" onclick="printLandscape()">🖨️ Print Landscape</button>
     <button class="btn-close"     onclick="history.back()">✕ Close</button>
   </div>
+  @{
+    string RcIntl(string? raw)
+    {
+      var d = new string((raw ?? "").Where(char.IsDigit).ToArray());
+      if (d.Length < 10) return "";
+      if (d.StartsWith("0")) d = d.Substring(1);
+      return d.Length == 10 ? "91" + d : d;
+    }
+    var rcNums = new List<(string L, string N)>();
+    foreach (var (l, raw) in new[] { ("Father", Model.FatherPhone), ("Student", Model.StudentPhone) })
+    {
+      var n = RcIntl(raw);
+      if (n != "" && !rcNums.Any(x => x.N == n)) rcNums.Add((l, n));
+    }
+  }
+  @if (rcNums.Any())
+  {
+    <div class="btn-group">
+      @foreach (var c in rcNums)
+      {
+        <button style="background:#25d366;color:#fff;" onclick="rcWhatsapp('@c.N')">💬 WhatsApp @c.L</button>
+      }
+    </div>
+    <div style="font-size:12px;color:#555;margin-bottom:8px;">To send the PDF: Print → "Save as PDF", then attach it in the WhatsApp chat.</div>
+  }
 </div>
 
 @{
@@ -231,6 +256,24 @@ body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
 </div>
 
 <script>
+
+function rcWhatsapp(number) {
+  const vars = {
+    student: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StudentName ?? "")),
+    class: @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model.ClassName ?? "").Trim())),
+    medium: @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model.SectionName ?? "").Trim())),
+    receipt: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ReceiptNo ?? "")),
+    amount: '@Model.NetAmount.ToString("N0")',
+    date: new Date().toLocaleDateString('en-GB').replace(/\//g, '-'), school: 'RK Classes'
+  };
+  fetch('/Masters/MessageTemplatesJson?category=Receipt').then(r => r.json()).catch(() => []).then(list => {
+    const body = (list && list[0] && list[0].body) ||
+      'Dear Parent, thank you. Please find attached the fee receipt {receipt} of Rs {amount} for {student} ({class}). - {school}';
+    const msg = body.replace(/\{(\w+)\}/g, (m, k) => (vars[k.toLowerCase()] !== undefined ? vars[k.toLowerCase()] : m));
+    window.open('https://wa.me/' + number + '?text=' + encodeURIComponent(msg), '_blank');
+  });
+}
+
 function printPortrait() {
   var s = document.getElementById('ls-style');
   if (s) s.textContent = '';

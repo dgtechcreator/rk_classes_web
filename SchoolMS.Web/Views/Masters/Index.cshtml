@@ -7,6 +7,8 @@
     var subjects     = ViewBag.Subjects          as List<SchoolMS.Domain.Subject>     ?? new();
     var feeTypes     = ViewBag.FeeTypes          as List<SchoolMS.Domain.FeeType>     ?? new();
     var expCats      = ViewBag.ExpenseCategories as List<SchoolMS.Domain.ExpenseCat>  ?? new();
+    var msgTemplates = ViewBag.MessageTemplates as List<SchoolMS.Domain.MessageTemplate> ?? new();
+    bool templatesMissing = (bool)(ViewBag.TemplatesMissing ?? false);
     var feeList      = ViewBag.FeeList  as List<SchoolMS.Domain.FeeStructure> ?? new();
     int currentYearId   = (int)(ViewBag.CurrentYearId ?? 0);
     string currentYearName = (string)(ViewBag.CurrentYearName ?? "");
@@ -70,7 +72,8 @@
       ("batches",  "⏰", "Batches",     batches.Count(b=>b.IsActive)),
       ("feesetup", "💰", "Fee Setup",   feeList.Count),
       ("subjects", "📖", "Subjects",    subjects.Count(s=>s.IsActive)),
-      ("expcats",  "🏷️", "Exp. Category",  expCats.Count(e=>e.IsActive))
+      ("expcats",  "🏷️", "Exp. Category",  expCats.Count(e=>e.IsActive)),
+      ("templates","💬", "Templates",    msgTemplates.Count)
     };
   }
   @foreach (var (id, ico, lbl, cnt) in tabs)
@@ -591,6 +594,90 @@
   </div>
 </div>
 
+@* ════════════════════════════════════════════════════════════
+   TAB — MESSAGE TEMPLATES (WhatsApp texts: absent alert, fee reminder, receipt ...)
+   ════════════════════════════════════════════════════════════ *@
+<div id="tab-templates" class="tab-panel" style="display:none;">
+  @if (templatesMissing)
+  {
+    <div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> Message template table not found. Run <b>SQL/47_MessageTemplates.sql</b> on the database first.</div>
+  }
+  <div class="g2" style="align-items:start;">
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-ttl"><i class="fas fa-plus-circle" style="color:var(--p);margin-right:6px;"></i><span id="tplFormTitle">Add Message Template</span></span>
+      </div>
+      <form method="post" action="/Masters/SaveMessageTemplate">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="templateId" id="tplId" value="0"/>
+        <div class="fg" style="margin-bottom:12px;">
+          <label>Used for *</label>
+          <select name="category" id="tplCategory" class="fc">
+            <option value="Absent">Absent</option>
+            <option value="FeeReminder">Fee Reminder</option>
+            <option value="Receipt">Receipt</option>
+            <option value="General">General</option>
+          </select>
+        </div>
+        <div class="fg" style="margin-bottom:12px;">
+          <label>Title *</label>
+          <input type="text" name="title" id="tplTitle" class="fc" maxlength="100" placeholder="e.g. Absent Alert" required/>
+        </div>
+        <div class="fg" style="margin-bottom:8px;">
+          <label>Message *</label>
+          <textarea name="body" id="tplBody" class="fc" rows="6" maxlength="1000" placeholder="Dear Parent, {student} ({class}) was absent today ({date})..." required></textarea>
+        </div>
+        <div style="margin-bottom:14px;font-size:12px;color:var(--mu);">
+          Insert:
+          @foreach (var ph in new[] { "{student}", "{class}", "{medium}", "{date}", "{school}", "{total}", "{paid}", "{balance}", "{receipt}", "{amount}" })
+          {
+            <button type="button" class="btn btn-outline btn-sm" style="padding:2px 8px;font-size:11px;margin:2px;" onclick="insertPlaceholder('@ph')">@ph</button>
+          }
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+          <button type="button" class="btn btn-outline" onclick="resetTplForm()"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="padding:0;">
+      <div class="card-hdr" style="padding:16px 18px;">
+        <span class="card-ttl">Message Templates (@msgTemplates.Count total)</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Title</th><th>Used for</th><th>Message</th><th></th></tr></thead>
+          <tbody>
+          @foreach (var t in msgTemplates)
+          {
+            <tr>
+              <td class="fw7">@t.Title</td>
+              <td><span class="badge b-blue">@(t.Category == "FeeReminder" ? "Fee Reminder" : t.Category)</span></td>
+              <td style="max-width:340px;white-space:normal;font-size:12px;color:var(--mu);">@t.Body</td>
+              <td>
+                <div class="df g8">
+                  <button class="btn btn-outline btn-sm btn-icon" title="Edit"
+                    data-id="@t.TemplateId" data-cat="@t.Category" data-title="@t.Title" data-body="@t.Body"
+                    onclick="editTpl(this)"><i class="fas fa-edit"></i></button>
+                  <form method="post" action="/Masters/DeleteMessageTemplate/@t.TemplateId"
+                        onsubmit="return confirm('Delete this template?')">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          }
+          @if (!msgTemplates.Any())
+          {<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--mu);">No templates yet. Add one using the form.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 @section Scripts {
 <script>
 // ── Open in App / Fullscreen ──────────────────────────────────
@@ -627,6 +714,30 @@ function switchTab(id) {
 const savedTab = new URLSearchParams(window.location.hash.replace('#','')).get('') ||
                  localStorage.getItem('masterTab') || '@openTab';
 switchTab(savedTab);
+
+// ── Message templates ─────────────────────────────────────────
+function editTpl(btn) {
+  switchTab('templates');
+  document.getElementById('tplId').value = btn.dataset.id;
+  document.getElementById('tplCategory').value = btn.dataset.cat;
+  document.getElementById('tplTitle').value = btn.dataset.title;
+  document.getElementById('tplBody').value = btn.dataset.body;
+  document.getElementById('tplFormTitle').textContent = 'Edit Message Template';
+  document.getElementById('tplBody').focus();
+}
+function resetTplForm() {
+  document.getElementById('tplId').value = 0;
+  document.getElementById('tplTitle').value = '';
+  document.getElementById('tplBody').value = '';
+  document.getElementById('tplCategory').value = 'Absent';
+  document.getElementById('tplFormTitle').textContent = 'Add Message Template';
+}
+function insertPlaceholder(ph) {
+  const ta = document.getElementById('tplBody');
+  const s = ta.selectionStart ?? ta.value.length, e = ta.selectionEnd ?? s;
+  ta.value = ta.value.slice(0, s) + ph + ta.value.slice(e);
+  ta.focus(); ta.selectionStart = ta.selectionEnd = s + ph.length;
+}
 
 // ── Academic Year ─────────────────────────────────────────────
 function editYear(id, name, isCurrent, isActive) {

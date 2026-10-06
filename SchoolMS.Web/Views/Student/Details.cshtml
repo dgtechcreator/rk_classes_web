@@ -220,6 +220,30 @@ Welcome to R K CLASSES. Wishing you a great learning experience and success in y
     <div style="font-size:18px;font-weight:800;color:var(--txt);">@Model.FullName</div>
     <div style="font-size:13px;" class="text-mu">@Model.AdmissionNo</div>
     <span class="badge @(Model.Status=="Active"?"b-active":"b-inactive")" style="margin-top:8px;">@Model.Status</span>
+    @{
+      var contacts = new List<(string Label, string Number)>();
+      foreach (var (lbl, raw) in new[] { ("Father", Model.FatherPhone), ("Mother", Model.MotherPhone), ("Student", Model.Phone) })
+      {
+        var digits = new string((raw ?? "").Where(char.IsDigit).ToArray());
+        if (digits.Length < 10) continue;
+        if (digits.StartsWith("0")) digits = digits.Substring(1);
+        var intl = digits.Length == 10 ? "91" + digits : digits;
+        if (contacts.Any(c => c.Number == intl)) continue;
+        contacts.Add((lbl, intl));
+      }
+    }
+    <div style="margin-top:16px;text-align:left;">
+      @if (!contacts.Any())
+      {<div class="text-mu" style="font-size:12px;text-align:center;">No valid phone number saved.</div>}
+      @foreach (var c in contacts)
+      {
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--bdr);">
+          <div style="flex:1;font-size:13px;"><b>@c.Label</b><div style="font-size:12px;color:var(--mu);">+@c.Number</div></div>
+          <a href="tel:+@c.Number" class="btn btn-outline btn-sm" title="Call @c.Label" style="color:#2563eb;"><i class="fas fa-phone"></i> Call</a>
+          <button type="button" class="btn btn-sm" title="WhatsApp @c.Label" style="background:#25d366;color:#fff;border:none;" onclick="rkWhatsapp('General','@c.Number')"><i class="fab fa-whatsapp"></i></button>
+        </div>
+      }
+    </div>
     <div style="margin-top:18px;">
       @foreach(var (lbl,val) in new[]{("Std",Model.ClassName??"—"),("Medium/Stream",Model.SectionName??"—"),("Batch",Model.BatchName??"—"),("Roll No",Model.RollNo??"—"),("Year",Model.YearName??"—")})
       {<div class="info-row"><span class="info-lbl">@lbl</span><span class="info-val">@val</span></div>}
@@ -236,9 +260,88 @@ Welcome to R K CLASSES. Wishing you a great learning experience and success in y
       @foreach(var (lbl,val) in new[]{("Father's Name",Model.FatherName??"—"),("Mother's Name",Model.MotherName??"—")})
       {<div class="info-row"><span class="info-lbl">@lbl</span><span class="info-val">@val</span></div>}
     </div>
+    @if (Context.Session.HasPerm("fee_collection") && ViewBag.FeeTotal != null)
+    {
+      decimal feeTotal = ViewBag.FeeTotal, feePaid = ViewBag.FeePaid, feeBalance = ViewBag.FeeBalance, feeDisc = ViewBag.FeeDiscount, feeExtra = ViewBag.FeeExtra;
+      var feeHistory = ViewBag.FeeHistory as List<SchoolMS.Domain.FeePayment> ?? new();
+      <div class="card">
+        <div class="card-hdr">
+          <span class="card-ttl"><i class="fas fa-rupee-sign" style="color:var(--p);margin-right:7px;"></i>Fees</span>
+          <span class="badge @(feeBalance > 0 ? "b-inactive" : "b-active")">@(feeBalance > 0 ? "Due ₹" + feeBalance.ToString("N0") : "Fully paid")</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+          <div style="flex:1;min-width:110px;"><div class="text-mu" style="font-size:12px;">Total</div><div style="font-size:20px;font-weight:800;">₹@feeTotal.ToString("N0")</div></div>
+          <div style="flex:1;min-width:110px;"><div class="text-mu" style="font-size:12px;">Paid</div><div style="font-size:20px;font-weight:800;color:#059669;">₹@feePaid.ToString("N0")</div></div>
+          <div style="flex:1;min-width:110px;"><div class="text-mu" style="font-size:12px;">Balance</div><div style="font-size:20px;font-weight:800;color:@(feeBalance > 0 ? "#dc2626" : "#059669");">₹@feeBalance.ToString("N0")</div></div>
+        </div>
+        @if (feeExtra > 0 || feeDisc > 0)
+        {
+          <div class="text-mu" style="font-size:12px;margin-bottom:8px;">
+            @if (feeExtra > 0) {<span>Includes ₹@feeExtra.ToString("N0") additional charges. </span>}
+            @if (feeDisc > 0) {<span>Total is after the ₹@feeDisc.ToString("N0") discount.</span>}
+          </div>
+        }
+        @if (feeHistory.Any())
+        {
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Receipt</th><th>Mode</th><th style="text-align:right;">Amount</th><th></th></tr></thead>
+              <tbody>
+              @foreach (var p in feeHistory)
+              {
+                <tr>
+                  <td>@p.PaymentDate.ToString("dd-MM-yyyy")</td>
+                  <td>@p.ReceiptNo</td>
+                  <td>@p.PaymentMode</td>
+                  <td style="text-align:right;font-weight:700;">₹@p.NetAmount.ToString("N0")</td>
+                  <td><a href="/Fees/Receipt/@p.PaymentId" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-receipt"></i> Receipt</a></td>
+                </tr>
+              }
+              </tbody>
+            </table>
+          </div>
+        }
+        @if (feeBalance > 0 && contacts.Any())
+        {
+          <div style="margin-top:12px;">
+            <div class="text-mu" style="font-size:12px;margin-bottom:6px;">Send fee reminder on WhatsApp:</div>
+            <div class="df g8" style="flex-wrap:wrap;">
+              @foreach (var c in contacts)
+              {
+                <button type="button" class="btn btn-sm" style="background:#25d366;color:#fff;border:none;"
+                  onclick="rkWhatsapp('FeeReminder','@c.Number',{total:'@feeTotal.ToString("N0")',paid:'@feePaid.ToString("N0")',balance:'@feeBalance.ToString("N0")'})">
+                  <i class="fab fa-whatsapp"></i> @c.Label
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
     <div class="df g8">
       <a href="/Fees/Collect" class="btn btn-success" style="flex:1;justify-content:center;"><i class="fas fa-rupee-sign"></i> Collect Fee</a>
       <a href="/Attendance/Index" class="btn btn-outline" style="flex:1;justify-content:center;"><i class="fas fa-calendar-check"></i> Attendance</a>
     </div>
   </div>
 </div>
+
+<script>
+  // WhatsApp text comes from Masters -> Templates (category), with a plain fallback if none is saved.
+  const RK_STUDENT = { fullName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.FullName ?? "")), className: @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model.ClassName ?? "").Trim())), medium: @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model.SectionName ?? "").Trim())) };
+  const RK_FALLBACK = {
+    General: "Dear Parent, a message regarding {student} ({class}) from {school}.",
+    FeeReminder: "Dear Parent, this is a gentle reminder regarding the fees of {student} ({class}). Total fees: Rs {total}, paid: Rs {paid}, balance due: Rs {balance}. Kindly clear the balance at the earliest. - {school}"
+  };
+  let rkTemplates = [];
+  fetch('/Masters/MessageTemplatesJson').then(r => r.json()).then(t => { rkTemplates = t || []; }).catch(() => {});
+  function rkWhatsapp(category, number, extra) {
+    const t = rkTemplates.find(x => (x.category || '').toLowerCase() === category.toLowerCase());
+    const vars = Object.assign({
+      student: RK_STUDENT.fullName, class: RK_STUDENT.className, medium: RK_STUDENT.medium,
+      date: new Date().toLocaleDateString('en-GB').replace(/\//g, '-'), school: 'RK Classes'
+    }, extra || {});
+    const body = t ? t.body : (RK_FALLBACK[category] || '');
+    const msg = body.replace(/\{(\w+)\}/g, (m, k) => (vars[k.toLowerCase()] !== undefined ? vars[k.toLowerCase()] : m));
+    window.open('https://wa.me/' + number + '?text=' + encodeURIComponent(msg), '_blank');
+  }
+</script>

@@ -41,6 +41,40 @@ public class FinanceController(FeesService feesSvc, StudentService studentSvc,
         }
     }
 
+    // Student-wise fee position behind the dashboard tiles / class rows. Same rule as the dashboard totals
+    // (fees - collected - discount), so the rows add up to the tile that was clicked.
+    [HttpGet]
+    public IActionResult Students(string? className = null, string? batchName = null, string view = "all")
+    {
+        var rows = feesSvc.GetFinanceStudents(className, batchName);
+        view = (view ?? "all").ToLowerInvariant();
+        rows = view switch
+        {
+            "fees"      => rows.OrderByDescending(r => r.TotalFees).ToList(),
+            "collected" => rows.OrderByDescending(r => r.Collected).ToList(),
+            "due"       => rows.Where(r => r.Balance > 0.5m).OrderByDescending(r => r.Balance).ToList(),
+            _           => rows.OrderBy(r => r.FullName).ToList(),
+        };
+        ViewBag.ClassName = className;
+        ViewBag.BatchName = batchName;
+        ViewBag.View = view;
+        ViewBag.Title2 = !string.IsNullOrWhiteSpace(className)
+            ? string.IsNullOrWhiteSpace(batchName) ? className!.Trim() : $"{className!.Trim()} · {batchName!.Trim()}"
+            : view switch { "fees" => "Total Fees", "collected" => "Collected Fees", "due" => "Pending Dues", _ => "All Students" };
+        return View(rows);
+    }
+
+    // Payments of one student (for the Receipt button in the list above).
+    [HttpGet]
+    public IActionResult StudentPayments(int id)
+    {
+        var list = feesSvc.GetStudentHistory(id);
+        return Json(list.Select(p => new {
+            paymentId = p.PaymentId, receiptNo = p.ReceiptNo,
+            date = p.PaymentDate.ToString("dd-MM-yyyy"), mode = p.PaymentMode, amount = p.NetAmount
+        }));
+    }
+
     [HttpGet]
     public IActionResult ClassDetail(string className, string batchName)
     {

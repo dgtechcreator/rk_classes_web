@@ -108,11 +108,15 @@ public class UsersController(UserMgmtService svc) : Controller
     }
 
     [HttpPost]
-    public IActionResult SavePermissions(int userId, [FromBody] List<PermEntry> entries)
+    public IActionResult SavePermissions(int id, int userId, [FromBody] List<PermEntry> entries)
     {
         try {
             if (HttpContext.Session.GetInt32("RoleId") != 1) return Unauthorized();
+            // The Permissions page posts to /Users/SavePermissions/{id} (route value "id"), other callers
+            // may send ?userId= — accept either, otherwise the user id silently binds to 0.
+            if (userId <= 0) userId = id;
             if (userId <= 0) return Json(new { success = false, message = "Invalid user." });
+            if (entries == null) return Json(new { success = false, message = "No permissions received." });
 
             var user = svc.GetById(userId);
             if (user == null) return Json(new { success = false, message = "User not found." });

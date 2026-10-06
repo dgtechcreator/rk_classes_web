@@ -129,6 +129,7 @@ builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<AttendanceBatchService>();
 builder.Services.AddScoped<TeacherPaymentService>();
 builder.Services.AddScoped<TeacherAttendanceService>();
+builder.Services.AddScoped<FeePositionService>();
 
 var app = builder.Build();
 

@@ -22,6 +22,33 @@ public class DashboardController(LookupService lookup, AttendanceService attSvc,
     }
 
     [HttpGet]
+    public IActionResult GetPresentStudents()
+    {
+        var present = attSvc.GetPresentStudentsToday();
+        return Json(present.Select(a => new
+        {
+            studentId = a.StudentId,
+            fullName = a.FullName,
+            admissionNo = a.AdmissionNo,
+            className = a.ClassName,
+            sectionName = a.SectionName,
+            batchName = a.BatchName,
+            medium = a.Medium,
+        }));
+    }
+
+    // Payments behind the "Fees This Month" card — same rule as the card (payment date in this month,
+    // deleted receipts excluded). Admin only, like the dashboard itself.
+    [HttpGet]
+    public IActionResult FeesThisMonth()
+    {
+        if (HttpContext.Session.GetInt32("RoleId") != 1)
+            return RedirectToAction("AccessDenied", "Home");
+        var payments = feesSvc.GetPaymentsThisMonth();
+        return View(payments);
+    }
+
+    [HttpGet]
     public IActionResult GetAbsentStudents()
     {
         var absent = attSvc.GetAbsentStudentsToday();

@@ -13,7 +13,8 @@ public class ParentApiController(
     AttendanceService attSvc,
     MarksService marksSvc,
     FeesService feesSvc,
-    FeeStructureService feeStructureSvc) : ControllerBase
+    FeeStructureService feeStructureSvc,
+    FeePositionService feePos) : ControllerBase
 {
     string Phone => User.Phone() ?? "";
 
@@ -31,36 +32,23 @@ public class ParentApiController(
         var attendance = attSvc.GetStudentAttendanceSummary(sid);
         var attDetail  = attSvc.GetStudentAttendanceDetail(sid);
         var marks      = marksSvc.GetStudentAllMarks(sid);
-        var feeHistory = feesSvc.GetStudentHistory(sid);
-        var totalPaid  = feeHistory.Sum(x => x.NetAmount);
 
-        var structures = feeStructureSvc.GetAllForStudent(sid);
-        if (!structures.Any() && selected.AcademicYearId.HasValue && selected.ClassId.HasValue)
-        {
-            structures = feeStructureSvc.GetAll(selected.AcademicYearId, selected.ClassId, selected.SectionId);
-            if (!structures.Any() && selected.SectionId.HasValue)
-                structures = feeStructureSvc.GetAll(selected.AcademicYearId, selected.ClassId, null);
-            if (!structures.Any())
-                structures = feeStructureSvc.GetAll(null, selected.ClassId, selected.SectionId);
-            if (!structures.Any())
-                structures = feeStructureSvc.GetAll(null, selected.ClassId, null);
-        }
-        var actualFee = structures.Sum(x => x.Amount);
-
-        List<object>? classFeesSummary = null;
-        if (selected.ClassId.HasValue)
-            classFeesSummary = feesSvc.GetClassFeesSummary(selected.ClassId.Value, selected.SectionId).Cast<object>().ToList();
+        var fee = feePos.Calculate(selected);
 
         return Ok(new {
             student = selected,
             attendance,
             attendanceDetail = attDetail,
             marks,
-            feeHistory,
-            totalPaid,
-            actualFee,
-            balance = actualFee - totalPaid,
-            classFeesSummary,
+            feeHistory = fee.History,
+            totalPaid = fee.Paid,
+            actualFee = fee.BaseFee,          // base fee (older app builds)
+            additionalCharges = fee.AdditionalCharges,
+            discount = fee.Discount,
+            netTotal = fee.NetTotal,          // fee + charges - discount
+            balance = fee.Balance,
+            dueDate = fee.DueDate,
+            feeStructures = fee.Structures,
         });
     }
 

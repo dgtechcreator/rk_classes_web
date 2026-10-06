@@ -8,7 +8,7 @@ namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
 public class StudentController(StudentService svc, LookupService lookup, FeeStructureService feeSvc,
-    AttendanceService attSvc, MarksService marksSvc, FeesService feesSvc) : Controller
+    AttendanceService attSvc, MarksService marksSvc, FeesService feesSvc, FeePositionService feePos) : Controller
 {
     public IActionResult Index(int page=1, string? search=null, int? classId=null,
         int? sectionId=null, int? batchId=null, string? status="Active")
@@ -80,6 +80,20 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
         if (s == null) return NotFound();
         var fees = feeSvc.GetStudentFees(id);
         ViewBag.StudentFees = fees;
+
+        // Fee position (same rule as the Fees > Pay page): base fee + additional charges (kept in payment
+        // remarks) - discount - paid. Only for staff who may see fee data.
+        if (HttpContext.Session.HasPerm("fee_collection"))
+        {
+            var pos = feePos.Calculate(s);
+            ViewBag.FeeTotal = pos.NetTotal;        // fee + additional charges - discount
+            ViewBag.FeeBase = pos.BaseFee;
+            ViewBag.FeeExtra = pos.AdditionalCharges;
+            ViewBag.FeeDiscount = pos.Discount;
+            ViewBag.FeePaid = pos.Paid;
+            ViewBag.FeeBalance = pos.Balance;
+            ViewBag.FeeHistory = pos.History;
+        }
         return View(s);
     }
 

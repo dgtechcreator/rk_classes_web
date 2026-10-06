@@ -199,7 +199,11 @@
             var totalFeeWithAdditional = Model.ActualFee + totalAdditionalCharges;
         }
         <div class="fp-info-item" style="color:@(totalFeeWithAdditional > 0 ? "#15803d" : "#dc2626");font-weight:700;">
-            <strong>Total Fee:</strong> ₹ @totalFeeWithAdditional.ToString("N0")
+            <strong>Total Fee:</strong> ₹ @((totalFeeWithAdditional - Model.ExistingDiscount).ToString("N0"))
+            @if (Model.ExistingDiscount > 0)
+            {
+                <span style="font-size:11px;color:#6b7280;font-weight:400;"> (after ₹@Model.ExistingDiscount.ToString("N0") discount)</span>
+            }
             @if (Model.ActualFee == 0)
             {
                 <span style="font-size:11px;color:#dc2626;font-weight:400;"> (no fee structure set)</span>

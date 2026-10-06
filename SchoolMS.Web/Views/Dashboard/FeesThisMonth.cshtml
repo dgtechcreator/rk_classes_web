@@ -1,0 +1,42 @@
+@model List<SchoolMS.Domain.FeePayment>
+@{
+    ViewData["Title"] = "Fees This Month";
+    var total = Model.Sum(p => p.NetAmount);
+}
+
+<div class="pg-hdr">
+  <div class="pg-row" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h1>💰 Fees — @DateTime.Today.ToString("MMMM yyyy")</h1>
+      <p>@Model.Count payments received this month · Total <b>₹@total.ToString("N0")</b></p>
+    </div>
+    <a href="/Dashboard/Index" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Dashboard</a>
+  </div>
+</div>
+
+<div class="card" style="padding:0;">
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Date</th><th>Student</th><th>Class</th><th>Receipt No</th><th>Mode</th><th style="text-align:right;">Amount</th><th></th></tr></thead>
+      <tbody>
+      @{ int n = 0; }
+      @foreach (var p in Model)
+      {
+        n++;
+        <tr>
+          <td class="text-mu fw7">@n</td>
+          <td>@p.PaymentDate.ToString("dd-MM-yyyy")</td>
+          <td class="fw7"><a href="/Student/Profile360?id=@p.StudentId" style="color:inherit;text-decoration:none;">@p.StudentName</a><div style="font-size:11px;color:var(--mu);font-weight:400;">@p.AdmissionNo</div></td>
+          <td>@p.ClassName @p.SectionName</td>
+          <td>@p.ReceiptNo</td>
+          <td>@p.PaymentMode</td>
+          <td style="text-align:right;font-weight:800;">₹@p.NetAmount.ToString("N0")</td>
+          <td><a href="/Fees/Receipt/@p.PaymentId" target="_blank" class="btn btn-outline btn-sm"><i class="fas fa-receipt"></i> Receipt</a></td>
+        </tr>
+      }
+      @if (!Model.Any())
+      {<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--mu);">No payments received this month yet.</td></tr>}
+      </tbody>
+    </table>
+  </div>
+</div>

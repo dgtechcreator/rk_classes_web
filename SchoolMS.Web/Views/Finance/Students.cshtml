@@ -1,0 +1,131 @@
+@model List<SchoolMS.Domain.FinanceStudentRow>
+@{
+    ViewData["Title"] = "Finance — " + (string)ViewBag.Title2;
+    string view = (string)ViewBag.View;
+    decimal tFees = Model.Sum(r => r.TotalFees), tPaid = Model.Sum(r => r.Collected), tDisc = Model.Sum(r => r.Discount), tBal = Model.Sum(r => r.Balance);
+    bool canReceipt = Context.Session.HasPerm("fee_collection");
+    string Intl(string? raw)
+    {
+        var d = new string((raw ?? "").Where(char.IsDigit).ToArray());
+        if (d.Length < 10) return "";
+        if (d.StartsWith("0")) d = d.Substring(1);
+        return d.Length == 10 ? "91" + d : d;
+    }
+}
+
+<div class="pg-hdr">
+  <div class="pg-row" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h1>💰 @ViewBag.Title2</h1>
+      <p>@Model.Count students · Fees <b>₹@tFees.ToString("N0")</b> · Collected <b style="color:#059669;">₹@tPaid.ToString("N0")</b> · Discount <b>₹@tDisc.ToString("N0")</b> · Balance <b style="color:#dc2626;">₹@tBal.ToString("N0")</b></p>
+    </div>
+    <a href="/Finance/Dashboard" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Finance Dashboard</a>
+  </div>
+</div>
+
+<div class="card" style="padding:0;">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px 18px;border-bottom:1px solid var(--bdr);">
+    <input type="text" id="fsSearch" class="fc" placeholder="Search name or admission no..." style="max-width:280px;" oninput="fsFilter()"/>
+    <button type="button" class="btn btn-sm fsChip btn-primary" data-f="all" onclick="fsSetFilter('all')">All</button>
+    <button type="button" class="btn btn-sm fsChip btn-outline" data-f="due" onclick="fsSetFilter('due')">Due</button>
+    <button type="button" class="btn btn-sm fsChip btn-outline" data-f="paid" onclick="fsSetFilter('paid')">Paid up</button>
+    <span id="fsCount" class="text-mu" style="margin-left:auto;font-size:12px;"></span>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Student</th><th>Class</th><th style="text-align:right;">Fees</th><th style="text-align:right;">Paid</th><th style="text-align:right;">Discount</th><th style="text-align:right;">Balance</th><th>Contact</th><th></th></tr></thead>
+      <tbody id="fsBody">
+      @foreach (var r in Model)
+      {
+        var contacts = new List<(string L, string N)>();
+        foreach (var (l, raw) in new[] { ("F", r.FatherPhone), ("M", r.MotherPhone), ("S", r.Phone) })
+        {
+          var n = Intl(raw);
+          if (n != "" && !contacts.Any(c => c.N == n)) contacts.Add((l, n));
+        }
+        var due = r.Balance > 0.5m;
+        <tr class="fsRow" data-name="@((r.FullName + " " + r.AdmissionNo).ToLower())" data-due="@(due ? "1" : "0")">
+          <td class="fw7"><a href="/Student/Details/@r.StudentId" style="color:inherit;text-decoration:none;">@r.FullName</a><div style="font-size:11px;color:var(--mu);font-weight:400;">@r.AdmissionNo</div></td>
+          <td style="font-size:12px;">@r.ClassName @r.SectionName<div style="color:var(--mu);">@r.BatchName</div></td>
+          <td style="text-align:right;">₹@r.TotalFees.ToString("N0")</td>
+          <td style="text-align:right;color:#059669;">₹@r.Collected.ToString("N0")</td>
+          <td style="text-align:right;">₹@r.Discount.ToString("N0")</td>
+          <td style="text-align:right;font-weight:800;color:@(due ? "#dc2626" : "#059669");">@(due ? "₹" + r.Balance.ToString("N0") : "Paid up")</td>
+          <td style="white-space:nowrap;">
+            @if (!contacts.Any()) {<span class="text-mu" style="font-size:11px;">no number</span>}
+            @foreach (var c in contacts)
+            {
+              <a href="tel:+@c.N" class="btn btn-outline btn-sm" title="Call @c.L" style="color:#2563eb;padding:3px 7px;"><i class="fas fa-phone"></i> @c.L</a>
+              <button type="button" class="btn btn-sm" title="@(due ? "Fee reminder" : "WhatsApp") @c.L" style="background:#25d366;color:#fff;border:none;padding:3px 7px;"
+                data-name="@r.FullName" data-class="@r.ClassName.Trim()" data-medium="@r.SectionName.Trim()" data-num="@c.N" data-due="@(due ? "1" : "0")"
+                data-total="@r.TotalFees.ToString("N0")" data-paid="@r.Collected.ToString("N0")" data-bal="@((r.Balance < 0 ? 0 : r.Balance).ToString("N0"))"
+                onclick="fsWhatsapp(this)"><i class="fab fa-whatsapp"></i> @c.L</button>
+            }
+          </td>
+          <td style="white-space:nowrap;">
+            @if (canReceipt && r.Collected > 0)
+            {<button type="button" class="btn btn-outline btn-sm" onclick="fsReceipt(@r.StudentId)"><i class="fas fa-receipt"></i> Receipt</button>}
+          </td>
+        </tr>
+      }
+      @if (!Model.Any())
+      {<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--mu);">No students.</td></tr>}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="fsReceiptModal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center;">
+  <div class="card" style="max-width:420px;width:92%;max-height:80vh;overflow:auto;">
+    <div class="card-hdr"><span class="card-ttl">Receipts</span><button class="btn btn-outline btn-sm" onclick="document.getElementById('fsReceiptModal').style.display='none'">Close</button></div>
+    <div id="fsReceiptList"></div>
+  </div>
+</div>
+
+<script>
+  let fsMode = 'all';
+  function fsSetFilter(f) {
+    fsMode = f;
+    document.querySelectorAll('.fsChip').forEach(b => { const on = b.dataset.f === f; b.classList.toggle('btn-primary', on); b.classList.toggle('btn-outline', !on); });
+    fsFilter();
+  }
+  function fsFilter() {
+    const q = document.getElementById('fsSearch').value.trim().toLowerCase();
+    let shown = 0;
+    document.querySelectorAll('.fsRow').forEach(tr => {
+      const okQ = !q || tr.dataset.name.includes(q);
+      const okF = fsMode === 'all' || (fsMode === 'due' ? tr.dataset.due === '1' : tr.dataset.due === '0');
+      tr.style.display = (okQ && okF) ? '' : 'none';
+      if (okQ && okF) shown++;
+    });
+    document.getElementById('fsCount').textContent = shown + ' students';
+  }
+  fsSetFilter('@(view == "due" ? "due" : "all")');
+
+  // WhatsApp text from Masters -> Templates
+  let rkTemplates = [];
+  fetch('/Masters/MessageTemplatesJson').then(r => r.json()).then(t => { rkTemplates = t || []; }).catch(() => {});
+  const RK_FALLBACK = {
+    General: "Dear Parent, a message regarding {student} ({class}) from {school}.",
+    FeeReminder: "Dear Parent, this is a gentle reminder regarding the fees of {student} ({class}). Total fees: Rs {total}, paid: Rs {paid}, balance due: Rs {balance}. Kindly clear the balance at the earliest. - {school}"
+  };
+  function fsWhatsapp(btn) {
+    const category = btn.dataset.due === '1' ? 'FeeReminder' : 'General';
+    const t = rkTemplates.find(x => (x.category || '').toLowerCase() === category.toLowerCase());
+    const vars = { student: btn.dataset.name, class: btn.dataset.class, medium: btn.dataset.medium, school: 'RK Classes',
+      date: new Date().toLocaleDateString('en-GB').replace(/\//g, '-'), total: btn.dataset.total, paid: btn.dataset.paid, balance: btn.dataset.bal };
+    const body = t ? t.body : RK_FALLBACK[category];
+    const msg = body.replace(/\{(\w+)\}/g, (m, k) => (vars[k.toLowerCase()] !== undefined ? vars[k.toLowerCase()] : m));
+    window.open('https://wa.me/' + btn.dataset.num + '?text=' + encodeURIComponent(msg), '_blank');
+  }
+
+  function fsReceipt(studentId) {
+    fetch('/Finance/StudentPayments?id=' + studentId).then(r => r.json()).then(list => {
+      if (!list.length) { alert('No payments received yet.'); return; }
+      if (list.length === 1) { window.open('/Fees/Receipt/' + list[0].paymentId, '_blank'); return; }
+      document.getElementById('fsReceiptList').innerHTML = list.map(p =>
+        `<a href="/Fees/Receipt/${p.paymentId}" target="_blank" class="btn btn-outline" style="display:flex;justify-content:space-between;margin:6px 0;"><span>${p.receiptNo} · ${p.date} · ${p.mode}</span><b>₹${Number(p.amount).toLocaleString('en-IN')}</b></a>`).join('');
+      document.getElementById('fsReceiptModal').style.display = 'flex';
+    }).catch(() => alert('Could not load receipts.'));
+  }
+</script>
