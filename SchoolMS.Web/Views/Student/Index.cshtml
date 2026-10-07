@@ -208,15 +208,15 @@
   <input type="text" name="search" value="@Model.Search" class="fc" placeholder="Search name, admission no..." style="min-width:200px;"/>
   <select name="sectionId" class="fs">
     <option value="">All Medium/Stream</option>
-    @foreach(var s in Model.Sections){<option value="@s.SectionId" selected=@(Model.SectionFilter==s.SectionId?"selected":"")>@s.SectionName</option>}
+    @foreach(var s in Model.Sections){<option value="@s.SectionId" selected="@(Model.SectionFilter==s.SectionId)">@s.SectionName</option>}
   </select>
   <select name="classId" class="fs">
     <option value="">All Std</option>
-    @foreach(var c in Model.Classes){<option value="@c.ClassId" selected=@(Model.ClassFilter==c.ClassId?"selected":"")>@c.ClassName</option>}
+    @foreach(var c in Model.Classes){<option value="@c.ClassId" selected="@(Model.ClassFilter==c.ClassId)">@c.ClassName</option>}
   </select>
   <select name="batchId" class="fs">
     <option value="">All Batches</option>
-    @foreach(var b in Model.Batches){<option value="@b.BatchId" selected=@(Model.BatchFilter==b.BatchId?"selected":"")>@b.BatchName</option>}
+    @foreach(var b in Model.Batches){<option value="@b.BatchId" selected="@(Model.BatchFilter==b.BatchId)">@b.BatchName</option>}
   </select>
   @{ var selSt = Model.StatusFilter ?? "Active"; }
   <select name="status" class="fs">

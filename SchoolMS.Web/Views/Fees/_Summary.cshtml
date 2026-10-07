@@ -26,8 +26,8 @@
 <form method="get" action="/Fees/Summary">
 <div class="filter-bar">
   <input type="text" name="search" value="@Model.Search" class="fc" placeholder="Search student, receipt no..." style="min-width:200px;"/>
-  <select name="month" class="fs"><option value="">All Months</option>@foreach(var m in new[]{"April","May","June","July","August","September","October","November","December","January","February","March"}){<option value="@m" selected=@(Model.MonthFilter==m?"selected":"")>@m</option>}</select>
-  <select name="feeType" class="fs"><option value="">All Fee Types</option>@foreach(var ft in Model.FeeTypes){<option value="@ft.FeeTypeId" selected=@(Model.FeeTypeFilter==ft.FeeTypeId?"selected":"")>@ft.TypeName</option>}</select>
+  <select name="month" class="fs"><option value="">All Months</option>@foreach(var m in new[]{"April","May","June","July","August","September","October","November","December","January","February","March"}){<option value="@m" selected="@(Model.MonthFilter==m)">@m</option>}</select>
+  <select name="feeType" class="fs"><option value="">All Fee Types</option>@foreach(var ft in Model.FeeTypes){<option value="@ft.FeeTypeId" selected="@(Model.FeeTypeFilter==ft.FeeTypeId)">@ft.TypeName</option>}</select>
   <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i></button>
   <a href="/Fees/Summary" class="btn btn-outline btn-sm"><i class="fas fa-times"></i></a>
 </div></form>

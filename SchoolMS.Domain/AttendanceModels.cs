@@ -65,3 +65,20 @@ public class AttendanceBatch
     public DateTime CreatedAt { get; set; }
     public bool IsActive { get; set; } = true;
 }
+
+/// <summary>One attendance batch's status for a single date — drives the green/red batch cards.</summary>
+public class AttendanceBatchSummary
+{
+    public int    BatchId      { get; set; }
+    public string BatchName    { get; set; } = "";
+    /// <summary>Active students currently in the batch.</summary>
+    public int    Total        { get; set; }
+    public int    Present      { get; set; }
+    public int    Absent       { get; set; }
+    public int    Late         { get; set; }
+    /// <summary>Students that already have an attendance row for the date.</summary>
+    public int    Marked       { get; set; }
+    public int    Pending      => Total - Marked;
+    /// <summary>True once attendance was taken for at least one student of the batch on the date.</summary>
+    public bool   IsMarked     => Marked > 0;
+}

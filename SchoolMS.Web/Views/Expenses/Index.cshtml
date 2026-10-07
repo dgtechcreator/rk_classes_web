@@ -18,7 +18,7 @@
             <option value="">All Categories</option>
             @foreach (var c in Model.Categories)
             {
-                <option value="@c.CategoryId" selected=@(Model.CategoryFilter == c.CategoryId ? "selected" : "")>@c.CategoryName</option>
+                <option value="@c.CategoryId" selected="@(Model.CategoryFilter == c.CategoryId)">@c.CategoryName</option>
             }
         </select>
         <select name="month" class="fs">
@@ -26,7 +26,7 @@
             @for (int m = 1; m <= 12; m++)
             {
                 var mn = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m);
-                <option value="@m" selected=@(Model.MonthFilter == m ? "selected" : "")>@mn</option>
+                <option value="@m" selected="@(Model.MonthFilter == m)">@mn</option>
             }
         </select>
         <select name="year" class="fs">
@@ -34,7 +34,7 @@
             @foreach (var y in Model.Years)
             {
                 var startYr = y.YearName?.Length >= 4 ? y.YearName[..4] : "";
-                <option value="@startYr" selected=@(Model.YearFilter != null && Model.YearFilter.ToString() == startYr ? "selected" : "")>@y.YearName @(y.IsCurrent ? "(Current)" : "")</option>
+                <option value="@startYr" selected="@(Model.YearFilter != null && Model.YearFilter.ToString() == startYr)">@y.YearName @(y.IsCurrent ? "(Current)" : "")</option>
             }
         </select>
         <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Filter</button>

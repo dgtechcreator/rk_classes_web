@@ -109,6 +109,7 @@ builder.Services.AddScoped<NotificationRepo>();
 builder.Services.AddScoped<AttendanceBatchRepo>();
 builder.Services.AddScoped<TeacherPaymentRepo>();
 builder.Services.AddScoped<TeacherAttendanceRepo>();
+builder.Services.AddScoped<LectureRepo>();
 
 // Services
 builder.Services.AddScoped<AuthService>();
@@ -129,6 +130,7 @@ builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<AttendanceBatchService>();
 builder.Services.AddScoped<TeacherPaymentService>();
 builder.Services.AddScoped<TeacherAttendanceService>();
+builder.Services.AddScoped<LectureService>();
 builder.Services.AddScoped<FeePositionService>();
 builder.Services.AddScoped<TeacherAccountLinker>();
 

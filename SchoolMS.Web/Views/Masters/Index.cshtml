@@ -382,7 +382,7 @@
           <select name="AcademicYearId" class="fs" required>
             <option value="">— Select Year —</option>
             @foreach(var y in years)
-            {<option value="@y.YearId" selected=@(y.YearId==currentYearId?"selected":"")>@y.YearName @(y.IsCurrent?"(Current)":"")</option>}
+            {<option value="@y.YearId" selected="@(y.YearId==currentYearId)">@y.YearName @(y.IsCurrent?"(Current)":"")</option>}
           </select>
         </div>
         <div class="fg" style="margin-bottom:14px;">

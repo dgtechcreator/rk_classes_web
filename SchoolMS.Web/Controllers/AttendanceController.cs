@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using SchoolMS.Domain;
 using SchoolMS.Services;
 using SchoolMS.Web.Filters;
+using SchoolMS.Web.Utils;
 using SchoolMS.Web.ViewModels;
 
 namespace SchoolMS.Web.Controllers;
@@ -10,53 +11,38 @@ namespace SchoolMS.Web.Controllers;
 public class AttendanceController(AttendanceService svc, LookupService lookup,
     MastersService mastersSvc, FacultyService facultySvc, StudentService studentSvc, AttendanceBatchService batchSvc) : Controller
 {
-    public IActionResult Index(DateTime? date, int? classId, int? sectionId, int? batchId,
+    public IActionResult Index(DateTime? date, int? classId, int? sectionId, int? batchId, int? attBatchId,
         string? subject, string? sirName, string? startTime, string? endTime)
     {
-        var d = date ?? DateTime.Today;
-        var todayRecords = svc.GetForDate(d, null, null, null).Where(r => r.AttendanceId.HasValue).ToList();
+        var d = (date ?? DateTime.Today).Date;
+        if (d > DateTime.Today) d = DateTime.Today;   // attendance can be reviewed/edited for past days, never future ones
 
-        var records = classId.HasValue
-            ? svc.GetForDate(d, classId, sectionId, batchId)
-            : todayRecords;
+        // Every active student with this day's status (AttendanceId is set once marked) — the batch cards
+        // and the entry table both read from this one list so their numbers always agree.
+        var dayRecords = svc.GetForDate(d, null, null, null);
+        var attendanceBatches = batchSvc.GetAll();
+        var summaries = batchSvc.BuildSummaries(attendanceBatches, dayRecords);
+
+        AttendanceBatch? selectedBatch = null;
+        List<AttendanceRecord> records;
+        if (attBatchId.HasValue)
+        {
+            selectedBatch = attendanceBatches.FirstOrDefault(b => b.BatchId == attBatchId.Value);
+            records = selectedBatch == null ? new() : batchSvc.RecordsFor(selectedBatch, dayRecords);
+        }
+        else if (classId.HasValue || sectionId.HasValue || batchId.HasValue)
+            records = svc.GetForDate(d, classId, sectionId, batchId);
+        else
+            records = new();
+
         var first = records.FirstOrDefault(r => r.Subject != null || r.SirName != null);
         var (teachers, _) = facultySvc.GetAll(null, "Active", null, 1, 1000);
 
         var totalPresent = records.Count(r => r.AttendanceStatus == "Present");
         var totalAbsent = records.Count(r => r.AttendanceStatus == "Absent");
 
-        // Get all unique class/section/batch combinations with total student count
-        var (allStudents, _) = studentSvc.GetAll(1, 10000, null, null, null, null, null, "Active");
-        var allSessions = allStudents
-            .GroupBy(s => new { s.ClassId, s.ClassName, s.SectionId, s.SectionName, s.BatchId, s.BatchName })
-            .Select(g => new {
-                g.Key.ClassId, g.Key.ClassName,
-                g.Key.SectionId, g.Key.SectionName,
-                g.Key.BatchId, g.Key.BatchName,
-                TotalStudents = g.Count()
-            })
-            .OrderBy(x => (x.BatchName ?? "").ToUpper().Contains("EVENING") ? 1 : 0)
-            .ThenBy(x => {
-                var classNum = System.Text.RegularExpressions.Regex.Match(x.ClassName ?? "", @"\d+").Value;
-                return string.IsNullOrEmpty(classNum) ? 0 : int.Parse(classNum);
-            })
-            .Cast<dynamic>()
-            .ToList();
-
-        var attendanceBatches = batchSvc.GetAll();
-
-        // Check which batches have attendance marked
-        var batchAttendanceStatus = new Dictionary<int, bool>();
-        foreach (var batch in attendanceBatches)
-        {
-            // Check if all students in this batch have attendance marked today
-            var studentsInBatch = batch.StudentIds.Count;
-            var attendanceMarked = todayRecords.Count(r => batch.StudentIds.Contains(r.StudentId));
-            batchAttendanceStatus[batch.BatchId] = attendanceMarked > 0; // If any student has attendance marked
-        }
-
-        ViewBag.AttendanceBatches = attendanceBatches;
-        ViewBag.BatchAttendanceStatus = batchAttendanceStatus;
+        ViewBag.AttendanceBatches = summaries;
+        ViewBag.SelectedAttBatch = selectedBatch;
 
         return View(new AttendanceVM {
             Records=records, Date=d, ClassId=classId, SectionId=sectionId, BatchId=batchId,
@@ -66,11 +52,10 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
             EndTime   = endTime   ?? first?.EndTime?.ToString(@"hh\:mm"),
             TotalPresent = totalPresent,
             TotalAbsent = totalAbsent,
-            TotalMarked = records.Count,
+            TotalMarked = records.Count(r => r.AttendanceId.HasValue),
             Classes=lookup.GetClasses(), Sections=lookup.GetSections(), Batches=lookup.GetBatches(),
             Subjects=mastersSvc.GetSubjects(),
-            Teachers=teachers,
-            AllSessions = allSessions
+            Teachers=teachers
         });
     }
 
@@ -78,17 +63,14 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
     public IActionResult Save([FromBody] AttSaveReq req)
     {
         int uid = HttpContext.Session.GetUserId() ?? 1;
-        TimeSpan? st = TimeSpan.TryParse(req.StartTime, out var s) ? s : null;
-        TimeSpan? et = TimeSpan.TryParse(req.EndTime,   out var e) ? e : null;
-        foreach (var en in req.Entries)
-            svc.Save(en.StudentId, req.Date, en.Status, req.ClassId, req.SectionId, req.BatchId,
-                en.Remarks, uid, req.Subject, req.SirName, st, et);
-        return Json(new { success = true, message = $"Attendance saved for {req.Entries.Count} students." });
+        var (ok, message) = AttendanceSaveHelper.Save(req, uid, svc, studentSvc, batchSvc);
+        return Json(new { success = ok, message });
     }
 
     public IActionResult Report(int? classId, int? sectionId, int? batchId, int? month, int? year)
     {
-        var report = svc.GetReport(classId, month ?? DateTime.Today.Month, year ?? DateTime.Today.Year);
+        var (report, studentPhones) = AttendanceReportHelper.Build(classId, sectionId, batchId,
+            month ?? DateTime.Today.Month, year ?? DateTime.Today.Year, svc, studentSvc);
         ViewBag.Classes = lookup.GetClasses();
         ViewBag.Sections = lookup.GetSections();
         ViewBag.Batches = lookup.GetBatches();
@@ -97,17 +79,6 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
         ViewBag.BatchId = batchId;
         ViewBag.Month   = month ?? DateTime.Today.Month;
         ViewBag.Year    = year  ?? DateTime.Today.Year;
-
-        // Get student phone numbers for all students in report
-        var studentPhones = new Dictionary<int, (string father, string mother)>();
-        foreach (var r in report)
-        {
-            var student = studentSvc.GetById(r.StudentId);
-            if (student != null)
-            {
-                studentPhones[r.StudentId] = (student.FatherPhone ?? "", student.MotherPhone ?? "");
-            }
-        }
         ViewBag.StudentPhones = studentPhones;
 
         return View(report);
@@ -215,6 +186,7 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
 
 public class AttSaveReq {
     public DateTime Date{get;set;} public int? ClassId{get;set;} public int? SectionId{get;set;} public int? BatchId{get;set;}
+    public int? AttBatchId{get;set;}
     public string? Subject{get;set;} public string? SirName{get;set;}
     public string? StartTime{get;set;} public string? EndTime{get;set;}
     public List<AttEntry> Entries{get;set;}=new();

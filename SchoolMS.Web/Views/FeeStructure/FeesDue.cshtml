@@ -53,23 +53,23 @@
   <i class="fas fa-filter" style="color:var(--mu);font-size:13px;"></i>
   <select name="yearId" class="fs">
     <option value="">All Years</option>
-    @foreach(var y in years){<option value="@y.YearId" selected=@((int?)ViewBag.YearId==y.YearId?"selected":"")>@y.YearName @(y.IsCurrent?"✓ Current":"")</option>}
+    @foreach(var y in years){<option value="@y.YearId" selected="@((int?)ViewBag.YearId==y.YearId)">@y.YearName @(y.IsCurrent?"✓ Current":"")</option>}
   </select>
   <select name="sectionId" class="fs">
     <option value="">All Medium/Stream</option>
-    @foreach(var s in sections){<option value="@s.SectionId" selected=@((int?)ViewBag.SectionId==s.SectionId?"selected":"")>@s.SectionName</option>}
+    @foreach(var s in sections){<option value="@s.SectionId" selected="@((int?)ViewBag.SectionId==s.SectionId)">@s.SectionName</option>}
   </select>
   <select name="classId" class="fs">
     <option value="">All Std</option>
-    @foreach(var c in classes){<option value="@c.ClassId" selected=@((int?)ViewBag.ClassId==c.ClassId?"selected":"")>@c.ClassName</option>}
+    @foreach(var c in classes){<option value="@c.ClassId" selected="@((int?)ViewBag.ClassId==c.ClassId)">@c.ClassName</option>}
   </select>
   <select name="feeTypeId" class="fs">
     <option value="">All Fee Types</option>
-    @foreach(var ft in feeTypes){<option value="@ft.FeeTypeId" selected=@((int?)ViewBag.FeeTypeId==ft.FeeTypeId?"selected":"")>@ft.TypeName</option>}
+    @foreach(var ft in feeTypes){<option value="@ft.FeeTypeId" selected="@((int?)ViewBag.FeeTypeId==ft.FeeTypeId)">@ft.TypeName</option>}
   </select>
   <select name="status" class="fs">
     <option value="">All Status</option>
-    @foreach(var s in new[]{"Pending","Partial","Paid","Waived"}){<option value="@s" selected=@(ViewBag.Status==s?"selected":"")>@s</option>}
+    @foreach(var s in new[]{"Pending","Partial","Paid","Waived"}){<option value="@s" selected="@(ViewBag.Status==s)">@s</option>}
   </select>
   <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Filter</button>
   <a href="/FeeStructure/FeesDue" class="btn btn-outline btn-sm"><i class="fas fa-times"></i> Clear</a>

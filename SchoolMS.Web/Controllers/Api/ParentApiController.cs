@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SchoolMS.Services;
 using SchoolMS.Web.Auth;
+using SchoolMS.Web.Utils;
 
 namespace SchoolMS.Web.Controllers.Api;
 
@@ -14,7 +15,9 @@ public class ParentApiController(
     MarksService marksSvc,
     FeesService feesSvc,
     FeeStructureService feeStructureSvc,
-    FeePositionService feePos) : ControllerBase
+    FeePositionService feePos,
+    LookupService lookup,
+    LectureService lectureSvc) : ControllerBase
 {
     string Phone => User.Phone() ?? "";
 
@@ -61,6 +64,24 @@ public class ParentApiController(
 
         var top5 = marksSvc.GetTop5StudentsInSubject(subjectName, student.ClassId.Value, student.SectionId);
         return Ok(new { top5 });
+    }
+
+    // Top 5 (overall + per subject) of the child's own class & medium — same data as the web parent portal.
+    [HttpGet("toppers")]
+    public IActionResult Toppers(int studentId)
+    {
+        var child = parentSvc.GetChildren(Phone).FirstOrDefault(c => c.StudentId == studentId);
+        if (child == null) return NotFound(new { error = "Student not found for this parent." });
+        return Ok(ParentToppersHelper.Build(child, marksSvc, lookup));
+    }
+
+    // Lectures of the child's own class / medium / batch: the chosen day plus the counts for that day's month.
+    [HttpGet("lectures")]
+    public IActionResult Lectures(int studentId, DateTime? date)
+    {
+        var child = parentSvc.GetChildren(Phone).FirstOrDefault(c => c.StudentId == studentId);
+        if (child == null) return NotFound(new { error = "Student not found for this parent." });
+        return Ok(LectureHelpers.ParentPayload(lectureSvc, child, date ?? DateTime.Today));
     }
 
     public record ContactReq(string Name, string Email, string Subject, string Message);

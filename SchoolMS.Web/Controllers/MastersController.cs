@@ -289,15 +289,9 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
             if (string.IsNullOrWhiteSpace(batchName) || studentIds == null || !studentIds.Any())
                 throw new Exception("Batch name and students are required.");
 
-            var batch = new AttendanceBatch
-            {
-                BatchId = batchId,
-                BatchName = batchName.Trim(),
-                StudentIds = studentIds ?? new()
-            };
-
-            // The Save method in repo handles both insert and update based on BatchId
-            batchSvc.CreateBatch(batchName, studentIds);
+            // Edit must update the existing batch (name + students); CreateBatch always inserts a new one.
+            if (batchId > 0) batchSvc.UpdateBatch(batchId, batchName, studentIds);
+            else batchSvc.CreateBatch(batchName, studentIds);
             TempData["Success"] = "Batch updated successfully.";
         }
         catch (Exception ex)

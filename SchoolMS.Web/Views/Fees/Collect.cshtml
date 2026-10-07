@@ -78,7 +78,7 @@
       <div class="fg">
         <label>Academic Year</label>
         <select name="AcademicYearId" class="fs">
-          @foreach(var y in Model.Years){<option value="@y.YearId" selected=@(y.IsCurrent?"selected":"")>@y.YearName</option>}
+          @foreach(var y in Model.Years){<option value="@y.YearId" selected="@(y.IsCurrent)">@y.YearName</option>}
         </select>
       </div>
       <div class="fg">

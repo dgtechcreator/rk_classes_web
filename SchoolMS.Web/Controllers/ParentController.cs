@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SchoolMS.Services;
 using SchoolMS.Web.Filters;
+using SchoolMS.Web.Utils;
 using SchoolMS.Web.ViewModels;
 
 namespace SchoolMS.Web.Controllers;
@@ -11,7 +12,9 @@ public class ParentController(
     MarksService marksSvc,
     FeesService feesSvc,
     FeeStructureService feeStructureSvc,
-    FeePositionService feePos) : Controller
+    FeePositionService feePos,
+    LookupService lookup,
+    LectureService lectureSvc) : Controller
 {
     // ── Login ────────────────────────────────────────────────────
     [HttpGet]
@@ -135,6 +138,28 @@ public class ParentController(
         {
             return Json(new { top5 = new List<object>(), error = ex.Message });
         }
+    }
+
+    // ── Class toppers (overall + per subject) of the child's own class & medium ──
+    [HttpGet]
+    [RequireParentLogin]
+    public IActionResult Toppers(int studentId)
+    {
+        var phone = HttpContext.Session.GetParentPhone() ?? "";
+        var child = parentSvc.GetChildren(phone).FirstOrDefault(c => c.StudentId == studentId);
+        if (child == null) return NotFound(new { error = "Student not found for this parent." });
+        return Json(ParentToppersHelper.Build(child, marksSvc, lookup));
+    }
+
+    // ── Lectures of the child's own class / medium / batch (day list + month counts) ──
+    [HttpGet]
+    [RequireParentLogin]
+    public IActionResult Lectures(int studentId, DateTime? date)
+    {
+        var phone = HttpContext.Session.GetParentPhone() ?? "";
+        var child = parentSvc.GetChildren(phone).FirstOrDefault(c => c.StudentId == studentId);
+        if (child == null) return NotFound(new { error = "Student not found for this parent." });
+        return Json(LectureHelpers.ParentPayload(lectureSvc, child, date ?? DateTime.Today));
     }
 
     // ── Contact Us ──────────────────────────────────────────────

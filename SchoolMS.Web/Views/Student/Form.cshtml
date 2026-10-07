@@ -64,7 +64,7 @@
             <select name="Student.Gender" class="fs">
               <option value="">— Select —</option>
               @foreach(var g in new[]{"Male","Female","Other"})
-              {<option value="@g" selected=@(Model.Student.Gender==g?"selected":"")>@g</option>}
+              {<option value="@g" selected="@(Model.Student.Gender==g)">@g</option>}
             </select>
           </div>
           <div class="fg">
@@ -121,7 +121,7 @@
             <select name="Student.AcademicYearId" class="fs" required>
               <option value="">— Select Year —</option>
               @foreach(var y in Model.Years)
-              {<option value="@y.YearId" selected=@(Model.Student.AcademicYearId==y.YearId?"selected":"")>@y.YearName @(y.IsCurrent?"(Current)":"")</option>}
+              {<option value="@y.YearId" selected="@(Model.Student.AcademicYearId==y.YearId)">@y.YearName @(y.IsCurrent?"(Current)":"")</option>}
             </select>
           </div>
           <div class="fg">
@@ -129,7 +129,7 @@
             <select name="Student.SectionId" class="fs" required>
               <option value="">— Select Medium/Stream —</option>
               @foreach(var s in Model.Sections)
-              {<option value="@s.SectionId" selected=@(Model.Student.SectionId==s.SectionId?"selected":"")>@s.SectionName</option>}
+              {<option value="@s.SectionId" selected="@(Model.Student.SectionId==s.SectionId)">@s.SectionName</option>}
             </select>
           </div>
           <div class="fg">
@@ -137,7 +137,7 @@
             <select name="Student.ClassId" class="fs" required>
               <option value="">— Select Std —</option>
               @foreach(var c in Model.Classes)
-              {<option value="@c.ClassId" selected=@(Model.Student.ClassId==c.ClassId?"selected":"")>@c.ClassName</option>}
+              {<option value="@c.ClassId" selected="@(Model.Student.ClassId==c.ClassId)">@c.ClassName</option>}
             </select>
           </div>
           <div class="fg">
@@ -145,7 +145,7 @@
             <select name="Student.BatchId" class="fs" required>
               <option value="">— Select Batch —</option>
               @foreach(var b in Model.Batches)
-              {<option value="@b.BatchId" selected=@(Model.Student.BatchId==b.BatchId?"selected":"")>@b.BatchName</option>}
+              {<option value="@b.BatchId" selected="@(Model.Student.BatchId==b.BatchId)">@b.BatchName</option>}
             </select>
           </div>
           <div class="fg">

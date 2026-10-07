@@ -63,14 +63,14 @@
             <label>Gender</label>
             <select name="Gender" class="fs">
               <option value="">— Select —</option>
-              @foreach(var g in new[]{"Male","Female","Other"}){<option value="@g" selected=@(Model.Gender==g?"selected":"")>@g</option>}
+              @foreach(var g in new[]{"Male","Female","Other"}){<option value="@g" selected="@(Model.Gender==g)">@g</option>}
             </select>
           </div>
           <div class="fg">
             <label>Blood Group</label>
             <select name="BloodGroup" class="fs">
               <option value="">— Select —</option>
-              @foreach(var b in new[]{"A+","A-","B+","B-","O+","O-","AB+","AB-"}){<option value="@b" selected=@(Model.BloodGroup==b?"selected":"")>@b</option>}
+              @foreach(var b in new[]{"A+","A-","B+","B-","O+","O-","AB+","AB-"}){<option value="@b" selected="@(Model.BloodGroup==b)">@b</option>}
             </select>
           </div>
           <div class="fg">
@@ -106,7 +106,7 @@
             <label>Designation *</label>
             <select name="DesignationId" class="fs" required>
               <option value="">— Select Designation —</option>
-              @foreach(var d in designations){<option value="@d.DesignationId" selected=@(Model.DesignationId==d.DesignationId?"selected":"")>@d.DesignationName</option>}
+              @foreach(var d in designations){<option value="@d.DesignationId" selected="@(Model.DesignationId==d.DesignationId)">@d.DesignationName</option>}
             </select>
           </div>
           <div class="fg">

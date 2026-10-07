@@ -119,6 +119,10 @@
 <script>
 let selectedStudents = [];
 const batchId = @batch.BatchId;
+const currentStudentIds = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(batch.StudentIds));
+// Students of this batch that are not on screen (other class / medium filter) — kept as-is on save so
+// editing one class never silently drops the rest of the batch.
+let displayedIds = [];
 
 async function loadStudents() {
     const classId = document.getElementById('classId').value;
@@ -139,7 +143,7 @@ async function loadStudents() {
             return;
         }
 
-        const currentStudentIds = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(batch.StudentIds));
+        displayedIds = students.map(s => s.studentId);
 
         const html = students.map(s => {
             const isSelected = currentStudentIds.includes(s.studentId);
@@ -177,6 +181,7 @@ function updateCount() {
 function saveBatch() {
     const batchName = document.getElementById('batchName').value.trim();
     const selectedIds = Array.from(document.querySelectorAll('.student-checkbox:checked')).map(chk => parseInt(chk.value));
+    currentStudentIds.forEach(id => { if (!displayedIds.includes(id) && !selectedIds.includes(id)) selectedIds.push(id); });
 
     if (!batchName) {
         alert('Please enter batch name');

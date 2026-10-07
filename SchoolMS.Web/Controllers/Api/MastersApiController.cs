@@ -266,8 +266,9 @@ public class MastersApiController(MastersService svc, StudentService studentSvc,
             if (string.IsNullOrWhiteSpace(req.BatchName) || req.StudentIds == null || !req.StudentIds.Any())
                 throw new Exception("Batch name and students are required.");
 
-            // CreateBatch handles both insert and update based on BatchId internally via the repo.
-            batchSvc.CreateBatch(req.BatchName, req.StudentIds);
+            // Edit must update the existing batch (name + students); CreateBatch always inserts a new one.
+            if (req.BatchId > 0) batchSvc.UpdateBatch(req.BatchId, req.BatchName, req.StudentIds);
+            else batchSvc.CreateBatch(req.BatchName, req.StudentIds);
             return Ok(new { success = true });
         }
         catch (Exception ex)

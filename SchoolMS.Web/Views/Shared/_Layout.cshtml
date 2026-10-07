@@ -294,6 +294,18 @@
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Marks" && ViewContext.RouteData.Values["action"]?.ToString()=="TopStudents"?"active":"")" href="/Marks/TopStudents">
       <span class="nav-ic"><i class="fas fa-trophy"></i></span> Top 5 Students
     </a>}
+    @if(Context.Session.HasPerm("lecture_schedule")){
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Lecture" && ViewContext.RouteData.Values["action"]?.ToString()=="Index"?"active":"")" href="/Lecture/Index">
+      <span class="nav-ic"><i class="fas fa-chalkboard-teacher"></i></span> Lecture Schedule
+    </a>}
+    @if(Context.Session.HasPerm("lecture_summary")){
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Lecture" && ViewContext.RouteData.Values["action"]?.ToString()=="Summary"?"active":"")" href="/Lecture/Summary">
+      <span class="nav-ic"><i class="fas fa-chart-pie"></i></span> Lecture Summary
+    </a>}
+    @if(Context.Session.GetInt32("RoleId") != 1 && (Context.Session.GetString("RoleName") ?? "").Contains("teacher", StringComparison.OrdinalIgnoreCase)){
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Lecture" && ViewContext.RouteData.Values["action"]?.ToString()=="Mine"?"active":"")" href="/Lecture/Mine">
+      <span class="nav-ic"><i class="fas fa-user-clock"></i></span> My Lectures
+    </a>}
   </div>
 
   <div class="nav-grp">

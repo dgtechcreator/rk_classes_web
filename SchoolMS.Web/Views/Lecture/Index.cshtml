@@ -1,0 +1,298 @@
+@{
+    ViewData["Title"] = "Lecture Schedule";
+    var canEdit = (bool)(ViewBag.CanEdit ?? false);
+}
+
+<style>
+    .lc-filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; align-items:end; }
+    .lc-filters label { font-size:11px; font-weight:700; color:var(--mu); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:4px; }
+    .lc-quick { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .lc-chip { border:1px solid #d1d5db; background:#fff; border-radius:20px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; color:#374151; }
+    .lc-chip:hover { background:#f3f4f6; }
+    .lc-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin:16px 0; }
+    .lc-kpi { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px 14px; }
+    .lc-kpi .v { font-size:22px; font-weight:800; }
+    .lc-kpi .l { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:#6b7280; font-weight:700; }
+    .lc-day { font-size:13px; font-weight:800; color:#1f2937; padding:10px 14px; background:#f3f4f6; border-top:1px solid #e5e7eb; }
+    .lc-row { display:grid; grid-template-columns:120px 1.3fr 1fr 1fr 110px auto; gap:10px; align-items:center; padding:10px 14px; border-top:1px solid #f1f1f4; font-size:13px; }
+    .lc-time { font-weight:800; color:#1e40af; }
+    .lc-sub { font-size:11px; color:#6b7280; }
+    .lc-badge { display:inline-block; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:800; }
+    .lc-badge.Scheduled { background:#dbeafe; color:#1e40af; }
+    .lc-badge.Completed { background:#dcfce7; color:#166534; }
+    .lc-badge.Cancelled { background:#fee2e2; color:#991b1b; }
+    .lc-badge.NeedsUpdate { background:#fef3c7; color:#92400e; }
+    .lc-act { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+    .lc-act button { border:none; border-radius:6px; padding:6px 10px; font-size:11px; font-weight:700; cursor:pointer; }
+    .lc-modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:10000; padding:12px; }
+    .lc-modal { background:#fff; border-radius:12px; padding:22px; width:100%; max-width:640px; max-height:92vh; overflow-y:auto; }
+    .lc-modal h3 { margin:0 0 14px; font-size:17px; }
+    .lc-form { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .lc-form .full { grid-column:1 / -1; }
+    .lc-form label { font-size:11px; font-weight:700; color:var(--mu); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:4px; }
+    .lc-days { display:flex; gap:6px; flex-wrap:wrap; }
+    .lc-days label { display:inline-flex; align-items:center; gap:4px; text-transform:none; letter-spacing:0; font-size:13px; font-weight:700; border:1px solid #d1d5db; border-radius:16px; padding:4px 10px; cursor:pointer; margin:0; }
+    @@media (max-width: 900px) {
+        .lc-row { grid-template-columns:1fr 1fr; }
+        .lc-act { justify-content:flex-start; grid-column:1 / -1; }
+        .lc-form { grid-template-columns:1fr; }
+    }
+</style>
+
+<div class="pg-hdr">
+    <div class="pg-row">
+        <div><h1>🧑‍🏫 Lecture Schedule</h1><p>Schedule lectures by class, medium and batch — parents and teachers see them automatically</p></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            @if (Context.Session.HasPerm("lecture_summary"))
+            {
+                <a href="/Lecture/Summary" class="btn btn-outline"><i class="fas fa-chart-pie"></i> Summary</a>
+            }
+            @if (canEdit)
+            {
+                <button class="btn btn-primary" onclick="openForm()"><i class="fas fa-plus"></i> Add Lecture</button>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="card" style="padding:16px 18px;margin-bottom:6px;">
+    <div class="lc-filters">
+        <div><label>From</label><input type="date" id="fFrom" class="fc" /></div>
+        <div><label>To</label><input type="date" id="fTo" class="fc" /></div>
+        <div><label>Class</label><select id="fClass" class="fs"></select></div>
+        <div><label>Medium</label><select id="fSection" class="fs"></select></div>
+        <div><label>Batch</label><select id="fBatch" class="fs"></select></div>
+        <div><label>Subject</label><select id="fSubject" class="fs"></select></div>
+        <div><label>Teacher</label><select id="fTeacher" class="fs"></select></div>
+        <div><label>Status</label>
+            <select id="fStatus" class="fs">
+                <option value="">All</option><option>Scheduled</option><option>Completed</option><option>Cancelled</option>
+            </select>
+        </div>
+        <div><button class="btn btn-primary" style="width:100%;" onclick="load()"><i class="fas fa-search"></i> Search</button></div>
+    </div>
+    <div class="lc-quick">
+        <button class="lc-chip" onclick="quick('today')">Today</button>
+        <button class="lc-chip" onclick="quick('week')">This week</button>
+        <button class="lc-chip" onclick="quick('month')">This month</button>
+        <button class="lc-chip" onclick="quick('last')">Last month</button>
+        <button class="lc-chip" onclick="clearFilters()">Clear filters</button>
+    </div>
+</div>
+
+<div class="lc-kpis" id="kpis"></div>
+<div class="card" style="padding:0;overflow:hidden;" id="list"><div class="empty"><h3>Loading…</h3></div></div>
+
+@if (canEdit)
+{
+    <div class="lc-modal-bg" id="formBg">
+        <div class="lc-modal">
+            <h3 id="formTitle">Add Lecture</h3>
+            <div class="lc-form">
+                <div><label>Date *</label><input type="date" id="mDate" class="fc" /></div>
+                <div><label>Subject *</label><select id="mSubject" class="fs"></select></div>
+                <div><label>Start time *</label><input type="time" id="mStart" class="fc" /></div>
+                <div><label>End time *</label><input type="time" id="mEnd" class="fc" /></div>
+                <div><label>Class *</label><select id="mClass" class="fs"></select></div>
+                <div><label>Teacher *</label><select id="mTeacher" class="fs"></select></div>
+                <div><label>Medium</label><select id="mSection" class="fs"></select></div>
+                <div><label>Batch</label><select id="mBatch" class="fs"></select></div>
+                <div class="full"><label>Topic (optional)</label><input type="text" id="mTopic" class="fc" maxlength="200" /></div>
+                <div class="full"><label>Remarks (optional)</label><input type="text" id="mRemarks" class="fc" maxlength="300" /></div>
+                <div class="full" id="repeatBox">
+                    <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;cursor:pointer;">
+                        <input type="checkbox" id="mRepeat" onchange="toggleRepeat()" /> Repeat every week
+                    </label>
+                    <div id="repeatOpts" style="display:none;margin-top:10px;">
+                        <div class="lc-days" id="mDays"></div>
+                        <div style="margin-top:10px;max-width:220px;"><label>Repeat until *</label><input type="date" id="mUntil" class="fc" /></div>
+                    </div>
+                </div>
+            </div>
+            <div id="formErr" style="color:#b91c1c;font-size:13px;font-weight:700;margin-top:12px;display:none;"></div>
+            <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;">
+                <button class="btn btn-outline" onclick="closeForm()">Cancel</button>
+                <button class="btn btn-primary" id="saveBtn" onclick="saveLecture()"><i class="fas fa-save"></i> Save</button>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="lc-modal-bg" id="askBg">
+    <div class="lc-modal" style="max-width:420px;">
+        <h3 id="askTitle"></h3>
+        <p id="askMsg" style="font-size:14px;color:#374151;margin:0 0 16px;"></p>
+        <div id="askBtns" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;"></div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const OPT = @Html.Raw(ViewBag.OptionsJson);
+const CAN_EDIT = @(canEdit ? "true" : "false");
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+let rows = {};
+
+const $ = id => document.getElementById(id);
+const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const iso = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+function fmtDate(s) { const [y,m,d] = s.split('-').map(Number); const dt = new Date(y, m-1, d);
+  return dt.toLocaleDateString('en-GB', { weekday:'long', day:'2-digit', month:'short', year:'numeric' }); }
+
+function fill(id, items, placeholder, valueKey = 'id', labelKey = 'name') {
+  const el = $(id); if (!el) return;
+  el.innerHTML = `<option value="">${placeholder}</option>` + items.map(i => {
+    const v = typeof i === 'string' ? i : i[valueKey], l = typeof i === 'string' ? i : i[labelKey];
+    return `<option value="${esc(v)}">${esc(l)}</option>`; }).join('');
+}
+
+function init() {
+  fill('fClass', OPT.classes, 'All classes'); fill('fSection', OPT.sections, 'All mediums'); fill('fBatch', OPT.batches, 'All batches');
+  fill('fSubject', OPT.subjects, 'All subjects'); fill('fTeacher', OPT.teachers, 'All teachers', 'id', 'displayName');
+  if (CAN_EDIT) {
+    fill('mClass', OPT.classes, '— Select class —'); fill('mSection', OPT.sections, 'All mediums'); fill('mBatch', OPT.batches, 'All batches');
+    fill('mSubject', OPT.subjects, '— Select subject —'); fill('mTeacher', OPT.teachers, '— Select teacher —', 'id', 'displayName');
+    $('mDays').innerHTML = [1,2,3,4,5,6,0].map(d => `<label><input type="checkbox" value="${d}" /> ${DAYS[d]}</label>`).join('');
+  }
+  const q = new URLSearchParams(location.search);
+  if (q.toString()) {
+    ['From','To'].forEach(k => { if (q.get(k.toLowerCase())) $('f'+k).value = q.get(k.toLowerCase()); });
+    [['classId','fClass'],['sectionId','fSection'],['batchId','fBatch'],['subject','fSubject'],['facultyId','fTeacher'],['status','fStatus']]
+      .forEach(([k,id]) => { if (q.get(k)) $(id).value = q.get(k); });
+  }
+  if (!$('fFrom').value) quick('week', true);
+  load();
+}
+
+function quick(kind, noLoad) {
+  const t = new Date(); let a, b;
+  if (kind === 'today') { a = b = t; }
+  else if (kind === 'week') { const dow = (t.getDay() + 6) % 7; a = new Date(t.getFullYear(), t.getMonth(), t.getDate() - dow); b = new Date(a.getFullYear(), a.getMonth(), a.getDate() + 6); }
+  else if (kind === 'last') { a = new Date(t.getFullYear(), t.getMonth() - 1, 1); b = new Date(t.getFullYear(), t.getMonth(), 0); }
+  else { a = new Date(t.getFullYear(), t.getMonth(), 1); b = new Date(t.getFullYear(), t.getMonth() + 1, 0); }
+  $('fFrom').value = iso(a); $('fTo').value = iso(b);
+  if (!noLoad) load();
+}
+function clearFilters() { ['fClass','fSection','fBatch','fSubject','fTeacher','fStatus'].forEach(id => $(id).value = ''); quick('week'); }
+
+async function load() {
+  const p = new URLSearchParams();
+  [['from','fFrom'],['to','fTo'],['classId','fClass'],['sectionId','fSection'],['batchId','fBatch'],['subject','fSubject'],['facultyId','fTeacher'],['status','fStatus']]
+    .forEach(([k,id]) => { if ($(id).value) p.set(k, $(id).value); });
+  $('list').innerHTML = '<div class="empty"><h3>Loading…</h3></div>';
+  try {
+    const res = await fetch('/Lecture/ListJson?' + p.toString());
+    if (!res.ok) throw new Error('Could not load lectures.');
+    render(await res.json());
+  } catch (e) { $('list').innerHTML = `<div class="empty"><h3 style="color:#b91c1c;">${esc(e.message)}</h3></div>`; }
+}
+
+function render(d) {
+  const t = d.totals;
+  $('kpis').innerHTML = [['Total', t.total, '#1f2937'], ['Held', t.held, '#16a34a'], ['Scheduled', t.scheduled, '#1e40af'],
+    ['Cancelled', t.cancelled, '#dc2626'], ['Not updated', t.notUpdated, '#d97706'], ['Hours held', t.hoursHeld, '#7c3aed']]
+    .map(([l,v,c]) => `<div class="lc-kpi"><div class="v" style="color:${c}">${v}</div><div class="l">${l}</div></div>`).join('');
+  rows = {}; d.lectures.forEach(l => rows[l.lectureId] = l);
+  if (!d.lectures.length) { $('list').innerHTML = '<div class="empty"><div class="empty-ico">📚</div><h3>No lectures in this period</h3><p>Change the filters, or add a lecture.</p></div>'; return; }
+  let html = '', cur = '';
+  d.lectures.forEach(l => {
+    if (l.date !== cur) { cur = l.date; html += `<div class="lc-day">${fmtDate(l.date)}</div>`; }
+    const badge = l.needsUpdate ? '<span class="lc-badge NeedsUpdate">Not updated</span>' : `<span class="lc-badge ${l.status}">${l.status}</span>`;
+    const acts = [];
+    if (l.status !== 'Completed' && l.date <= iso(new Date())) acts.push(`<button style="background:#dcfce7;color:#166534" onclick="setStatus(${l.lectureId},'Completed')">✓ Done</button>`);
+    if (CAN_EDIT) {
+      if (l.status === 'Scheduled') acts.push(`<button style="background:#fee2e2;color:#991b1b" onclick="cancelLecture(${l.lectureId})">Cancel</button>`);
+      if (l.status !== 'Scheduled') acts.push(`<button style="background:#e0e7ff;color:#3730a3" onclick="setStatus(${l.lectureId},'Scheduled')">Re-open</button>`);
+      acts.push(`<button style="background:#dbeafe;color:#1e40af" onclick="openForm(${l.lectureId})">Edit</button>`);
+      acts.push(`<button style="background:#f3f4f6;color:#b91c1c" onclick="removeLecture(${l.lectureId})">Delete</button>`);
+    }
+    html += `<div class="lc-row">
+      <div class="lc-time">${l.startTime} – ${l.endTime}</div>
+      <div><strong>${esc(l.groupLabel)}</strong>${l.isRepeating ? '<div class="lc-sub">🔁 repeating</div>' : ''}</div>
+      <div>${esc(l.subject)}${l.topic ? `<div class="lc-sub">${esc(l.topic)}</div>` : ''}</div>
+      <div>${esc(l.teacher || '—')}</div>
+      <div>${badge}${l.statusNote ? `<div class="lc-sub">${esc(l.statusNote)}</div>` : ''}</div>
+      <div class="lc-act">${acts.join('')}</div></div>`;
+  });
+  $('list').innerHTML = html;
+}
+
+// ── status / delete ──────────────────────────────────────────────────────────────────
+async function post(url, body) {
+  const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  try { return await res.json(); } catch { return { success:false, message:'Request failed.' }; }
+}
+function toast(msg, ok) {
+  const el = document.createElement('div'); el.className = 'alert alert-' + (ok ? 'success' : 'danger'); el.textContent = msg;
+  Object.assign(el.style, { position:'fixed', top:'76px', right:'22px', zIndex:'20000', minWidth:'260px', boxShadow:'0 4px 20px rgba(0,0,0,.13)' });
+  document.body.appendChild(el); setTimeout(() => el.remove(), 4000);
+}
+async function setStatus(id, status, note) {
+  const r = await post('/Lecture/SetStatus', { id, status, note: note || null });
+  toast(r.message, r.success); if (r.success) load();
+}
+function cancelLecture(id) {
+  const note = prompt('Reason for cancelling (optional):');
+  if (note === null) return;
+  setStatus(id, 'Cancelled', note);
+}
+function ask(title, msg, buttons) {
+  return new Promise(res => {
+    $('askTitle').textContent = title; $('askMsg').textContent = msg;
+    $('askBtns').innerHTML = '';
+    buttons.forEach(b => { const el = document.createElement('button'); el.className = 'btn ' + (b.cls || 'btn-outline'); el.textContent = b.label;
+      el.onclick = () => { $('askBg').style.display = 'none'; res(b.value); }; $('askBtns').appendChild(el); });
+    $('askBg').style.display = 'flex';
+  });
+}
+async function removeLecture(id) {
+  const l = rows[id]; if (!l) return;
+  const choice = l.isRepeating
+    ? await ask('Delete lecture', 'This lecture is part of a repeating schedule.', [
+        { label:'Keep', value:'no' }, { label:'Only this one', value:'one', cls:'btn-danger' }, { label:'This & all later', value:'series', cls:'btn-danger' }])
+    : await ask('Delete lecture', 'Delete this lecture? It will disappear for parents and teachers.', [
+        { label:'Keep', value:'no' }, { label:'Delete', value:'one', cls:'btn-danger' }]);
+  if (choice === 'no') return;
+  const r = await post(choice === 'series' ? '/Lecture/DeleteSeries' : '/Lecture/Delete', { id });
+  toast(r.message, r.success); if (r.success) load();
+}
+
+// ── add / edit form ──────────────────────────────────────────────────────────────────
+let editId = 0;
+function toggleRepeat() { $('repeatOpts').style.display = $('mRepeat').checked ? 'block' : 'none'; }
+function openForm(id) {
+  editId = id || 0; const l = id ? rows[id] : null;
+  $('formTitle').textContent = l ? 'Edit Lecture' : 'Add Lecture';
+  $('mDate').value = l ? l.date : iso(new Date());
+  $('mStart').value = l ? l.startTime : ''; $('mEnd').value = l ? l.endTime : '';
+  $('mClass').value = l ? l.classId : ''; $('mSection').value = l && l.sectionId ? l.sectionId : ''; $('mBatch').value = l && l.batchId ? l.batchId : '';
+  $('mSubject').value = l ? l.subject : ''; $('mTeacher').value = l ? l.facultyId : '';
+  $('mTopic').value = l ? (l.topic || '') : ''; $('mRemarks').value = l ? (l.remarks || '') : '';
+  $('mRepeat').checked = false; toggleRepeat(); $('mUntil').value = '';
+  document.querySelectorAll('#mDays input').forEach(c => c.checked = false);
+  $('repeatBox').style.display = l ? 'none' : 'block';
+  $('formErr').style.display = 'none'; $('formBg').style.display = 'flex';
+}
+function closeForm() { $('formBg').style.display = 'none'; }
+async function saveLecture() {
+  const err = m => { $('formErr').textContent = m; $('formErr').style.display = 'block'; };
+  const req = {
+    lectureId: editId, date: $('mDate').value, startTime: $('mStart').value, endTime: $('mEnd').value,
+    classId: parseInt($('mClass').value) || 0, sectionId: $('mSection').value ? parseInt($('mSection').value) : null,
+    batchId: $('mBatch').value ? parseInt($('mBatch').value) : null, subjectName: $('mSubject').value,
+    facultyId: parseInt($('mTeacher').value) || 0, topic: $('mTopic').value || null, remarks: $('mRemarks').value || null,
+    repeat: !editId && $('mRepeat').checked,
+    repeatDays: [...document.querySelectorAll('#mDays input:checked')].map(c => parseInt(c.value)),
+    repeatUntil: $('mUntil').value || null,
+  };
+  if (!req.date) return err('Pick a date.');
+  $('saveBtn').disabled = true;
+  const r = await post('/Lecture/Save', req);
+  $('saveBtn').disabled = false;
+  if (!r.success) return err(r.message || 'Could not save.');
+  closeForm(); toast(r.message, true); load();
+}
+
+init();
+</script>
+}

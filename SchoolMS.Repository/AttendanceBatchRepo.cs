@@ -1,5 +1,6 @@
 using SchoolMS.Domain;
 using SchoolMS.DB;
+using Microsoft.Data.SqlClient;
 
 namespace SchoolMS.Repository;
 
@@ -64,6 +65,33 @@ public class AttendanceBatchRepo(CommonConnectivity db)
             db.Exec("sp_UpdateAttendanceBatch", new() { { "@BatchId", batch.BatchId }, { "@BatchName", batch.BatchName } });
             return batch.BatchId;
         }
+    }
+
+    /// <summary>Renames the batch and replaces its student list in one transaction (edit must never create a new batch).</summary>
+    public void Update(int batchId, string batchName, List<int> studentIds)
+    {
+        using var c = db.Open();
+        using var tx = c.BeginTransaction();
+
+        using (var cmd = new SqlCommand("UPDATE AttendanceBatches SET BatchName=@n WHERE BatchId=@id AND IsActive=1", c, tx))
+        {
+            cmd.Parameters.AddWithValue("@n", batchName);
+            cmd.Parameters.AddWithValue("@id", batchId);
+            if (cmd.ExecuteNonQuery() == 0) throw new Exception("Batch not found.");
+        }
+        using (var cmd = new SqlCommand("DELETE FROM AttendanceBatchStudents WHERE BatchId=@id", c, tx))
+        {
+            cmd.Parameters.AddWithValue("@id", batchId);
+            cmd.ExecuteNonQuery();
+        }
+        foreach (var studentId in studentIds.Distinct())
+        {
+            using var cmd = new SqlCommand("INSERT INTO AttendanceBatchStudents (BatchId, StudentId) VALUES (@b, @s)", c, tx);
+            cmd.Parameters.AddWithValue("@b", batchId);
+            cmd.Parameters.AddWithValue("@s", studentId);
+            cmd.ExecuteNonQuery();
+        }
+        tx.Commit();
     }
 
     public void Delete(int batchId)

@@ -51,7 +51,7 @@
         <select name="AcademicYearId" class="fs" required @(Model.StructureId>0?"disabled":"")>
           <option value="">— Select Academic Year —</option>
           @foreach(var y in years)
-          {<option value="@y.YearId" selected=@(yearId==y.YearId?"selected":"")>@y.YearName @(y.IsCurrent?"(Current)":"")</option>}
+          {<option value="@y.YearId" selected="@(yearId==y.YearId)">@y.YearName @(y.IsCurrent?"(Current)":"")</option>}
         </select>
         @if (Model.StructureId > 0)
         {<input type="hidden" name="AcademicYearId" value="@yearId"/>}
@@ -62,7 +62,7 @@
         <select name="SectionId" class="fs" required @(Model.StructureId>0?"disabled":"")>
           <option value="">— Select Medium/Stream —</option>
           @foreach(var s in sections)
-          {<option value="@s.SectionId" selected=@(Model.SectionId==s.SectionId?"selected":"")>@s.SectionName</option>}
+          {<option value="@s.SectionId" selected="@(Model.SectionId==s.SectionId)">@s.SectionName</option>}
         </select>
         @if (Model.StructureId > 0)
         {<input type="hidden" name="SectionId" value="@Model.SectionId"/>}
@@ -73,7 +73,7 @@
         <select name="ClassId" class="fs" required @(Model.StructureId>0?"disabled":"")>
           <option value="">— Select Std —</option>
           @foreach(var c in classes)
-          {<option value="@c.ClassId" selected=@(Model.ClassId==c.ClassId?"selected":"")>@c.ClassName</option>}
+          {<option value="@c.ClassId" selected="@(Model.ClassId==c.ClassId)">@c.ClassName</option>}
         </select>
         @if (Model.StructureId > 0)
         {<input type="hidden" name="ClassId" value="@Model.ClassId"/>}
@@ -84,7 +84,7 @@
         <select name="FeeTypeId" class="fs" required @(Model.StructureId>0?"disabled":"")>
           <option value="">— Select Fee Type —</option>
           @foreach(var ft in feeTypes)
-          {<option value="@ft.FeeTypeId" selected=@(Model.FeeTypeId==ft.FeeTypeId?"selected":"")>@ft.TypeName</option>}
+          {<option value="@ft.FeeTypeId" selected="@(Model.FeeTypeId==ft.FeeTypeId)">@ft.TypeName</option>}
         </select>
         @if (Model.StructureId > 0)
         {<input type="hidden" name="FeeTypeId" value="@Model.FeeTypeId"/>}

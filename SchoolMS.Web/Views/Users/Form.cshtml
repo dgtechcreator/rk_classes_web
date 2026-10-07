@@ -60,7 +60,7 @@
             <label>Role *</label>
             <select name="RoleId" class="fs" required>
               <option value="">— Select Role —</option>
-              @foreach(var r in roles){<option value="@r.RoleId" selected=@(Model.RoleId==r.RoleId?"selected":"")>@r.RoleName</option>}
+              @foreach(var r in roles){<option value="@r.RoleId" selected="@(Model.RoleId==r.RoleId)">@r.RoleName</option>}
             </select>
           </div>
           <div class="fg">
@@ -87,8 +87,8 @@
           <div class="fg">
             <label>Status</label>
             <select name="IsActive" class="fs">
-              <option value="true"  selected=@(Model.IsActive?"selected":"")>Active</option>
-              <option value="false" selected=@(!Model.IsActive?"selected":"")>Inactive</option>
+              <option value="true"  selected="@(Model.IsActive)">Active</option>
+              <option value="false" selected="@(!Model.IsActive)">Inactive</option>
             </select>
           </div>
         }

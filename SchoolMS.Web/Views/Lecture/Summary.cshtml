@@ -1,0 +1,125 @@
+@{
+    ViewData["Title"] = "Lecture Summary";
+}
+
+<style>
+    .ls-filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; align-items:end; }
+    .ls-filters label { font-size:11px; font-weight:700; color:var(--mu); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:4px; }
+    .ls-chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; align-items:center; }
+    .ls-chip { border:1px solid #d1d5db; background:#fff; border-radius:20px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; color:#374151; }
+    .ls-chip.on { background:#1e40af; color:#fff; border-color:#1e40af; }
+    .ls-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin:16px 0; }
+    .ls-kpi { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px 14px; }
+    .ls-kpi .v { font-size:22px; font-weight:800; }
+    .ls-kpi .l { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:#6b7280; font-weight:700; }
+    .ls-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+    .ls-tbl th { text-align:right; padding:10px 14px; background:#f8f9fa; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:#4b5563; border-bottom:2px solid #e5e7eb; }
+    .ls-tbl th:first-child, .ls-tbl td:first-child { text-align:left; }
+    .ls-tbl td { text-align:right; padding:10px 14px; border-bottom:1px solid #f1f1f4; }
+    .ls-tbl tbody tr:hover { background:#f9fafb; }
+    .ls-bar { height:6px; background:#e5e7eb; border-radius:4px; overflow:hidden; margin-top:6px; min-width:120px; }
+    .ls-bar > div { height:100%; background:#16a34a; }
+</style>
+
+<div class="pg-hdr">
+    <div class="pg-row">
+        <div><h1>📊 Lecture Summary</h1><p>How many lectures each teacher, class and subject has actually held</p></div>
+        <a href="/Lecture/Index" class="btn btn-outline"><i class="fas fa-calendar-alt"></i> Schedule</a>
+    </div>
+</div>
+
+<div class="card" style="padding:16px 18px;">
+    <div class="ls-filters">
+        <div><label>From</label><input type="date" id="fFrom" class="fc" /></div>
+        <div><label>To</label><input type="date" id="fTo" class="fc" /></div>
+        <div><label>Class</label><select id="fClass" class="fs"></select></div>
+        <div><label>Medium</label><select id="fSection" class="fs"></select></div>
+        <div><label>Batch</label><select id="fBatch" class="fs"></select></div>
+        <div><label>Subject</label><select id="fSubject" class="fs"></select></div>
+        <div><label>Teacher</label><select id="fTeacher" class="fs"></select></div>
+        <div><button class="btn btn-primary" style="width:100%;" onclick="load()"><i class="fas fa-search"></i> Show</button></div>
+    </div>
+    <div class="ls-chips">
+        <span style="font-size:12px;font-weight:700;color:#6b7280;">Period:</span>
+        <button class="ls-chip" id="pThis" onclick="period(0)">This month</button>
+        <button class="ls-chip" id="pLast" onclick="period(-1)">Last month</button>
+        <input type="month" id="fMonth" class="fc" style="width:160px;" onchange="pickMonth(this.value)" />
+        <span style="width:16px;"></span>
+        <span style="font-size:12px;font-weight:700;color:#6b7280;">Group by:</span>
+        <button class="ls-chip on" id="gTeacher" onclick="group('teacher')">Teacher</button>
+        <button class="ls-chip" id="gClass" onclick="group('class')">Class / Batch</button>
+        <button class="ls-chip" id="gSubject" onclick="group('subject')">Subject</button>
+    </div>
+</div>
+
+<div class="ls-kpis" id="kpis"></div>
+<div class="card" style="padding:0;overflow:auto;" id="table"><div class="empty"><h3>Loading…</h3></div></div>
+<p style="font-size:12px;color:#6b7280;margin-top:10px;">
+    <strong>Held</strong> = lectures marked Completed. <strong>Not updated</strong> = scheduled lectures whose time has passed but were never marked done or cancelled —
+    update them from the Schedule page so the counts are accurate.
+</p>
+
+@section Scripts {
+<script>
+const OPT = @Html.Raw(ViewBag.OptionsJson);
+const $ = id => document.getElementById(id);
+const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const iso = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+let groupBy = 'teacher';
+
+function fill(id, items, placeholder, valueKey = 'id', labelKey = 'name') {
+  $(id).innerHTML = `<option value="">${placeholder}</option>` + items.map(i => {
+    const v = typeof i === 'string' ? i : i[valueKey], l = typeof i === 'string' ? i : i[labelKey];
+    return `<option value="${esc(v)}">${esc(l)}</option>`; }).join('');
+}
+function setRange(a, b) { $('fFrom').value = iso(a); $('fTo').value = iso(b); $('fMonth').value = iso(a).slice(0, 7);
+  const t = new Date(); const ym = x => x.getFullYear() * 12 + x.getMonth();
+  $('pThis').classList.toggle('on', ym(a) === ym(t) && a.getDate() === 1 && b.getDate() === new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate() && ym(b) === ym(t));
+  $('pLast').classList.toggle('on', ym(a) === ym(t) - 1 && ym(b) === ym(t) - 1 && a.getDate() === 1);
+}
+function period(offset) { const t = new Date(); setRange(new Date(t.getFullYear(), t.getMonth() + offset, 1), new Date(t.getFullYear(), t.getMonth() + offset + 1, 0)); load(); }
+function pickMonth(v) { if (!v) return; const [y, m] = v.split('-').map(Number); setRange(new Date(y, m - 1, 1), new Date(y, m, 0)); load(); }
+function group(g) { groupBy = g; ['Teacher','Class','Subject'].forEach(n => $('g' + n).classList.toggle('on', n.toLowerCase() === g)); load(); }
+
+async function load() {
+  const p = new URLSearchParams({ groupBy });
+  [['from','fFrom'],['to','fTo'],['classId','fClass'],['sectionId','fSection'],['batchId','fBatch'],['subject','fSubject'],['facultyId','fTeacher']]
+    .forEach(([k,id]) => { if ($(id).value) p.set(k, $(id).value); });
+  $('table').innerHTML = '<div class="empty"><h3>Loading…</h3></div>';
+  try {
+    const res = await fetch('/Lecture/SummaryJson?' + p.toString());
+    if (!res.ok) throw new Error('Could not load the summary.');
+    render(await res.json());
+  } catch (e) { $('table').innerHTML = `<div class="empty"><h3 style="color:#b91c1c;">${esc(e.message)}</h3></div>`; }
+}
+
+function drill(r) {
+  const p = new URLSearchParams({ from: $('fFrom').value, to: $('fTo').value });
+  [['classId','fClass'],['sectionId','fSection'],['batchId','fBatch'],['subject','fSubject'],['facultyId','fTeacher']].forEach(([k,id]) => { if ($(id).value) p.set(k, $(id).value); });
+  if (groupBy === 'teacher' && r.facultyId) p.set('facultyId', r.facultyId);
+  if (groupBy === 'subject') p.set('subject', r.label);
+  if (groupBy === 'class') { const [c, s, b] = r.key.split('|'); if (c) p.set('classId', c); if (s) p.set('sectionId', s); if (b) p.set('batchId', b); }
+  return '/Lecture/Index?' + p.toString();
+}
+
+function render(d) {
+  const t = d.totals;
+  $('kpis').innerHTML = [['Held', t.held, '#16a34a'], ['Scheduled', t.scheduled, '#1e40af'], ['Cancelled', t.cancelled, '#dc2626'],
+    ['Not updated', t.notUpdated, '#d97706'], ['Total', t.total, '#1f2937'], ['Hours held', t.hoursHeld, '#7c3aed']]
+    .map(([l,v,c]) => `<div class="ls-kpi"><div class="v" style="color:${c}">${v}</div><div class="l">${l}</div></div>`).join('');
+  if (!d.rows.length) { $('table').innerHTML = '<div class="empty"><div class="empty-ico">📊</div><h3>No lectures in this period</h3></div>'; return; }
+  const head = { teacher: 'Teacher', class: 'Class / Medium / Batch', subject: 'Subject' }[d.groupBy];
+  const max = Math.max(...d.rows.map(r => r.total), 1);
+  $('table').innerHTML = `<table class="ls-tbl"><thead><tr><th>${head}</th><th>Held</th><th>Scheduled</th><th>Cancelled</th><th>Not updated</th><th>Hours held</th><th>Total</th></tr></thead><tbody>` +
+    d.rows.map(r => `<tr>
+      <td><a href="${drill(r)}" style="font-weight:800;color:#1f2937;text-decoration:none;">${esc(r.label)}</a>
+          <div class="ls-bar"><div style="width:${Math.round(r.completed * 100 / max)}%"></div></div></td>
+      <td style="font-weight:800;color:#16a34a;">${r.completed}</td><td>${r.scheduled}</td><td style="color:#dc2626;">${r.cancelled}</td>
+      <td style="color:#d97706;">${r.notUpdated}</td><td>${r.hoursHeld}</td><td style="font-weight:700;">${r.total}</td></tr>`).join('') + '</tbody></table>';
+}
+
+fill('fClass', OPT.classes, 'All classes'); fill('fSection', OPT.sections, 'All mediums'); fill('fBatch', OPT.batches, 'All batches');
+fill('fSubject', OPT.subjects, 'All subjects'); fill('fTeacher', OPT.teachers, 'All teachers', 'id', 'displayName');
+period(0);
+</script>
+}

@@ -68,15 +68,15 @@
   <i class="fas fa-filter" style="color:var(--mu);font-size:13px;"></i>
   <select name="yearId" class="fs">
     <option value="">All Years</option>
-    @foreach(var y in years){<option value="@y.YearId" selected=@((int?)ViewBag.YearId==y.YearId?"selected":"")>@y.YearName @(y.IsCurrent?"✓ Current":"")</option>}
+    @foreach(var y in years){<option value="@y.YearId" selected="@((int?)ViewBag.YearId==y.YearId)">@y.YearName @(y.IsCurrent?"✓ Current":"")</option>}
   </select>
   <select name="sectionId" class="fs">
     <option value="">All Medium/Stream</option>
-    @foreach(var s in sections){<option value="@s.SectionId" selected=@((int?)(ViewBag.SectionId)==s.SectionId?"selected":"")>@s.SectionName</option>}
+    @foreach(var s in sections){<option value="@s.SectionId" selected="@((int?)(ViewBag.SectionId)==s.SectionId)">@s.SectionName</option>}
   </select>
   <select name="classId" class="fs">
     <option value="">All Std</option>
-    @foreach(var c in classes){<option value="@c.ClassId" selected=@((int?)(ViewBag.ClassId)==c.ClassId?"selected":"")>@c.ClassName</option>}
+    @foreach(var c in classes){<option value="@c.ClassId" selected="@((int?)(ViewBag.ClassId)==c.ClassId)">@c.ClassName</option>}
   </select>
   <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Filter</button>
   <a href="/FeeStructure/Index" class="btn btn-outline btn-sm"><i class="fas fa-times"></i> Clear</a>
@@ -172,7 +172,7 @@
     <div class="fg" style="min-width:180px;">
       <label>Academic Year *</label>
       <select name="yearId" class="fs" required>
-        @foreach(var y in years){<option value="@y.YearId" selected=@(y.IsCurrent?"selected":"")>@y.YearName</option>}
+        @foreach(var y in years){<option value="@y.YearId" selected="@(y.IsCurrent)">@y.YearName</option>}
       </select>
     </div>
     <button type="submit" class="btn btn-primary"

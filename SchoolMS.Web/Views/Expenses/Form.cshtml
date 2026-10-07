@@ -29,7 +29,7 @@
         <select name="AcademicYearId" class="fs">
           <option value="">— Select Year —</option>
           @foreach(var y in Model.Years)
-          {<option value="@y.YearId" selected=@(Model.AcademicYearId==y.YearId || (Model.AcademicYearId==null && y.IsCurrent)?"selected":"")>@y.YearName @(y.IsCurrent?" (Current)":"")</option>}
+          {<option value="@y.YearId" selected="@(Model.AcademicYearId==y.YearId || (Model.AcademicYearId==null && y.IsCurrent))">@y.YearName @(y.IsCurrent?" (Current)":"")</option>}
         </select>
       </div>
 
@@ -38,7 +38,7 @@
         <select name="Expense.CategoryId" class="fs" required>
           <option value="">— Select Category —</option>
           @foreach(var c in Model.Categories)
-          {<option value="@c.CategoryId" selected=@(Model.Expense.CategoryId==c.CategoryId?"selected":"")>@c.CategoryName</option>}
+          {<option value="@c.CategoryId" selected="@(Model.Expense.CategoryId==c.CategoryId)">@c.CategoryName</option>}
         </select>
       </div>
 
@@ -57,7 +57,7 @@
         <label>Payment Mode</label>
         <select name="Expense.PaymentMode" class="fs">
           @foreach(var m in new[]{"Cash","Online Transfer","Cheque","Demand Draft"})
-          {<option value="@m" selected=@(Model.Expense.PaymentMode==m?"selected":"")>@m</option>}
+          {<option value="@m" selected="@(Model.Expense.PaymentMode==m)">@m</option>}
         </select>
       </div>
 

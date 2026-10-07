@@ -23,7 +23,7 @@
   <input type="text" name="search" value="@search" class="fc" placeholder="Search name, employee code, phone..." style="min-width:220px;"/>
   <select name="designationId" class="fs">
     <option value="">All Designations</option>
-    @foreach(var d in designations){<option value="@d.DesignationId" selected=@((int?)desigId==d.DesignationId?"selected":"")>@d.DesignationName</option>}
+    @foreach(var d in designations){<option value="@d.DesignationId" selected="@((int?)desigId==d.DesignationId)">@d.DesignationName</option>}
   </select>
   @{ var facSt = status ?? "Active"; }
   <select name="status" class="fs">

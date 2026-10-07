@@ -147,7 +147,7 @@
           <select name="yearId" class="fp-select">
             <option value="">All Years</option>
             @foreach(var y in Model.Years)
-            {<option value="@y.YearId" selected=@(Model.YearFilter==y.YearId?"selected":"")>@y.YearName @(y.IsCurrent?"(Current)":"")</option>}
+            {<option value="@y.YearId" selected="@(Model.YearFilter==y.YearId)">@y.YearName @(y.IsCurrent?"(Current)":"")</option>}
           </select>
         </div>
         <div class="fp-field">
@@ -155,7 +155,7 @@
           <select name="sectionId" class="fp-select">
             <option value="">All Medium/Stream</option>
             @foreach(var s in Model.Sections)
-            {<option value="@s.SectionId" selected=@(Model.SectionFilter==s.SectionId?"selected":"")>@s.SectionName</option>}
+            {<option value="@s.SectionId" selected="@(Model.SectionFilter==s.SectionId)">@s.SectionName</option>}
           </select>
         </div>
         <div class="fp-field">
@@ -163,7 +163,7 @@
           <select name="classId" class="fp-select">
             <option value="">All Std</option>
             @foreach(var c in Model.Classes)
-            {<option value="@c.ClassId" selected=@(Model.ClassFilter==c.ClassId?"selected":"")>@c.ClassName</option>}
+            {<option value="@c.ClassId" selected="@(Model.ClassFilter==c.ClassId)">@c.ClassName</option>}
           </select>
         </div>
         <div class="fp-field">

@@ -160,6 +160,22 @@
 
 .marks-top5-item { padding: 12px; margin-bottom: 8px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; }
 .marks-top5-rank { font-weight: 700; color: #f59e0b; font-size: 16px; }
+.marks-top5-item.me { background: #dcfce7; border-left-color: #16a34a; }
+.marks-top5-item.me .marks-top5-rank { color: #16a34a; }
+.marks-myrank { margin-top: 10px; padding: 10px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 13px; font-weight: 600; color: #1e40af; }
+.lec-day-nav { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+.lec-nav-btn { border:1px solid #d1d5db; background:#fff; border-radius:50%; width:34px; height:34px; cursor:pointer; font-weight:800; }
+.lec-chip { border:1px solid #d1d5db; background:#fff; border-radius:20px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; }
+.lec-chip.on { background:#2563eb; color:#fff; border-color:#2563eb; }
+.lec-card { background:#fff; border:1px solid #e5e7eb; border-left:5px solid #2563eb; border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+.lec-card.Completed { border-left-color:#16a34a; } .lec-card.Cancelled { border-left-color:#dc2626; opacity:.8; }
+.lec-time { font-weight:800; color:#1e40af; font-size:13px; }
+.lec-badge { display:inline-block; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:800; }
+.lec-badge.Scheduled { background:#dbeafe; color:#1e40af; } .lec-badge.Completed { background:#dcfce7; color:#166534; } .lec-badge.Cancelled { background:#fee2e2; color:#991b1b; }
+.lec-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin-bottom:12px; }
+.lec-kpi { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px; text-align:center; }
+.lec-kpi .v { font-size:22px; font-weight:800; } .lec-kpi .l { font-size:11px; color:#6b7280; font-weight:700; text-transform:uppercase; }
+.lec-pill { display:inline-block; background:#eef2ff; color:#3730a3; border-radius:14px; padding:3px 10px; font-size:12px; font-weight:700; margin:3px 6px 3px 0; }
 </style>
 
 @if (!Model.Children.Any())
@@ -274,6 +290,12 @@ else
       <div id="marksSubjectsView">
         <h3 style="font-size:14px;margin-bottom:12px;">📚 Select a Subject</h3>
         <div id="marksSubjectsList" style="display:flex;flex-wrap:wrap;"></div>
+
+        <div style="margin-top:24px;padding-top:20px;border-top:2px solid #e5e7eb;">
+          <h3 style="font-size:14px;margin-bottom:4px;">🏆 Class Toppers — Overall</h3>
+          <p id="marksOverallInfo" style="font-size:12px;color:#666;margin:0 0 12px;"></p>
+          <div id="marksOverallToppers"><p style="color:#888;">Loading…</p></div>
+        </div>
       </div>
 
       <!-- Level 2: Subject Marks & Top 5 -->
@@ -315,6 +337,33 @@ else
 
   const studentId = @(Model.SelectedChild?.StudentId ?? 0);
 
+  const toppersPromise = fetch(`/Parent/Toppers?studentId=${studentId}`)
+    .then(r => r.ok ? r.json() : null)
+    .catch(() => null);
+
+  function topperEsc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+  function topperListHtml(sec) {
+    if (!sec || !sec.top || sec.top.length === 0) return '<p style="color:#888;">No data available</p>';
+    const rows = sec.top.map(s => `<div class="marks-top5-item${s.isMe ? ' me' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+          <div style="font-weight:700;font-size:14px;"><span class="marks-top5-rank">#${s.rank}</span> ${topperEsc(s.fullName)}${s.isMe ? ' <span style="font-size:11px;color:#16a34a;">(your child)</span>' : ''}</div>
+          <div style="text-align:right;font-weight:700;font-size:15px;white-space:nowrap;">${s.percentage}%
+            <div style="font-size:11px;color:#666;font-weight:600;">${s.totalObtained}/${s.totalMax}</div></div>
+        </div>
+      </div>`).join('');
+    const mine = sec.myRank && !sec.top.some(s => s.isMe)
+      ? `<div class="marks-myrank">Your child: rank #${sec.myRank} of ${sec.ranked} (${sec.myPercentage}%)</div>` : '';
+    return rows + mine;
+  }
+  toppersPromise.then(d => {
+    const el = document.getElementById('marksOverallToppers');
+    if (!el) return;
+    if (!d) { el.innerHTML = '<p style="color:#888;">Could not load toppers.</p>'; return; }
+    const info = document.getElementById('marksOverallInfo');
+    if (info) info.textContent = [d.className, d.sectionName, d.yearName].filter(Boolean).join(' • ') + ' — all tests combined';
+    el.innerHTML = topperListHtml(d.overall);
+  });
+
   function loadMarksSubjects() {
     const html = marksData.map(s =>
       `<button class="marks-subject-pill" onclick="loadMarksForSubject('${s.subjectName}')">${s.subjectName}</button>`
@@ -339,34 +388,12 @@ else
     ).join('');
     document.getElementById('marksDetailsBody').innerHTML = tableHtml;
 
-    // Fetch top 5 students from API
-    fetch(`/Parent/GetTop5ForSubject?studentId=${studentId}&subjectName=${encodeURIComponent(subjectName)}`)
-      .then(r => r.json())
-      .then(data => {
-        if (!data.top5 || data.top5.length === 0) {
-          document.getElementById('marksTop5List').innerHTML = '<p style="color:#888;">No data available</p>';
-          return;
-        }
-        const top5Html = data.top5.map((s, i) => {
-          const grade = s.grade || '—';
-          return `<div class="marks-top5-item">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-              <div>
-                <div style="font-weight:700;font-size:14px;"><span class="marks-top5-rank">#${i+1}</span> ${s.fullName || '—'}</div>
-                <div style="font-size:12px;color:#666;margin-top:4px;">${s.className || ''}</div>
-              </div>
-              <div style="text-align:right;font-weight:700;font-size:15px;">
-                ${s.marksObtained || '—'}/${s.maxMarks || '—'} <span style="font-size:12px;color:#666;">${grade}</span>
-              </div>
-            </div>
-          </div>`;
-        }).join('');
-        document.getElementById('marksTop5List').innerHTML = top5Html;
-      })
-      .catch(e => {
-        console.error('Error:', e);
-        document.getElementById('marksTop5List').innerHTML = '<p style="color:#888;">Error loading data</p>';
-      });
+    // Top 5 of this subject in the child's own class & medium (same ranking the admin sees)
+    document.getElementById('marksTop5List').innerHTML = '<p style="color:#888;">Loading…</p>';
+    toppersPromise.then(d => {
+      const sub = d && d.subjects ? d.subjects.find(x => x.subjectName === subjectName) : null;
+      document.getElementById('marksTop5List').innerHTML = sub ? topperListHtml(sub.top) : '<p style="color:#888;">No data available</p>';
+    });
 
     document.getElementById('marksSubjectsView').style.display = 'none';
     document.getElementById('marksDetailsView').style.display = 'block';
@@ -380,6 +407,69 @@ else
 
   loadMarksSubjects();
   </script>
+
+  @* ══════════════════════ LECTURES ══════════════════════ *@
+  @if (activeTab == "lectures")
+  {
+    <div class="sec-title"><i class="fas fa-chalkboard-teacher"></i> Lectures</div>
+    <div class="lec-day-nav">
+      <button class="lec-nav-btn" onclick="lecShift(-1)" title="Previous day">&#8249;</button>
+      <input type="date" id="lecDate" style="border:1px solid #d1d5db;border-radius:8px;padding:7px 10px;font-weight:700;" onchange="lecLoad(this.value)" />
+      <button class="lec-nav-btn" onclick="lecShift(1)" title="Next day">&#8250;</button>
+      <button class="lec-chip" onclick="lecToday()">Today</button>
+      <button class="lec-chip" onclick="lecMonth(-1)">Previous month</button>
+      <span id="lecDayLabel" style="font-weight:700;color:#4b5563;"></span>
+    </div>
+    <div id="lecDay"><div class="pp-empty">Loading…</div></div>
+
+    <div style="margin-top:22px;padding-top:18px;border-top:2px solid #e5e7eb;">
+      <h3 style="font-size:15px;margin:0 0 4px;" id="lecMonthTitle">This month</h3>
+      <p style="font-size:12px;color:#666;margin:0 0 12px;">Lectures of your child's class — counts for the month of the selected date</p>
+      <div id="lecMonth"></div>
+    </div>
+
+    <script>
+    const lecStudentId = @(Model.SelectedChild?.StudentId ?? 0);
+    const lecEsc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+    const lecIso = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    let lecCur = lecIso(new Date());
+    function lecParse(s) { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+    function lecShift(n) { const d = lecParse(lecCur); d.setDate(d.getDate() + n); lecLoad(lecIso(d)); }
+    function lecToday() { lecLoad(lecIso(new Date())); }
+    function lecMonth(n) { const d = lecParse(lecCur); d.setDate(1); d.setMonth(d.getMonth() + n); lecLoad(lecIso(d)); }
+    async function lecLoad(date) {
+      if (!date) return; lecCur = date; document.getElementById('lecDate').value = date;
+      document.getElementById('lecDayLabel').textContent = lecParse(date).toLocaleDateString('en-GB', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+      try {
+        const res = await fetch(`/Parent/Lectures?studentId=${lecStudentId}&date=${date}`);
+        if (!res.ok) throw new Error();
+        const d = await res.json();
+        document.getElementById('lecDay').innerHTML = d.lectures.length ? d.lectures.map(l => `
+          <div class="lec-card ${l.status}">
+            <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+              <div class="lec-time">${l.startTime} – ${l.endTime}</div><span class="lec-badge ${l.status}">${l.status}</span></div>
+            <div style="font-weight:800;font-size:15px;margin-top:4px;">${lecEsc(l.subject)}</div>
+            <div style="font-size:12px;color:#6b7280;">${lecEsc(l.teacher || '')}${l.topic ? ' · ' + lecEsc(l.topic) : ''}</div>
+            ${l.status === 'Cancelled' && l.statusNote ? `<div style="font-size:12px;color:#991b1b;margin-top:4px;">${lecEsc(l.statusNote)}</div>` : ''}
+          </div>`).join('') : '<div class="pp-table-wrap"><div class="pp-empty"><i class="fas fa-chalkboard-teacher"></i>No lectures on this day</div></div>';
+        const m = d.month;
+        if (!m) { document.getElementById('lecMonth').innerHTML = ''; return; }
+        document.getElementById('lecMonthTitle').textContent = m.label;
+        const t = m.totals;
+        const subs = m.bySubject.map(s => `<span class="lec-pill">${lecEsc(s.label)}: ${s.held}</span>`).join('');
+        document.getElementById('lecMonth').innerHTML = `
+          <div class="lec-kpis">
+            <div class="lec-kpi"><div class="v" style="color:#16a34a">${t.held}</div><div class="l">Held</div></div>
+            <div class="lec-kpi"><div class="v" style="color:#1e40af">${t.scheduled}</div><div class="l">Scheduled</div></div>
+            <div class="lec-kpi"><div class="v" style="color:#dc2626">${t.cancelled}</div><div class="l">Cancelled</div></div>
+            <div class="lec-kpi"><div class="v" style="color:#7c3aed">${t.hoursHeld}</div><div class="l">Hours held</div></div>
+          </div>
+          ${subs ? `<div style="font-size:12px;color:#6b7280;font-weight:700;">Lectures held per subject</div><div>${subs}</div>` : ''}`;
+      } catch (e) { document.getElementById('lecDay').innerHTML = '<div class="pp-empty">Could not load lectures.</div>'; }
+    }
+    lecLoad(lecCur);
+    </script>
+  }
 
   @* ══════════════════════ FEES ══════════════════════ *@
   @if (activeTab == "fees")

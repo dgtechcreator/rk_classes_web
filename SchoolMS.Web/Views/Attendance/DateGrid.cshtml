@@ -38,15 +38,15 @@
   <i class="fas fa-filter" style="color:var(--mu);font-size:13px;"></i>
   <select name="sectionId" class="fs">
     <option value="">All Medium/Stream</option>
-    @foreach(var s in sections){<option value="@s.SectionId" selected=@(sectionId==s.SectionId?"selected":"")>@s.SectionName</option>}
+    @foreach(var s in sections){<option value="@s.SectionId" selected="@(sectionId==s.SectionId)">@s.SectionName</option>}
   </select>
   <select name="classId" class="fs">
     <option value="">— Std —</option>
-    @foreach(var c in classes){<option value="@c.ClassId" selected=@(classId==c.ClassId?"selected":"")>@c.ClassName</option>}
+    @foreach(var c in classes){<option value="@c.ClassId" selected="@(classId==c.ClassId)">@c.ClassName</option>}
   </select>
   <select name="batchId" class="fs">
     <option value="">All Batches</option>
-    @foreach(var b in batches){<option value="@b.BatchId" selected=@(batchId==b.BatchId?"selected":"")>@b.BatchName</option>}
+    @foreach(var b in batches){<option value="@b.BatchId" selected="@(batchId==b.BatchId)">@b.BatchName</option>}
   </select>
   <div style="display:flex;align-items:center;gap:6px;">
     <label style="font-size:12px;font-weight:700;color:var(--mu);">From</label>
