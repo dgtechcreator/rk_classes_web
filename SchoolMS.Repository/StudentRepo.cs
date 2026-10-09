@@ -31,10 +31,17 @@ public class StudentRepo(CommonConnectivity db)
         }, MapStudent);
         return l;
     }
-    public void Delete(int id)  => db.Exec("sp_DeleteStudent",  new() { { "@StudentId", id } });
-    public void Restore(int id) => db.Exec("sp_RestoreStudent", new() { { "@StudentId", id } });
+    public void Delete(int id)  { db.Exec("sp_DeleteStudent",  new() { { "@StudentId", id } }); StudentNameDirectory.Invalidate(); }
+    public void Restore(int id) { db.Exec("sp_RestoreStudent", new() { { "@StudentId", id } }); StudentNameDirectory.Invalidate(); }
 
-    public int Save(Student s, string? pic, int by) => db.ExecOut("sp_SaveStudent", new() {
+    public int Save(Student s, string? pic, int by)
+    {
+        var id = SaveRaw(s, pic, by);
+        StudentNameDirectory.Invalidate();
+        return id;
+    }
+
+    int SaveRaw(Student s, string? pic, int by) => db.ExecOut("sp_SaveStudent", new() {
         { "@StudentId",s.StudentId }, { "@AdmissionNo",s.AdmissionNo==""?null:s.AdmissionNo },
         { "@FullName",s.FullName }, { "@DateOfBirth",s.DateOfBirth }, { "@Gender",s.Gender },
         { "@FatherName",s.FatherName }, { "@MotherName",s.MotherName }, { "@Phone",s.Phone },

@@ -11,7 +11,7 @@ public class AttendanceRepo(CommonConnectivity db)
     public List<AttendanceRecord> GetForDate(DateTime date, int? cls, int? sec, int? bat)
         => db.Read("sp_GetAttendance", new() { { "@AttendanceDate",date.Date }, { "@ClassId",cls }, { "@SectionId",sec }, { "@BatchId",bat } },
         r => new AttendanceRecord {
-            StudentId=G.G<int>(r,"StudentId"), FullName=G.G<string>(r,"FullName")??"",
+            StudentId=G.G<int>(r,"StudentId"), FullName=r.StudentName(db) ?? "",
             AdmissionNo=G.G<string>(r,"AdmissionNo")??"", RollNo=G.G<string>(r,"RollNo"),
             ClassId=G.G<int?>(r,"ClassId"), ClassName=G.G<string>(r,"ClassName"),
             SectionId=G.G<int?>(r,"SectionId"), SectionName=G.G<string>(r,"SectionName"),
@@ -22,7 +22,10 @@ public class AttendanceRepo(CommonConnectivity db)
             Subject=G.G<string>(r,"Subject"), SirName=G.G<string>(r,"SirName"),
             StartTime=G.G<TimeSpan?>(r,"StartTime"), EndTime=G.G<TimeSpan?>(r,"EndTime"),
             Phone=G.G<string>(r,"Phone"), FatherPhone=G.G<string>(r,"FatherPhone"), MotherPhone=G.G<string>(r,"MotherPhone")
-        });
+        }).OrderBy(a => RollKey(a.RollNo)).ThenBy(a => a.FullName, StringComparer.OrdinalIgnoreCase).ToList();
+
+    // Roll numbers sort numerically; students without one come after, ordered by name.
+    static int RollKey(string? roll) => int.TryParse(roll?.Trim(), out var n) ? n : int.MaxValue;
     public void Save(int sid, DateTime date, string status, int? cls, int? sec, int? bat,
         string? remarks, int by, string? subject, string? sirName, TimeSpan? startTime, TimeSpan? endTime)
         => db.Exec("sp_SaveAttendance", new() {
@@ -41,13 +44,13 @@ public class AttendanceRepo(CommonConnectivity db)
         var students = db.Read("sp_GetAttendanceDateGrid", p,
             r => new AttendanceRecord {
                 StudentId   = G.G<int>(r,"StudentId"),
-                FullName    = G.G<string>(r,"FullName")??"",
+                FullName    = r.StudentName(db) ?? "",
                 AdmissionNo = G.G<string>(r,"AdmissionNo")??"",
                 RollNo      = G.G<string>(r,"RollNo"),
                 ClassName   = G.G<string>(r,"ClassName"),
                 SectionName = G.G<string>(r,"SectionName"),
                 BatchName   = G.G<string>(r,"BatchName")
-            });
+            }).OrderBy(a => RollKey(a.RollNo)).ThenBy(a => a.FullName, StringComparer.OrdinalIgnoreCase).ToList();
 
         var att = db.Sql($@"
             SELECT a.StudentId, a.AttendanceDate, a.Status
@@ -127,7 +130,7 @@ public class AttendanceRepo(CommonConnectivity db)
         => db.Read("sp_GetAttendanceReport", new() { {"@ClassId",cls}, {"@Month",month}, {"@Year",year} },
         r => new AttendanceReport {
             StudentId    = G.G<int>(r,"StudentId"),
-            FullName     = G.G<string>(r,"FullName")??"",
+            FullName     = r.StudentName(db) ?? "",
             AdmissionNo  = G.G<string>(r,"AdmissionNo")??"",
             ClassName    = G.G<string>(r,"ClassName"),
             PresentDays  = G.G<int>(r,"PresentDays"),
@@ -162,7 +165,7 @@ public class AttendanceRepo(CommonConnectivity db)
             ORDER BY s.FullName",
             r => (
                 G.G<int>(r, "StudentId"),
-                G.G<string>(r, "FullName") ?? "",
+                r.StudentName(db) ?? "",
                 G.G<string>(r, "AdmissionNo") ?? "",
                 G.G<string>(r, "Phone") ?? "",
                 G.G<string>(r, "FatherPhone") ?? "",
@@ -171,6 +174,6 @@ public class AttendanceRepo(CommonConnectivity db)
                 G.G<string>(r, "ClassName") ?? "",
                 G.G<string>(r, "SectionName") ?? "",
                 G.G<string>(r, "BatchName") ?? ""
-            )).ToList();
+            )).OrderBy(x => x.Item2, StringComparer.OrdinalIgnoreCase).ToList();
     }
 }

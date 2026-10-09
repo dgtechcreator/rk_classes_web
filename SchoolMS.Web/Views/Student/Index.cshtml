@@ -247,10 +247,10 @@
         <tr onclick="window.location='/Student/Details/@s.StudentId'" style="cursor:pointer;">
           <td>
             @if (!string.IsNullOrEmpty(s.ProfilePicPath)){<img src="@s.ProfilePicPath" class="stu-pic"/>}
-            else{<div class="stu-av" style="font-size:14px;">@(s.FullName.Length>0?s.FullName[0].ToString().ToUpper():"?")</div>}
+            else{<div class="stu-av" style="font-size:14px;">@(s.DisplayName.Length>0?s.DisplayName[0].ToString().ToUpper():"?")</div>}
           </td>
           <td><span class="mono text-p" style="font-size:12px;">@s.AdmissionNo</span></td>
-          <td><div class="fw7">@s.FullName</div><div style="font-size:11px;" class="text-mu">Roll: @(s.RollNo??"—")</div></td>
+          <td><div class="fw7">@s.DisplayName</div><div style="font-size:11px;" class="text-mu">Roll: @(s.RollNo??"—")</div></td>
           <td>@s.ClassName</td>
           <td style="font-size:12.5px;" class="text-mu">@(s.AdmissionDate?.ToString("dd/MM/yyyy") ?? "—")</td>
           <td><span class="badge b-purple">@s.SectionName</span></td>
@@ -322,7 +322,7 @@
             <a href="/Student/AdmissionForm/@s.StudentId" class="btn btn-outline btn-sm btn-icon" title="Print Admission Form" target="_blank"><i class="fas fa-print"></i></a>
 
             <!-- Delete Button -->
-            <form method="post" action="/Student/Delete/@s.StudentId" style="display:inline;" onsubmit="return confirm('Mark @s.FullName as Inactive?')">
+            <form method="post" action="/Student/Delete/@s.StudentId" style="display:inline;" onsubmit="return confirm('Mark @s.DisplayName as Inactive?')">
               @Html.AntiForgeryToken()
               <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
             </form>

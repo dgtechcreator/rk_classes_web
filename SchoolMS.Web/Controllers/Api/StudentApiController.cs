@@ -69,7 +69,7 @@ public class StudentApiController(StudentService svc, LookupService lookup, FeeS
                 studentId = s.StudentId,
                 classId = s.ClassId,
                 sectionId = s.SectionId,
-                fullName = s.FullName,
+                fullName = s.DisplayName,
                 admissionNo = s.AdmissionNo,
                 className = classes.FirstOrDefault(c => c.ClassId == s.ClassId)?.ClassName ?? "",
                 sectionName = sections.FirstOrDefault(sec => sec.SectionId == s.SectionId)?.SectionName ?? ""
@@ -97,7 +97,7 @@ public class StudentApiController(StudentService svc, LookupService lookup, FeeS
                 students = students
                     .Select(s => new {
                         studentId = s.StudentId,
-                        fullName = s.FullName,
+                        fullName = s.DisplayName,
                         admissionNo = s.AdmissionNo,
                         fatherPhone = s.FatherPhone ?? "",
                         motherPhone = s.MotherPhone ?? "",

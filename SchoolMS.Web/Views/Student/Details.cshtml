@@ -217,7 +217,7 @@ Welcome to R K CLASSES. Wishing you a great learning experience and success in y
     {<img src="@Model.ProfilePicPath" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--bdr2);margin-bottom:14px;"/>}
     else
     {<div style="width:100px;height:100px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:900;color:#fff;margin:0 auto 14px;">@Model.FullName[0]</div>}
-    <div style="font-size:18px;font-weight:800;color:var(--txt);">@Model.FullName</div>
+    <div style="font-size:18px;font-weight:800;color:var(--txt);">@Model.DisplayName</div>
     <div style="font-size:13px;" class="text-mu">@Model.AdmissionNo</div>
     <span class="badge @(Model.Status=="Active"?"b-active":"b-inactive")" style="margin-top:8px;">@Model.Status</span>
     @{
@@ -327,7 +327,7 @@ Welcome to R K CLASSES. Wishing you a great learning experience and success in y
 
 <script>
   // WhatsApp text comes from Masters -> Templates (category), with a plain fallback if none is saved.
-  const RK_STUDENT = { fullName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.FullName ?? "")), className: @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model.ClassName ?? "").Trim())), medium: @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model.SectionName ?? "").Trim())) };
+  const RK_STUDENT = { fullName: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.DisplayName ?? "")), className: @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model.ClassName ?? "").Trim())), medium: @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model.SectionName ?? "").Trim())) };
   const RK_FALLBACK = {
     General: "Dear Parent, a message regarding {student} ({class}) from {school}.",
     FeeReminder: "Dear Parent, this is a gentle reminder regarding the fees of {student} ({class}). Total fees: Rs {total}, paid: Rs {paid}, balance due: Rs {balance}. Kindly clear the balance at the earliest. - {school}"

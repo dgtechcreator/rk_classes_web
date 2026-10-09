@@ -101,7 +101,7 @@ public class FeesRepo(CommonConnectivity db)
 
         return db.Sql(query, r => new {
             StudentId = G.G<int>(r, "StudentId"),
-            StudentName = G.G<string>(r, "StudentName") ?? "",
+            StudentName = r.StudentName(db, "StudentName") ?? "",
             AdmissionNo = G.G<string>(r, "AdmissionNo") ?? "",
             ClassName = G.G<string>(r, "ClassName") ?? "",
             SectionName = G.G<string>(r, "SectionName") ?? "",
@@ -167,11 +167,11 @@ public class FeesRepo(CommonConnectivity db)
         return result;
     }
 
-    static FeePayment MapFee(SqlDataReader r) => new() {
+    FeePayment MapFee(SqlDataReader r) => new() {
         PaymentId      = G.G<int>(r,"PaymentId"),
         ReceiptNo      = G.G<string>(r,"ReceiptNo")??"",
         StudentId      = G.G<int>(r,"StudentId"),
-        StudentName    = G.G<string>(r,"StudentName"),
+        StudentName    = r.StudentName(db, "StudentName"),
         AdmissionNo    = G.G<string>(r,"AdmissionNo"),
         ClassName      = G.G<string>(r,"ClassName"),
         SectionName    = G.G<string>(r,"SectionName"),
@@ -261,7 +261,7 @@ public class FeesRepo(CommonConnectivity db)
             { "@BatchName", batchName }
         }, r => new StudentFeeDetail
         {
-            StudentName = G.G<string>(r, "FullName") ?? "",
+            StudentName = r.StudentName(db) ?? "",
             TotalFees = G.G<decimal>(r, "TotalFees"),
             Discount = G.G<decimal>(r, "Discount"),
             Collected = G.G<decimal>(r, "Collected"),
@@ -303,7 +303,7 @@ public class FeesRepo(CommonConnectivity db)
         using var r = cmd.ExecuteReader();
         while (r.Read())
             list.Add(new FinanceStudentRow {
-                StudentId = G.G<int>(r, "StudentId"), FullName = G.G<string>(r, "FullName") ?? "",
+                StudentId = G.G<int>(r, "StudentId"), FullName = r.StudentName(db) ?? "",
                 AdmissionNo = G.G<string>(r, "AdmissionNo") ?? "",
                 ClassName = G.G<string>(r, "ClassName") ?? "", SectionName = G.G<string>(r, "SectionName") ?? "",
                 BatchName = G.G<string>(r, "BatchName") ?? "",

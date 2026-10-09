@@ -14,7 +14,7 @@ public class MarksRepo(CommonConnectivity db)
             new() { {"@ClassId",cls}, {"@SectionId",sec}, {"@BatchId",bat}, {"@AcademicYearId",DBNull.Value} },
             r => new StudentMarkRow {
                 StudentId   = G.G<int>(r,"StudentId"),
-                FullName    = G.G<string>(r,"FullName")??"",
+                FullName    = r.StudentName(db) ?? "",
                 AdmissionNo = G.G<string>(r,"AdmissionNo")??"",
                 RollNo      = G.G<string>(r,"RollNo"),
                 ClassName   = G.G<string>(r,"ClassName"),
@@ -94,7 +94,7 @@ public class MarksRepo(CommonConnectivity db)
         while (r.Read())
             list.Add(new TestMark {
                 StudentId     = G.G<int>(r,"StudentId"),
-                FullName      = G.G<string>(r,"FullName")??"",
+                FullName      = r.StudentName(db) ?? "",
                 AdmissionNo   = G.G<string>(r,"AdmissionNo")??"",
                 RollNo        = G.G<string>(r,"RollNo"),
                 ExamName      = G.G<string>(r,"ExamName"),
@@ -156,7 +156,7 @@ public class MarksRepo(CommonConnectivity db)
             list.Add(new TestMark {
                 MarkId        = G.G<int>(r,"MarkId"),
                 StudentId     = G.G<int>(r,"StudentId"),
-                FullName      = G.G<string>(r,"FullName")??"",
+                FullName      = r.StudentName(db) ?? "",
                 AdmissionNo   = G.G<string>(r,"AdmissionNo")??"",
                 RollNo        = G.G<string>(r,"RollNo"),
                 ExamId        = G.G<int>(r,"ExamId"),
@@ -212,7 +212,7 @@ public class MarksRepo(CommonConnectivity db)
             list.Add(new TestMark {
                 MarkId        = G.G<int>(r,"MarkId"),
                 StudentId     = G.G<int>(r,"StudentId"),
-                FullName      = G.G<string>(r,"FullName")??"",
+                FullName      = r.StudentName(db) ?? "",
                 AdmissionNo   = G.G<string>(r,"AdmissionNo")??"",
                 RollNo        = G.G<string>(r,"RollNo"),
                 ExamId        = G.G<int>(r,"ExamId"),
@@ -272,7 +272,7 @@ public class MarksRepo(CommonConnectivity db)
         while (r.Read())
             list.Add(new TopStudent {
                 StudentId     = G.G<int>(r,"StudentId"),
-                FullName      = G.G<string>(r,"FullName")??"",
+                FullName      = r.StudentName(db) ?? "",
                 AdmissionNo   = G.G<string>(r,"AdmissionNo")??"",
                 RollNo        = G.G<string>(r,"RollNo"),
                 ClassName     = G.G<string>(r,"ClassName"),
@@ -329,7 +329,7 @@ public class MarksRepo(CommonConnectivity db)
         while (r.Read())
             list.Add(new TopStudent {
                 StudentId     = G.G<int>(r,"StudentId"),
-                FullName      = G.G<string>(r,"FullName")??"",
+                FullName      = r.StudentName(db) ?? "",
                 AdmissionNo   = G.G<string>(r,"AdmissionNo")??"",
                 RollNo        = G.G<string>(r,"RollNo"),
                 ClassName     = G.G<string>(r,"ClassName"),
@@ -385,7 +385,7 @@ public class MarksRepo(CommonConnectivity db)
         while (r.Read())
             list.Add(new TestMark {
                 StudentId     = G.G<int>(r,"StudentId"),
-                FullName      = G.G<string>(r,"FullName")??"",
+                FullName      = r.StudentName(db) ?? "",
                 AdmissionNo   = G.G<string>(r,"AdmissionNo")??"",
                 RollNo        = G.G<string>(r,"RollNo"),
                 ExamName      = G.G<string>(r,"ExamName"),

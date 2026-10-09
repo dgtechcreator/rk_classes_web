@@ -204,14 +204,14 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; color: #
            class="pp-child-card @(isActive ? "active" : "")" onclick="closeSb()">
           @if (!string.IsNullOrEmpty(c.ProfilePicPath))
           {
-            <div class="pp-child-av"><img src="@c.ProfilePicPath" alt="@c.FullName"/></div>
+            <div class="pp-child-av"><img src="@c.ProfilePicPath" alt="@c.DisplayName"/></div>
           }
           else
           {
-            <div class="pp-child-av">@(c.FullName?.Length > 0 ? c.FullName[0].ToString().ToUpper() : "?")</div>
+            <div class="pp-child-av">@(c.DisplayName?.Length > 0 ? c.DisplayName[0].ToString().ToUpper() : "?")</div>
           }
           <div class="pp-child-info">
-            <div class="cn">@c.FullName</div>
+            <div class="cn">@c.DisplayName</div>
             <div class="cm">@(c.ClassName ?? "—") · @(c.SectionName ?? "—")</div>
           </div>
         </a>

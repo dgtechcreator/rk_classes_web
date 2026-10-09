@@ -218,7 +218,7 @@ body { font-family:'Segoe UI',Arial,sans-serif; background:#ffffff; }
         <select name="studentId" class="pr-select" onchange="document.getElementById('ff').submit()">
           <option value="">Select Student</option>
           @foreach(var s in studentList)
-          { <option value="@s.StudentId" selected="@(studentId==s.StudentId?"selected":null)">@s.FullName (@s.AdmissionNo)</option> }
+          { <option value="@s.StudentId" selected="@(studentId==s.StudentId?"selected":null)">@s.DisplayName (@s.AdmissionNo)</option> }
         </select>
       </div>
     </form>
@@ -241,7 +241,7 @@ body { font-family:'Segoe UI',Arial,sans-serif; background:#ffffff; }
         else { <span>👤</span> }
       </div>
       <div style="flex:1;min-width:0;">
-        <div class="pr-name">@Model.FullName <span class="pr-badge @(Model.Status=="Active"?"":"inactive")">@Model.Status</span></div>
+        <div class="pr-name">@Model.DisplayName <span class="pr-badge @(Model.Status=="Active"?"":"inactive")">@Model.Status</span></div>
         <div class="pr-info">
           Adm: <b>@Model.AdmissionNo</b> &nbsp;|&nbsp;
           Roll: <b>@(Model.RollNo??"—")</b> &nbsp;|&nbsp;

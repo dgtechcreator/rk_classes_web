@@ -5,6 +5,8 @@ public class Student
     public int       StudentId{get;set;}
     public string    AdmissionNo{get;set;}="";
     public string    FullName{get;set;}="";
+    /// <summary>"Surname StudentName FatherName MotherName" — what every list/card shows. FullName stays as typed for the edit form.</summary>
+    public string    DisplayName => StudentNameFormatter.Format(FullName, FatherName, MotherName);
     public DateTime? DateOfBirth{get;set;}
     public string?   Gender{get;set;}
     public string?   FatherName{get;set;}

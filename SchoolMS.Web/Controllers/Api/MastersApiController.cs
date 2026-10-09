@@ -187,7 +187,7 @@ public class MastersApiController(MastersService svc, StudentService studentSvc,
                 sectionId, batchId, null, "Active");
             return Ok(students.Select(s => new {
                 studentId = s.StudentId,
-                fullName = s.FullName,
+                fullName = s.DisplayName,
                 admissionNo = s.AdmissionNo,
                 className = s.ClassName,
                 sectionName = s.SectionName,

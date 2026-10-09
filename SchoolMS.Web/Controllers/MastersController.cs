@@ -199,7 +199,7 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
                 sectionId, batchId, null, "Active");
             return Json(students.Select(s => new {
                 studentId = s.StudentId,
-                fullName = s.FullName,
+                fullName = s.DisplayName,
                 admissionNo = s.AdmissionNo,
                 className = s.ClassName,
                 sectionName = s.SectionName,

@@ -3,7 +3,7 @@
   Layout = "_ParentLayout";
   var sel = Model.SelectedChild;
   var activeTab = Model.ActiveTab ?? "attendance";
-  ViewData["Title"] = sel != null ? sel.FullName : "Dashboard";
+  ViewData["Title"] = sel != null ? sel.DisplayName : "Dashboard";
   ViewBag.SelectedStudentId = sel?.StudentId;
   ViewBag.ActiveTab = activeTab;
   ViewBag.SidebarChildren = Model.Children;
@@ -199,11 +199,11 @@ else
   <div class="stu-card">
     <div class="stu-card-head">
       @if (!string.IsNullOrEmpty(sel.ProfilePicPath))
-      {<div class="stu-av-lg"><img src="@sel.ProfilePicPath" alt="@sel.FullName"/></div>}
+      {<div class="stu-av-lg"><img src="@sel.ProfilePicPath" alt="@sel.DisplayName"/></div>}
       else
-      {<div class="stu-av-lg">@(sel.FullName?.Length > 0 ? sel.FullName[0].ToString().ToUpper() : "?")</div>}
+      {<div class="stu-av-lg">@(sel.DisplayName?.Length > 0 ? sel.DisplayName[0].ToString().ToUpper() : "?")</div>}
       <div class="stu-head-info">
-        <h2>@sel.FullName.ToUpper()</h2>
+        <h2>@sel.DisplayName.ToUpper()</h2>
         <p>@(sel.ClassName ?? "—") &nbsp;·&nbsp; @(sel.SectionName ?? "—") @if(!string.IsNullOrEmpty(sel.BatchName)){<text>&nbsp;·&nbsp; @sel.BatchName</text>}</p>
         <p>Adm: @sel.AdmissionNo &nbsp;|&nbsp; Year: @(sel.YearName ?? "—")</p>
       </div>

@@ -95,11 +95,11 @@
             @if (!string.IsNullOrEmpty(s.ProfilePicPath))
             {<img src="@s.ProfilePicPath" class="stu-pic" style="opacity:.6;"/>}
             else
-            {<div class="stu-av" style="background:#e5e7eb;color:#9ca3af;font-size:14px;">@(s.FullName.Length>0?s.FullName[0].ToString().ToUpper():"?")</div>}
+            {<div class="stu-av" style="background:#e5e7eb;color:#9ca3af;font-size:14px;">@(s.DisplayName.Length>0?s.DisplayName[0].ToString().ToUpper():"?")</div>}
           </td>
           <td><span class="mono" style="font-size:12px;color:var(--mu);">@s.AdmissionNo</span></td>
           <td>
-            <div class="fw7" style="color:var(--mu);">@s.FullName</div>
+            <div class="fw7" style="color:var(--mu);">@s.DisplayName</div>
             <div style="font-size:11px;color:var(--mu2);">Roll: @(s.RollNo ?? "—")</div>
           </td>
           <td style="color:var(--mu);">@s.ClassName</td>
@@ -109,7 +109,7 @@
           <td style="font-size:12px;color:var(--mu2);">@s.CreatedAt.ToString("dd MMM yyyy")</td>
           <td>
             <form method="post" action="/Deleted/RestoreStudent/@s.StudentId"
-                  onsubmit="return confirm('Restore @s.FullName to Active?')">
+                  onsubmit="return confirm('Restore @s.DisplayName to Active?')">
               @Html.AntiForgeryToken()
               <button type="submit" class="btn btn-outline btn-sm" title="Restore"
                       style="color:#16a34a;border-color:#86efac;">

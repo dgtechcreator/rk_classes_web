@@ -27,7 +27,7 @@ public class TaskRepo(CommonConnectivity db)
                 CompletedAt = G.G<DateTime?>(r, "CompletedAt"),
                 IsCompleted = G.G<bool>(r, "IsCompleted"),
                 Status = G.G<string>(r, "Status") ?? "Pending",
-                StudentName = G.G<string>(r, "StudentName"),
+                StudentName = r.StudentName(db, "StudentName"),
                 AdmissionNo = G.G<string>(r, "AdmissionNo"),
                 CreatedByName = G.G<string>(r, "CreatedByName")
             });
@@ -59,7 +59,7 @@ public class TaskRepo(CommonConnectivity db)
                 CompletedAt = G.G<DateTime?>(r, "CompletedAt"),
                 IsCompleted = G.G<bool>(r, "IsCompleted"),
                 Status = G.G<string>(r, "Status") ?? "Pending",
-                StudentName = G.G<string>(r, "StudentName"),
+                StudentName = r.StudentName(db, "StudentName"),
                 AdmissionNo = G.G<string>(r, "AdmissionNo"),
                 CreatedByName = G.G<string>(r, "CreatedByName")
             });
@@ -105,7 +105,7 @@ public class TaskRepo(CommonConnectivity db)
                 CompletedAt = G.G<DateTime?>(r, "CompletedAt"),
                 IsCompleted = G.G<bool>(r, "IsCompleted"),
                 Status = G.G<string>(r, "Status") ?? "Pending",
-                StudentName = G.G<string>(r, "StudentName"),
+                StudentName = r.StudentName(db, "StudentName"),
                 AdmissionNo = G.G<string>(r, "AdmissionNo"),
                 CreatedByName = G.G<string>(r, "CreatedByName")
             });

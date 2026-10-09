@@ -121,5 +121,5 @@ public class LookupRepo(CommonConnectivity db)
         return stats;
     }
     public List<Student> GetStudentDropdown() => db.Sql("SELECT StudentId,FullName,AdmissionNo,ClassId FROM Students WHERE Status='Active' ORDER BY FullName",
-        r => new Student { StudentId=G.G<int>(r,"StudentId"), FullName=G.G<string>(r,"FullName")??"", AdmissionNo=G.G<string>(r,"AdmissionNo")??"", ClassId=G.G<int?>(r,"ClassId") });
+        r => new Student { StudentId=G.G<int>(r,"StudentId"), FullName=r.StudentName(db)??"", AdmissionNo=G.G<string>(r,"AdmissionNo")??"", ClassId=G.G<int?>(r,"ClassId") });
 }

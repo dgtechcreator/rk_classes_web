@@ -110,10 +110,10 @@ public class FeeStructureRepo(CommonConnectivity db)
         => db.ExecOut("sp_GenerateMonthlyFees",
             new() { {"@Month",month}, {"@AcademicYearId",yearId} }, "@FeesGenerated");
 
-    static StudentFee MapStudentFee(SqlDataReader r) => new() {
+    StudentFee MapStudentFee(SqlDataReader r) => new() {
         StudentFeeId   = G.G<int>(r,"StudentFeeId"),
         StudentId      = G.G<int>(r,"StudentId"),
-        StudentName    = G.G<string>(r,"StudentName"),
+        StudentName    = r.StudentName(db, "StudentName"),
         AdmissionNo    = G.G<string>(r,"AdmissionNo"),
         RollNo         = G.G<string>(r,"RollNo"),
         ClassName      = G.G<string>(r,"ClassName"),
