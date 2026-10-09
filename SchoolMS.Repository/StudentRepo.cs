@@ -38,7 +38,35 @@ public class StudentRepo(CommonConnectivity db)
     {
         var id = SaveRaw(s, pic, by);
         StudentNameDirectory.Invalidate();
+        if (id > 0) AddToMatchingAttendanceBatch(id);
         return id;
+    }
+
+    /// <summary>
+    /// Attendance batches are fixed student lists, so a new admission would never show on the batch card. If the student's
+    /// "Class Section Batch" (e.g. "8th English Morning") equals the name of an active attendance batch, add them to it.
+    /// Never removes anyone, and a failure here must not fail the student save.
+    /// </summary>
+    void AddToMatchingAttendanceBatch(int studentId)
+    {
+        try
+        {
+            using var c = db.Open();
+            using var cmd = new SqlCommand(@"
+                INSERT INTO AttendanceBatchStudents (BatchId, StudentId)
+                SELECT ab.BatchId, s.StudentId
+                FROM Students s
+                JOIN Classes  c   ON c.ClassId     = s.ClassId
+                JOIN Sections sec ON sec.SectionId = s.SectionId
+                JOIN Batches  b   ON b.BatchId     = s.BatchId
+                JOIN AttendanceBatches ab ON ab.IsActive = 1
+                     AND LTRIM(RTRIM(ab.BatchName)) = LTRIM(RTRIM(c.ClassName)) + ' ' + LTRIM(RTRIM(sec.SectionName)) + ' ' + LTRIM(RTRIM(b.BatchName))
+                WHERE s.StudentId = @id AND s.Status = 'Active'
+                  AND NOT EXISTS (SELECT 1 FROM AttendanceBatchStudents x WHERE x.BatchId = ab.BatchId AND x.StudentId = s.StudentId)", c);
+            cmd.Parameters.AddWithValue("@id", studentId);
+            cmd.ExecuteNonQuery();
+        }
+        catch { /* batch membership can still be fixed in Masters > Attendance Batches */ }
     }
 
     int SaveRaw(Student s, string? pic, int by) => db.ExecOut("sp_SaveStudent", new() {
