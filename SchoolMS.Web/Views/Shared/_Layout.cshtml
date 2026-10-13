@@ -314,6 +314,10 @@
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="FeeStructure" && ViewContext.RouteData.Values["action"]?.ToString()=="Index"?"active":"")" href="/FeeStructure/Index">
       <span class="nav-ic"><i class="fas fa-cog"></i></span> Fee Setup
     </a>}
+    @if(Context.Session.HasPerm("fee_structure")){
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="DataHealth"?"active":"")" href="/DataHealth">
+      <span class="nav-ic"><i class="fas fa-stethoscope"></i></span> Data Health
+    </a>}
     @if(Context.Session.HasPerm("fees_due")){
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="FeeStructure" && ViewContext.RouteData.Values["action"]?.ToString()=="FeesDue"?"active":"")" href="/FeeStructure/FeesDue">
       <span class="nav-ic"><i class="fas fa-list-alt"></i></span> Fees Due

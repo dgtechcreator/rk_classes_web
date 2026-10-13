@@ -1,0 +1,139 @@
+@model SchoolMS.Domain.DataHealthReport
+@{
+    ViewData["Title"] = "Data Health";
+    var all = Model.Issues;
+    var problems = all.Where(i => i.Severity != "Info").ToList();
+    int high = problems.Count(i => i.Severity == "High"), med = problems.Count(i => i.Severity == "Medium"), low = problems.Count(i => i.Severity == "Low");
+    int infoCount = all.Count - problems.Count;
+    int studentsWithProblems = problems.Select(i => i.StudentId).Distinct().Count();
+    var byType = all.GroupBy(i => (i.Code, i.Title, i.Severity, i.Group)).OrderBy(g => g.Key.Severity == "High" ? 1 : g.Key.Severity == "Medium" ? 2 : g.Key.Severity == "Low" ? 3 : 4).ToList();
+    var missingHeads = all.Where(i => i.Code == "NO_FEE_HEAD").GroupBy(i => (i.ClassName, i.SectionName)).OrderBy(g => g.Key.ClassName).ThenBy(g => g.Key.SectionName).ToList();
+    string SevColor(string s) => s switch { "High" => "#dc2626", "Medium" => "#d97706", "Low" => "#2563eb", _ => "#6b7280" };
+    string SevBg(string s) => s switch { "High" => "#fee2e2", "Medium" => "#fef3c7", "Low" => "#dbeafe", _ => "#f3f4f6" };
+    var classes = all.Select(i => i.ClassName).Where(c => c != "").Distinct().OrderBy(c => c).ToList();
+}
+
+<div class="pg-hdr">
+  <div class="pg-row" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h1>🩺 Data Health</h1>
+      <p>Everything that is missing or does not match for the @Model.StudentsChecked active students of this year. Checked live every time you open this page - fix it and it disappears; anything new shows up here.</p>
+    </div>
+    <a href="/DataHealth/Export" class="btn btn-outline"><i class="fas fa-file-csv"></i> Download list (CSV)</a>
+  </div>
+</div>
+
+@if (problems.Count == 0)
+{
+  <div class="card" style="padding:24px;text-align:center;color:#059669;font-weight:700;">✅ No problems found. Fees and student details are consistent.</div>
+}
+else
+{
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <div class="card" style="padding:14px 18px;min-width:150px;"><div style="font-size:26px;font-weight:800;">@studentsWithProblems</div><div class="text-mu" style="font-size:12px;">students need attention</div></div>
+    <div class="card" style="padding:14px 18px;min-width:120px;border-left:4px solid #dc2626;"><div style="font-size:26px;font-weight:800;color:#dc2626;">@high</div><div class="text-mu" style="font-size:12px;">High - wrong / missing fee</div></div>
+    <div class="card" style="padding:14px 18px;min-width:120px;border-left:4px solid #d97706;"><div style="font-size:26px;font-weight:800;color:#d97706;">@med</div><div class="text-mu" style="font-size:12px;">Medium - please check</div></div>
+    <div class="card" style="padding:14px 18px;min-width:120px;border-left:4px solid #2563eb;"><div style="font-size:26px;font-weight:800;color:#2563eb;">@low</div><div class="text-mu" style="font-size:12px;">Low - details missing</div></div>
+    <div class="card" style="padding:14px 18px;min-width:120px;border-left:4px solid #6b7280;"><div style="font-size:26px;font-weight:800;color:#6b7280;">@infoCount</div><div class="text-mu" style="font-size:12px;">Info - agreed custom fees</div></div>
+  </div>
+}
+
+@if (missingHeads.Any())
+{
+  <div class="card" style="padding:16px 18px;margin-bottom:16px;border-left:4px solid #dc2626;">
+    <div style="font-weight:800;margin-bottom:6px;">📌 Fee heads you need to add (these students have no fee yet - nothing is guessed for them)</div>
+    <div class="text-mu" style="font-size:12px;margin-bottom:10px;">Go to Fee Setup and add the fee head for each class / medium below. It is applied to these students automatically and the rows disappear from this page.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      @foreach (var g in missingHeads)
+      {
+        <a href="/FeeStructure/Index" class="btn btn-outline" style="border-color:#fca5a5;"><b>@g.Key.ClassName / @g.Key.SectionName</b>&nbsp;· @g.Count() students</a>
+      }
+    </div>
+  </div>
+}
+
+<div class="card" style="padding:0;margin-bottom:16px;">
+  <div style="padding:14px 18px;border-bottom:1px solid var(--bdr);font-weight:800;">What kinds of problems exist (click to filter the list)</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Level</th><th>Problem</th><th>Area</th><th style="text-align:right;">Students</th></tr></thead>
+      <tbody>
+      @foreach (var g in byType)
+      {
+        <tr style="cursor:pointer;" onclick="dhSetType('@g.Key.Code')">
+          <td><span style="background:@SevBg(g.Key.Severity);color:@SevColor(g.Key.Severity);padding:2px 9px;border-radius:99px;font-size:11px;font-weight:800;">@g.Key.Severity</span></td>
+          <td class="fw7">@g.Key.Title</td>
+          <td style="font-size:12px;">@g.Key.Group</td>
+          <td style="text-align:right;font-weight:800;">@g.Select(x => x.StudentId).Distinct().Count()</td>
+        </tr>
+      }
+      @if (!byType.Any()) {<tr><td colspan="4" class="text-mu" style="text-align:center;padding:16px;">Nothing to show.</td></tr>}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" style="padding:0;">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px 18px;border-bottom:1px solid var(--bdr);">
+    <input type="text" id="dhSearch" class="fc" placeholder="Search name or admission no..." style="max-width:260px;" oninput="dhFilter()"/>
+    <select id="dhSev" class="fc" style="max-width:150px;" onchange="dhFilter()">
+      <option value="">All levels</option><option>High</option><option>Medium</option><option>Low</option><option>Info</option>
+    </select>
+    <select id="dhClass" class="fc" style="max-width:150px;" onchange="dhFilter()">
+      <option value="">All classes</option>
+      @foreach (var c in classes) {<option>@c</option>}
+    </select>
+    <select id="dhType" class="fc" style="max-width:300px;" onchange="dhFilter()">
+      <option value="">All problems</option>
+      @foreach (var g in byType) {<option value="@g.Key.Code">@g.Key.Title</option>}
+    </select>
+    <span id="dhCount" class="text-mu" style="margin-left:auto;font-size:12px;"></span>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Level</th><th>Student</th><th>Class</th><th>Problem</th><th>What to do</th><th></th></tr></thead>
+      <tbody id="dhBody">
+      @foreach (var i in all)
+      {
+        <tr class="dhRow" data-q="@((i.FullName + " " + i.AdmissionNo).ToLower())" data-sev="@i.Severity" data-class="@i.ClassName" data-type="@i.Code">
+          <td><span style="background:@SevBg(i.Severity);color:@SevColor(i.Severity);padding:2px 9px;border-radius:99px;font-size:11px;font-weight:800;">@i.Severity</span></td>
+          <td class="fw7"><a href="/Student/Details/@i.StudentId" style="color:inherit;text-decoration:none;">@i.FullName</a><div style="font-size:11px;color:var(--mu);font-weight:400;">@i.AdmissionNo</div></td>
+          <td style="font-size:12px;">@i.ClassName @i.SectionName<div style="color:var(--mu);">@(i.BatchName == "" ? "no batch" : i.BatchName)</div></td>
+          <td style="font-size:12.5px;max-width:380px;"><div class="fw7">@i.Title</div>@i.Detail</td>
+          <td style="font-size:12px;max-width:300px;color:#374151;">@i.Action</td>
+          <td style="white-space:nowrap;">
+            @if (i.CanApplyFee)
+            {
+              <form method="post" action="/DataHealth/ApplyFees/@i.StudentId" style="display:inline;" onsubmit="return confirm('Apply the fee heads of @i.ClassName / @i.SectionName to this student?');">
+                <button type="submit" class="btn btn-sm btn-primary">Apply fee</button>
+              </form>
+            }
+            <a href="/Fees/Pay/@i.StudentId" class="btn btn-outline btn-sm" title="Open fee / pay page"><i class="fas fa-rupee-sign"></i></a>
+            <a href="/Student/Details/@i.StudentId" class="btn btn-outline btn-sm" title="Open student"><i class="fas fa-user"></i></a>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  function dhFilter() {
+    var q = document.getElementById('dhSearch').value.toLowerCase().trim();
+    var sev = document.getElementById('dhSev').value, cls = document.getElementById('dhClass').value, typ = document.getElementById('dhType').value;
+    var n = 0;
+    document.querySelectorAll('.dhRow').forEach(function (r) {
+      var ok = (!q || r.dataset.q.indexOf(q) > -1) && (!sev || r.dataset.sev === sev) && (!cls || r.dataset.class === cls) && (!typ || r.dataset.type === typ);
+      r.style.display = ok ? '' : 'none';
+      if (ok) n++;
+    });
+    document.getElementById('dhCount').textContent = n + ' item(s)';
+  }
+  function dhSetType(code) {
+    document.getElementById('dhType').value = code;
+    dhFilter();
+    document.getElementById('dhBody').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  dhFilter();
+</script>

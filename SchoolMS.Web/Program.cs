@@ -110,6 +110,7 @@ builder.Services.AddScoped<AttendanceBatchRepo>();
 builder.Services.AddScoped<TeacherPaymentRepo>();
 builder.Services.AddScoped<TeacherAttendanceRepo>();
 builder.Services.AddScoped<LectureRepo>();
+builder.Services.AddScoped<DataHealthRepo>();
 
 // Services
 builder.Services.AddScoped<AuthService>();
@@ -132,6 +133,7 @@ builder.Services.AddScoped<TeacherPaymentService>();
 builder.Services.AddScoped<TeacherAttendanceService>();
 builder.Services.AddScoped<LectureService>();
 builder.Services.AddScoped<FeePositionService>();
+builder.Services.AddScoped<DataHealthService>();
 builder.Services.AddScoped<TeacherAccountLinker>();
 
 var app = builder.Build();

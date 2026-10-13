@@ -81,7 +81,7 @@ public class FeeStructureRepo(CommonConnectivity db)
             });
 
     public void ApplyToStudent(int studentId)
-        => db.Exec("sp_ApplyFeesToStudent", new() { {"@StudentId",studentId} });
+        => db.Exec("sp_SyncStudentFees", new() { {"@StudentId",studentId} });
 
     public List<StudentFee> GetStudentFees(int studentId)
         => db.Read("sp_GetStudentFees", new() { {"@StudentId",studentId} }, MapStudentFee);

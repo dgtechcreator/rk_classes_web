@@ -205,6 +205,13 @@
         </div>
     </div>
 
+    @if (!Model.FeeStructures.Any())
+    {
+        <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:12px 18px;margin-bottom:20px;color:#92400e;font-size:13px;">
+            <b>Fee is not set for this student.</b> No fee head exists for @Model.Student.ClassName @Model.Student.SectionName (or the fee is not applied yet).
+            Add the fee head in Fee Setup, or see <a href="/DataHealth" style="color:#92400e;font-weight:700;">Data Health</a>.
+        </div>
+    }
     @* Fee heads breakdown *@
     @if (Model.FeeStructures.Any())
     {

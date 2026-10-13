@@ -44,18 +44,9 @@ public class FeePositionService(FeesService feesSvc, FeeStructureService feeStru
 
     public FeePosition Calculate(Student student)
     {
-        // Smart multi-level lookup (handles year/section id mismatches between Students and FeeStructure)
+        // The student's own fee rows only (same source as the phone's Finance numbers). No fee set -> empty, flagged on
+        // the Data Health page; never borrowed from another class/section.
         var structures = feeStructureSvc.GetAllForStudent(student.StudentId);
-        if (!structures.Any() && student.AcademicYearId.HasValue && student.ClassId.HasValue)
-        {
-            structures = feeStructureSvc.GetAll(student.AcademicYearId, student.ClassId, student.SectionId);
-            if (!structures.Any() && student.SectionId.HasValue)
-                structures = feeStructureSvc.GetAll(student.AcademicYearId, student.ClassId, null);
-            if (!structures.Any())
-                structures = feeStructureSvc.GetAll(null, student.ClassId, student.SectionId);
-            if (!structures.Any())
-                structures = feeStructureSvc.GetAll(null, student.ClassId, null);
-        }
 
         DateTime? dueDate = null;
         var firstDue = structures.FirstOrDefault(x => x.DueDay > 0);

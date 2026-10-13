@@ -50,7 +50,11 @@
           <td style="text-align:right;">₹@r.TotalFees.ToString("N0")</td>
           <td style="text-align:right;color:#059669;">₹@r.Collected.ToString("N0")</td>
           <td style="text-align:right;">₹@r.Discount.ToString("N0")</td>
+          @if (r.TotalFees == 0) {
+          <td style="text-align:right;font-weight:800;color:#d97706;"><a href="/DataHealth" style="color:inherit;" title="No fee is set for this student - see Data Health">Fee not set</a></td>
+          } else {
           <td style="text-align:right;font-weight:800;color:@(due ? "#dc2626" : "#059669");">@(due ? "₹" + r.Balance.ToString("N0") : "Paid up")</td>
+          }
           <td style="white-space:nowrap;">
             @if (!contacts.Any()) {<span class="text-mu" style="font-size:11px;">no number</span>}
             @foreach (var c in contacts)

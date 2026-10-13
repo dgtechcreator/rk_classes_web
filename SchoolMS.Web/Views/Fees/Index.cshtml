@@ -260,10 +260,7 @@
           {
             sr++;
             // Get fee for this student's specific section (may differ if multiple sections shown)
-            var stuFee = Model.FeeStructures
-                .Where(f => f.SectionId == (s.SectionId ?? 0) || !s.SectionId.HasValue)
-                .Sum(f => f.Amount);
-            if (stuFee == 0) stuFee = classFeeTotal; // fallback to class total
+            var stuFee = feeStructureSvc.GetAllForStudent(s.StudentId).Sum(f => f.Amount);   // student's own fee; 0 = not set
 
             // Get student payment history
             var history = feesService.GetStudentHistory(s.StudentId);

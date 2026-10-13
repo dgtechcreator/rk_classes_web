@@ -242,7 +242,7 @@ public class FeesRepo(CommonConnectivity db)
                 COALESCE(SUM(fs.PaidAmount), 0) AS TotalCollected,
                 COALESCE(SUM(fs.Discount), 0) AS TotalDiscount
             FROM StudentFees fs
-            WHERE fs.StudentId = {studentId} AND fs.AcademicYearId = {yearId}
+            WHERE fs.StudentId = {studentId} AND fs.AcademicYearId = {yearId} AND fs.IsActive = 1
         ";
 
         var result = db.Sql(query, r => new
@@ -284,7 +284,7 @@ public class FeesRepo(CommonConnectivity db)
                    LTRIM(RTRIM(ISNULL(c.ClassName,''))) AS ClassName,
                    LTRIM(RTRIM(ISNULL(sec.SectionName,''))) AS SectionName,
                    LTRIM(RTRIM(ISNULL(b.BatchName,''))) AS BatchName,
-                   ISNULL((SELECT SUM(sf.Amount) FROM StudentFees sf WHERE sf.StudentId = s.StudentId), 0) AS TotalFees,
+                   ISNULL((SELECT SUM(sf.Amount) FROM StudentFees sf WHERE sf.StudentId = s.StudentId AND sf.IsActive = 1), 0) AS TotalFees,
                    ISNULL((SELECT SUM(fp.Amount) FROM FeePayments fp WHERE fp.StudentId = s.StudentId AND fp.IsDeleted = 0), 0) AS Collected,
                    ISNULL((SELECT SUM(fp.Discount) FROM FeePayments fp WHERE fp.StudentId = s.StudentId AND fp.IsDeleted = 0), 0) AS Discount
             FROM Students s

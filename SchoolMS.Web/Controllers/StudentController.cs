@@ -57,7 +57,7 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
         }
         bool isNew = model.Student.StudentId == 0;
         var id = svc.Save(model.Student, picPath, uid);
-        if (isNew && id > 0) feeSvc.ApplyToStudent(id);
+        if (id > 0) feeSvc.ApplyToStudent(id);   // also re-syncs fees when class/section changed
         TempData["Success"] = "Student saved successfully.";
         TempData["IsNewStudent"] = isNew;
         TempData["StudentName"] = model.Student.FullName;
@@ -365,13 +365,9 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
         }
 
         // Get total actual fees for the student
-        var feeStructures = student != null && student.ClassId.HasValue
-            ? feeSvc.GetAll(student.AcademicYearId, student.ClassId, student.SectionId)
+        var feeStructures = student != null
+            ? feeSvc.GetAllForStudent(student.StudentId)
             : new List<SchoolMS.Domain.FeeStructure>();
-        if (!feeStructures.Any() && student != null && student.ClassId.HasValue)
-            feeStructures = feeSvc.GetAll(null, student.ClassId, student.SectionId);
-        if (!feeStructures.Any() && student != null && student.ClassId.HasValue)
-            feeStructures = feeSvc.GetAll(null, student.ClassId, null);
 
         decimal totalActualFees = feeStructures.Sum(f => f.Amount);
         decimal totalPaidFees = fees.Sum(f => f.NetAmount);

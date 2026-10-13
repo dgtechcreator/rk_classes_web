@@ -77,19 +77,9 @@ public class FeesController(FeesService svc, LookupService lookup,
         // (handles year/section ID mismatches between Students and FeeStructure tables)
         decimal actualFee = 0;
         DateTime? dueDate = null;
+        // The student's own fee rows only. No fee set = shown as "not set" (see Data Health page), never borrowed
+        // from another class/section.
         var structures = feeStructureSvc.GetAllForStudent(id);
-
-        // Final safety net: old-style ID fallbacks in case SP isn't deployed yet
-        if (!structures.Any() && student.AcademicYearId.HasValue && student.ClassId.HasValue)
-        {
-            structures = feeStructureSvc.GetAll(student.AcademicYearId, student.ClassId, student.SectionId);
-            if (!structures.Any() && student.SectionId.HasValue)
-                structures = feeStructureSvc.GetAll(student.AcademicYearId, student.ClassId, null);
-            if (!structures.Any())
-                structures = feeStructureSvc.GetAll(null, student.ClassId, student.SectionId);
-            if (!structures.Any())
-                structures = feeStructureSvc.GetAll(null, student.ClassId, null);
-        }
 
         if (structures.Any())
         {
@@ -406,16 +396,6 @@ public class FeesController(FeesService svc, LookupService lookup,
         if (student == null) return (null, 0);
 
         var structures = feeStructureSvc.GetAllForStudent(paymentData.StudentId);
-        if (!structures.Any() && student.AcademicYearId.HasValue && student.ClassId.HasValue)
-        {
-            structures = feeStructureSvc.GetAll(student.AcademicYearId, student.ClassId, student.SectionId);
-            if (!structures.Any() && student.SectionId.HasValue)
-                structures = feeStructureSvc.GetAll(student.AcademicYearId, student.ClassId, null);
-            if (!structures.Any())
-                structures = feeStructureSvc.GetAll(null, student.ClassId, student.SectionId);
-            if (!structures.Any())
-                structures = feeStructureSvc.GetAll(null, student.ClassId, null);
-        }
 
         decimal totalFee = structures.Sum(x => x.Amount);
         var history = svc.GetStudentHistory(paymentData.StudentId);

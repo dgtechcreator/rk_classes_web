@@ -36,7 +36,7 @@ public class StudentApiController(StudentService svc, LookupService lookup, FeeS
         int uid = User.UserId() ?? 1;
         bool isNew = model.StudentId == 0;
         var id = svc.Save(model, null, uid);
-        if (isNew && id > 0) feeSvc.ApplyToStudent(id);
+        if (id > 0) feeSvc.ApplyToStudent(id);   // also re-syncs fees when class/section changed
         return Ok(new { studentId = id, isNew });
     }
 
