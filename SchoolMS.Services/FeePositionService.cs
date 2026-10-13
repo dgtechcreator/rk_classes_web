@@ -63,15 +63,7 @@ public class FeePositionService(FeesService feesSvc, FeeStructureService feeStru
             dueDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddDays(firstDue.DueDay - 1);
 
         var history = feesSvc.GetStudentHistory(student.StudentId);
-        decimal extra = 0;
-        foreach (var p in history)
-        {
-            if (string.IsNullOrEmpty(p.Remarks) || !p.Remarks.Contains("Additional Charges:")) continue;
-            foreach (var part in p.Remarks.Split("|"))
-                if (part.Contains("Additional Charges:") &&
-                    decimal.TryParse(part.Replace("Additional Charges:", "").Replace("₹", "").Trim(), out var c))
-                    extra += c;
-        }
+        decimal extra = AdditionalCharges.Total(history);
 
         return new FeePosition {
             BaseFee = structures.Sum(x => x.Amount),

@@ -105,24 +105,8 @@ public class FeesController(FeesService svc, LookupService lookup,
         var totalPaid = history.Sum(x => x.NetAmount);
         var totalDiscount = history.Sum(x => x.Discount);
 
-        // Extract additional charges from previous payments
-        decimal totalAdditionalCharges = 0;
-        foreach (var payment in history)
-        {
-            if (!string.IsNullOrEmpty(payment.Remarks) && payment.Remarks.Contains("Additional Charges:"))
-            {
-                var parts = payment.Remarks.Split("|");
-                foreach (var part in parts)
-                {
-                    if (part.Contains("Additional Charges:"))
-                    {
-                        var chargeStr = part.Replace("Additional Charges:", "").Replace("₹", "").Trim();
-                        if (decimal.TryParse(chargeStr, out decimal charge))
-                            totalAdditionalCharges += charge;
-                    }
-                }
-            }
-        }
+        // Additional charges already saved on previous payments
+        decimal totalAdditionalCharges = AdditionalCharges.Total(history);
 
         var totalFeeWithAdditional = actualFee + totalAdditionalCharges;
         var netActualFee = totalFeeWithAdditional - totalDiscount;
@@ -139,6 +123,7 @@ public class FeesController(FeesService svc, LookupService lookup,
             FeeStructures = structures,
             PaymentHistory = history,
             ExistingDiscount = totalDiscount,
+            AdditionalCharges = totalAdditionalCharges,
             EditPaymentId = null
         };
 
@@ -206,11 +191,26 @@ public class FeesController(FeesService svc, LookupService lookup,
             // given"). It must NOT be subtracted from payingNow again here or inside
             // FeesRepo.Save — NetAmount in the DB should equal payingNow as-is.
 
-            // Note: additionalCharges is added to base fee for total fee calculation
-            // Store it in remarks if present for tracking
+            // "additionalCharges" on the form is the student's TOTAL additional charges (pre-filled with what is
+            // already saved). More than saved -> the difference is stored on this payment; less -> the older
+            // entries are lowered/removed, so a wrong entry can be corrected from this same field.
+            decimal savedCharges = AdditionalCharges.Total(history);
+            decimal newCharge = 0;
+            if (additionalCharges > savedCharges)
+                newCharge = additionalCharges - savedCharges;
+            else if (additionalCharges < savedCharges)
+            {
+                var err = svc.SetAdditionalCharges(studentId, Math.Max(0, additionalCharges));
+                if (err != null)
+                {
+                    TempData["Error"] = err;
+                    return RedirectToAction("Pay", new { id = studentId });
+                }
+            }
+
             string finalRemarks = remarks ?? "";
-            if (additionalCharges > 0)
-                finalRemarks = (finalRemarks.Length > 0 ? finalRemarks + " | " : "") + $"Additional Charges: ₹{additionalCharges}";
+            if (newCharge > 0)
+                finalRemarks = (finalRemarks.Length > 0 ? finalRemarks + " | " : "") + AdditionalCharges.Token(newCharge);
 
             var payId = svc.Collect(studentId, null, payingNow, discountToApply, 0,
                 paymentDate, paymentMode, transactionRef,
@@ -233,6 +233,32 @@ public class FeesController(FeesService svc, LookupService lookup,
             TempData["Error"] = "Error saving payment: " + ex.Message;
             return RedirectToAction("Pay", new { id = studentId });
         }
+    }
+
+    // ── Correct a student's additional charges without taking a payment ──
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequireLogin]
+    public IActionResult UpdateAdditionalCharges(int studentId, decimal additionalCharges)
+    {
+        try
+        {
+            if (!HttpContext.Session.GetUserId().HasValue)
+            {
+                TempData["Error"] = "Your session has expired. Please login again.";
+                return RedirectToAction("Login", "Auth");
+            }
+            var before = AdditionalCharges.Total(svc.GetStudentHistory(studentId));
+            var err = svc.SetAdditionalCharges(studentId, additionalCharges);
+            if (err != null) TempData["Error"] = err;
+            else TempData["Success"] = $"Additional charges changed from ₹{before:N0} to ₹{additionalCharges:N0}.";
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[UpdateAdditionalCharges Error] StudentId={studentId}, Error: {ex.Message}");
+            TempData["Error"] = "Error updating additional charges: " + ex.Message;
+        }
+        return RedirectToAction("Pay", new { id = studentId });
     }
 
     // ── Legacy Collect (keep for backward compatibility) ─────────
@@ -396,24 +422,7 @@ public class FeesController(FeesService svc, LookupService lookup,
         decimal totalPaid = history.Sum(x => x.NetAmount);
         decimal totalDiscount = history.Sum(x => x.Discount);
 
-        // Extract additional charges from all payment remarks
-        decimal totalAdditionalCharges = 0;
-        foreach (var payment in history)
-        {
-            if (!string.IsNullOrEmpty(payment.Remarks) && payment.Remarks.Contains("Additional Charges:"))
-            {
-                var parts = payment.Remarks.Split("|");
-                foreach (var part in parts)
-                {
-                    if (part.Contains("Additional Charges:"))
-                    {
-                        var chargeStr = part.Replace("Additional Charges:", "").Replace("₹", "").Trim();
-                        if (decimal.TryParse(chargeStr, out decimal charge))
-                            totalAdditionalCharges += charge;
-                    }
-                }
-            }
-        }
+        decimal totalAdditionalCharges = AdditionalCharges.Total(history);
 
         decimal netFeeAmount = (totalFee + totalAdditionalCharges) - totalDiscount;
         decimal remainingBalance = Math.Max(0, netFeeAmount - totalPaid);

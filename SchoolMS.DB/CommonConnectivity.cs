@@ -57,6 +57,14 @@ public class CommonConnectivity
         return list;
     }
 
+    // Parameterised text command (for one-off updates that have no stored procedure)
+    public int ExecSql(string sql, Dictionary<string,object?> p)
+    {
+        using var c = Open(); using var cmd = new SqlCommand(sql, c) { CommandTimeout = 60 };
+        foreach (var kv in p) cmd.Parameters.AddWithValue(kv.Key, kv.Value ?? DBNull.Value);
+        return cmd.ExecuteNonQuery();
+    }
+
     private static SqlCommand Cmd(SqlConnection c, string sp, Dictionary<string,object?> p)
     {
         var cmd = new SqlCommand(sp, c) { CommandType = CommandType.StoredProcedure, CommandTimeout = 60 };

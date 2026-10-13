@@ -14,6 +14,20 @@ public class FeesService(FeesRepo repo)
     public List<FeePayment> GetPaymentsThisMonth() => repo.GetPaymentsThisMonth();
     public List<FinanceStudentRow> GetFinanceStudents(string? className, string? batchName, string? sectionName = null, bool anyBatch = false)
         => repo.GetFinanceStudents(className, batchName, sectionName, anyBatch);
+    /// Sets the student's total additional charges to [target] by rewriting the "Additional Charges" part of the
+    /// remarks on their payments (a wrong entry can be lowered or removed). Returns an error text, or null on success.
+    public string? SetAdditionalCharges(int studentId, decimal target)
+    {
+        if (target < 0) return "Additional charges cannot be negative.";
+        var history = repo.GetStudentHistory(studentId);
+        var changes = AdditionalCharges.Plan(history, target);
+        if (changes.Count == 0)
+            return history.Count == 0 && target > 0
+                ? "Additional charges are saved with a payment — collect a payment first."
+                : null;
+        foreach (var (id, remarks) in changes) repo.UpdateRemarks(id, remarks);
+        return null;
+    }
     public void DeletePayment(int paymentId, int deletedBy) => repo.DeletePayment(paymentId, deletedBy);
     public void RestorePayment(int paymentId) => repo.RestorePayment(paymentId);
     public List<FeePayment> GetDeletedPayments() => repo.GetDeletedPayments();

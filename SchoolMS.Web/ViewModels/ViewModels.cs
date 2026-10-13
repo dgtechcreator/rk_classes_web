@@ -99,6 +99,8 @@ public class FeePayVM
     public decimal TotalPaid{get;set;}
     public decimal Balance{get;set;}
     public decimal ExistingDiscount{get;set;}
+    /// Total additional charges already saved on this student's payments (editable on the Pay page).
+    public decimal AdditionalCharges{get;set;}
     public DateTime? DueDate{get;set;}
     public decimal AdditionalDiscount{get;set;}
     public decimal PayingNow{get;set;}

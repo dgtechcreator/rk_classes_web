@@ -92,7 +92,7 @@ public class FeesApiController(FeesService svc, LookupService lookup,
 
             string finalRemarks = req.Remarks ?? "";
             if (req.AdditionalCharges > 0)
-                finalRemarks = (finalRemarks.Length > 0 ? finalRemarks + " | " : "") + $"Additional Charges: ₹{req.AdditionalCharges}";
+                finalRemarks = (finalRemarks.Length > 0 ? finalRemarks + " | " : "") + AdditionalCharges.Token(req.AdditionalCharges);
 
             var payId = svc.Collect(req.StudentId, null, req.PayingNow, discountToApply, 0,
                 paymentDate, req.PaymentMode, req.TransactionRef,
@@ -106,6 +106,26 @@ public class FeesApiController(FeesService svc, LookupService lookup,
         catch (Exception ex)
         {
             return BadRequest(new { error = "Error saving payment: " + ex.Message });
+        }
+    }
+
+    public record SetChargesReq(int StudentId, decimal AdditionalCharges);
+
+    /// Sets the student's TOTAL additional charges (use it to correct a wrong entry); no payment is taken.
+    [HttpPost("additional-charges")]
+    [ApiRequirePermission("fee_collection")]
+    public IActionResult SetAdditionalCharges([FromBody] SetChargesReq req)
+    {
+        try
+        {
+            if (studentSvc.GetById(req.StudentId) == null) return NotFound();
+            var err = svc.SetAdditionalCharges(req.StudentId, req.AdditionalCharges);
+            if (err != null) return BadRequest(new { error = err });
+            return Ok(new { success = true, additionalCharges = AdditionalCharges.Total(svc.GetStudentHistory(req.StudentId)) });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = "Error updating additional charges: " + ex.Message });
         }
     }
 

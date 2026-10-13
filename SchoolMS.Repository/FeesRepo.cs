@@ -41,6 +41,10 @@ public class FeesRepo(CommonConnectivity db)
         return l.FirstOrDefault();
     }
 
+    public void UpdateRemarks(int paymentId, string? remarks)
+        => db.ExecSql("UPDATE FeePayments SET Remarks=@Remarks WHERE PaymentId=@PaymentId AND IsDeleted=0",
+            new() { {"@PaymentId",paymentId}, {"@Remarks",string.IsNullOrWhiteSpace(remarks) ? null : remarks} });
+
     public void DeletePayment(int paymentId, int deletedBy)
         => db.Exec("sp_DeleteFeePayment", new() { {"@PaymentId",paymentId}, {"@DeletedBy",deletedBy} });
 
