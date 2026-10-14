@@ -73,7 +73,8 @@ public class MarksRepo(CommonConnectivity db)
             LEFT  JOIN AcademicYears ay   ON ay.YearId      = e.AcademicYearId
             LEFT  JOIN Sections      sec2 ON sec2.SectionId = s.SectionId
             LEFT  JOIN Batches       b    ON b.BatchId      = s.BatchId
-            WHERE  e.ExamName = @ExamName
+            WHERE  s.Status = 'Active'
+              AND  e.ExamName = @ExamName
               AND  e.IsActive  = 1
               AND  (tm.MarksObtained IS NOT NULL OR tm.Grade = 'AB')
               AND  (@ClassId   IS NULL OR s.ClassId   = @ClassId)
@@ -136,7 +137,8 @@ public class MarksRepo(CommonConnectivity db)
             LEFT  JOIN Sections      sec2 ON sec2.SectionId = s.SectionId
             LEFT  JOIN Batches       b    ON b.BatchId      = s.BatchId
             LEFT  JOIN Users         u    ON u.UserId       = tm.EnteredBy
-            WHERE  e.IsActive = 1
+            WHERE  s.Status = 'Active'
+              AND  e.IsActive = 1
               AND  (tm.MarksObtained IS NOT NULL OR tm.Grade = 'AB')
               AND  (@ClassId   IS NULL OR s.ClassId   = @ClassId)
               AND  (@SectionId IS NULL OR s.SectionId = @SectionId)
@@ -253,7 +255,8 @@ public class MarksRepo(CommonConnectivity db)
             LEFT  JOIN AcademicYears ay   ON ay.YearId      = e.AcademicYearId
             LEFT  JOIN Sections      sec2 ON sec2.SectionId = s.SectionId
             LEFT  JOIN Batches       b    ON b.BatchId      = s.BatchId
-            WHERE  e.IsActive = 1
+            WHERE  s.Status = 'Active'
+              AND  e.IsActive = 1
               AND  tm.MarksObtained IS NOT NULL
               AND  (@YearId    IS NULL OR e.AcademicYearId = @YearId)
               AND  (@ClassId   IS NULL OR s.ClassId        = @ClassId)
@@ -309,7 +312,8 @@ public class MarksRepo(CommonConnectivity db)
             LEFT  JOIN AcademicYears ay   ON ay.YearId      = e.AcademicYearId
             LEFT  JOIN Sections      sec2 ON sec2.SectionId = s.SectionId
             LEFT  JOIN Batches       b    ON b.BatchId      = s.BatchId
-            WHERE  e.IsActive = 1
+            WHERE  s.Status = 'Active'
+              AND  e.IsActive = 1
               AND  tm.MarksObtained IS NOT NULL
               AND  (@YearId    IS NULL OR e.AcademicYearId = @YearId)
               AND  (@ClassId   IS NULL OR s.ClassId        = @ClassId)
@@ -374,7 +378,7 @@ public class MarksRepo(CommonConnectivity db)
             INNER JOIN AcademicYears ay   ON ay.YearId      = e.AcademicYearId
             LEFT  JOIN Sections      sec  ON sec.SectionId  = s.SectionId
             LEFT  JOIN Batches       b    ON b.BatchId      = s.BatchId
-            WHERE  e.AcademicYearId = @YearId
+            WHERE  s.Status = 'Active' AND e.AcademicYearId = @YearId
             ORDER BY sub.SubjectName, e.ExamName, s.RollNo";
 
         var list = new List<TestMark>();

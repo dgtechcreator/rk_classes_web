@@ -13,7 +13,7 @@ namespace SchoolMS.Web.Controllers.Api;
 [ApiController]
 [Route("api/deleted")]
 [ApiRequireAdmin]
-public class DeletedApiController(StudentService studentSvc, FacultyService facultySvc, FeesService feesSvc) : ControllerBase
+public class DeletedApiController(StudentService studentSvc, FacultyService facultySvc, FeesService feesSvc, UserMgmtService userSvc, UserAccessCache access, DeletedRecordsService othersSvc) : ControllerBase
 {
     [HttpGet]
     public IActionResult Index()
@@ -21,7 +21,8 @@ public class DeletedApiController(StudentService studentSvc, FacultyService facu
         var (students, _) = studentSvc.GetAll(1, 10000, null, null, null, null, null, "Inactive");
         var (faculty, _) = facultySvc.GetAll(null, "Inactive", null, 1, 10000);
         var receipts = feesSvc.GetDeletedPayments();
-        return Ok(new { students, faculty, receipts });
+        var users = userSvc.GetDeleted().Select(u => new { u.UserId, u.FullName, u.Username, u.RoleId, u.RoleName, u.Email, u.Phone, u.DeletedAt });
+        return Ok(new { students, faculty, receipts, users, others = othersSvc.GetOthers() });
     }
 
     [HttpPost("students/{id:int}/restore")]
@@ -35,6 +36,22 @@ public class DeletedApiController(StudentService studentSvc, FacultyService facu
     public IActionResult RestoreFaculty(int id)
     {
         facultySvc.Restore(id);
+        return Ok(new { success = true });
+    }
+
+    [HttpPost("users/{id:int}/restore")]
+    public IActionResult RestoreUser(int id)
+    {
+        userSvc.Restore(id);
+        access.Invalidate(id);
+        return Ok(new { success = true });
+    }
+
+    /// <summary>kind = expense | teacherpayment | teacherattendance | lecture</summary>
+    [HttpPost("others/{kind}/{id:int}/restore")]
+    public IActionResult RestoreOther(string kind, int id)
+    {
+        if (!othersSvc.Restore(kind, id)) return BadRequest(new { error = "Unknown record type." });
         return Ok(new { success = true });
     }
 

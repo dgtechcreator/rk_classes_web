@@ -16,12 +16,13 @@
     string testDate = ViewBag.TestDate ?? "";
     int maxMarks    = ViewBag.MaxMarks ?? 30;
     bool hasData    = Model != null && Model.Any();
+    var cr = ViewBag.Cr as SchoolMS.Domain.CrScope;
 }
 
 <div class="pg-hdr">
   <div class="pg-row">
     <div><h1>✏️ Test Marks Entry</h1><p>Select filters, enter test name and date, then load</p></div>
-    @if (hasData && !string.IsNullOrWhiteSpace(examName))
+    @if (hasData && !string.IsNullOrWhiteSpace(examName) && cr == null)
     {
       <div class="df g8">
         <a href="/Marks/PrintResult?examName=@Uri.EscapeDataString(examName)&yearId=@yearId&classId=@classId&sectionId=@sectionId&batchId=@batchId&testDate=@Uri.EscapeDataString(testDate)"
@@ -96,7 +97,13 @@
 <form method="get" action="/Marks/Index" id="fltForm">
 <div class="filter-bar" style="flex-wrap:wrap;gap:10px;">
   <i class="fas fa-filter" style="color:var(--mu);font-size:13px;flex-shrink:0;"></i>
-
+  @if (cr != null)
+  {
+    <span style="background:#eef2ff;color:#3730a3;border-radius:20px;padding:7px 14px;font-size:13px;font-weight:800;"><i class="fas fa-user-shield"></i> Class Representative</span>
+    <span style="font-size:14px;font-weight:700;">@cr.ClassName@(cr.SectionName != null ? " · " + cr.SectionName : "")@(cr.EffectiveBatchId != null ? " · " + cr.BatchName : "")</span>
+    <span style="font-size:12px;color:var(--mu);">Tests of the last @SchoolMS.Domain.CrScope.MarksEditDays days.</span>
+  }
+  <div style="display:@(cr != null ? "none" : "contents");">
   <select name="yearId" class="fs" id="sel_year">
     <option value="">— Year —</option>
     @foreach (var y in years)
@@ -133,6 +140,7 @@
     }
   </select>
 
+  </div>
   <select name="subjectId" class="fs" id="sel_subject">
     <option value="">All Subject</option>
     @foreach (var s in subjects)
@@ -147,7 +155,8 @@
 
   <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
     <label style="font-size:12px;font-weight:700;color:var(--mu);white-space:nowrap;">Date</label>
-    <input type="date" name="testDate" id="inp_date" value="@testDate" class="fc" style="width:148px;"/>
+    <input type="date" name="testDate" id="inp_date" value="@testDate" class="fc" style="width:148px;"
+           min="@(cr != null ? ((DateTime)ViewBag.CrEarliest).ToString("yyyy-MM-dd") : "")" max="@(cr != null ? DateTime.Today.ToString("yyyy-MM-dd") : "")"/>
   </div>
 
   <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">

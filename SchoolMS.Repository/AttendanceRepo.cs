@@ -56,7 +56,7 @@ public class AttendanceRepo(CommonConnectivity db)
             SELECT a.StudentId, a.AttendanceDate, a.Status
             FROM Attendance a
             INNER JOIN Students s ON s.StudentId = a.StudentId
-            WHERE a.AttendanceDate BETWEEN '{from.Date:yyyy-MM-dd}' AND '{to.Date:yyyy-MM-dd}'
+            WHERE s.Status = 'Active' AND a.AttendanceDate BETWEEN '{from.Date:yyyy-MM-dd}' AND '{to.Date:yyyy-MM-dd}'
               {(cls.HasValue    ? $"AND s.ClassId={cls}"       : "")}
               {(sec.HasValue    ? $"AND s.SectionId={sec}"     : "")}
               {(bat.HasValue    ? $"AND s.BatchId={bat}"       : "")}",

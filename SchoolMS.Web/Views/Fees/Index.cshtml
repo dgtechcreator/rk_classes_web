@@ -523,13 +523,7 @@
 
             if (parentNum.length > 0) {
 
-                window.open(
-                    'https://wa.me/' +
-                    parentNum +
-                    '?text=' +
-                    encodeURIComponent(feeMsg),
-                    '_blank'
-                );
+                rkWaOpen(parentNum, feeMsg);
 
                 var modal = document.getElementById(
                     'feeReminderModal-' + studentId

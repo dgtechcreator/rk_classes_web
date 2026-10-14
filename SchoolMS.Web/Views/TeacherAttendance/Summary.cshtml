@@ -6,7 +6,7 @@
 }
 
 <style>
-    .sum-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+    .sum-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
     .sum-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
     .sum-hdr h1 { margin: 0; font-size: 20px; font-weight: 700; }
     .sum-hdr a { background: #2563eb; color: white; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 13px; transition: background 0.2s; }
@@ -59,10 +59,12 @@
                     <th>Class</th>
                     <th>Batch</th>
                     <th>Subject</th>
+                    <th>Topic</th>
                     <th>Date</th>
                     <th>In Time</th>
                     <th>Out Time</th>
                     <th>Hours</th>
+                    <th>Added by</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -76,10 +78,12 @@
                             <td>@record.ClassName</td>
                             <td>@record.BatchName</td>
                             <td>@record.SubjectName</td>
+                            <td style="max-width:260px;">@record.Topic</td>
                             <td>@record.AttendanceDate.ToString("dd-MMM-yyyy")</td>
                             <td>@(record.InTime?.ToString(@"hh\:mm") ?? "-")</td>
                             <td>@(record.OutTime?.ToString(@"hh\:mm") ?? "-")</td>
                             <td>@(record.TotalHours?.ToString("F2") ?? "-")</td>
+                            <td>@(string.IsNullOrEmpty(record.CreatedByName) ? "-" : record.CreatedByName)</td>
                             <td><button class="del-btn" onclick="deleteAttendance(@record.AttendanceId)">Delete</button></td>
                         </tr>
                     }
@@ -87,7 +91,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="9" style="text-align: center; color: #6b7280; padding: 20px;">No records</td>
+                        <td colspan="11" style="text-align: center; color: #6b7280; padding: 20px;">No records</td>
                     </tr>
                 }
             </tbody>

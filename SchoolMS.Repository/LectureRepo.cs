@@ -18,7 +18,7 @@ public class LectureRepo(CommonConnectivity db)
         LEFT JOIN Sections s ON s.SectionId = l.SectionId
         LEFT JOIN Batches  b ON b.BatchId   = l.BatchId
         LEFT JOIN Faculty  f ON f.FacultyId = l.FacultyId
-        WHERE l.IsDeleted = 0";
+        WHERE l.IsDeleted = 0 AND ISNULL(f.Status,'Active') = 'Active'";
 
     private static Lecture Map(SqlDataReader r) => new()
     {
@@ -142,6 +142,27 @@ public class LectureRepo(CommonConnectivity db)
         using var c = db.Open();
         using var cmd = new SqlCommand(sql, c);
         P(cmd, "@Id", id); P(cmd, "@U", userId);
+        return cmd.ExecuteNonQuery();
+    }
+
+    public List<DeletedItem> GetDeleted()
+        => db.Sql(@"SELECT l.LectureId, l.LectureDate, l.SubjectName, c.ClassName, f.FullName AS FacultyName, l.DeletedAt, u.FullName AS DeletedByName
+                    FROM Lectures l
+                    LEFT JOIN Classes c ON c.ClassId = l.ClassId
+                    LEFT JOIN Faculty f ON f.FacultyId = l.FacultyId
+                    LEFT JOIN Users u ON u.UserId = l.DeletedBy
+                    WHERE l.IsDeleted = 1 ORDER BY l.DeletedAt DESC",
+            r => new DeletedItem {
+                Kind = "lecture", KindLabel = "Lecture", Id = G.G<int>(r,"LectureId"),
+                Title = $"{G.G<string>(r,"SubjectName")} - {G.G<string>(r,"ClassName")}",
+                Subtitle = $"{G.G<DateTime>(r,"LectureDate"):dd MMM yyyy} - {G.G<string>(r,"FacultyName")}",
+                DeletedAt = G.G<DateTime?>(r,"DeletedAt"), DeletedByName = G.G<string>(r,"DeletedByName") });
+
+    public int Restore(int id)
+    {
+        using var c = db.Open();
+        using var cmd = new SqlCommand("UPDATE Lectures SET IsDeleted=0, DeletedBy=NULL, DeletedAt=NULL WHERE LectureId=@Id AND IsDeleted=1", c);
+        P(cmd, "@Id", id);
         return cmd.ExecuteNonQuery();
     }
 

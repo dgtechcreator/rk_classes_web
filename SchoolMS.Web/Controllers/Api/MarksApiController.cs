@@ -3,13 +3,14 @@ using SchoolMS.Domain;
 using SchoolMS.Services;
 using SchoolMS.Web.Auth;
 using SchoolMS.Web.Controllers;
+using SchoolMS.Web.Utils;
 
 namespace SchoolMS.Web.Controllers.Api;
 
 [ApiController]
 [Route("api/marks")]
 [ApiRequireStaff]
-public class MarksApiController(MarksService svc, LookupService lookup, MastersService mastersSvc) : ControllerBase
+public class MarksApiController(MarksService svc, LookupService lookup, MastersService mastersSvc, StudentService studentSvc) : ControllerBase
 {
     [HttpGet]
     [ApiRequirePermission("marks_entry")]
@@ -18,9 +19,16 @@ public class MarksApiController(MarksService svc, LookupService lookup, MastersS
     {
         yearId ??= lookup.GetCurrentYearId();
         testDate ??= DateTime.Today;
+        var cr = HttpContext.CurrentCr();   // Class Representative: only his own class
+        if (cr != null)
+        {
+            classId = cr.ClassId; sectionId = cr.SectionId; batchId = cr.EffectiveBatchId;
+            testDate = CrScope.ClampMarksDate(testDate.Value);
+        }
 
         var subjects = mastersSvc.GetSubjects();
         var examList = svc.GetExamList(yearId, null);
+        if (cr != null) examList = examList.Where(e => e.ClassId == cr.ClassId).ToList();
 
         if (subjectId == null && subjects.Count == 1) subjectId = subjects[0].SubjectId;
 
@@ -49,6 +57,12 @@ public class MarksApiController(MarksService svc, LookupService lookup, MastersS
         try
         {
             int uid = User.UserId() ?? 1;
+            var cr = HttpContext.CurrentCr();
+            if (cr != null)
+            {
+                var denied = MarksCrRules.CheckSave(cr, req, studentSvc);
+                if (denied != null) return BadRequest(new { success = false, message = denied });
+            }
             int yr = req.YearId > 0 ? req.YearId : (lookup.GetCurrentYearId() ?? 1);
             DateTime? testDate = req.TestDate.HasValue ? req.TestDate.Value.Date : (DateTime?)null;
             foreach (var e in req.Entries)

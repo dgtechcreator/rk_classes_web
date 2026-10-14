@@ -33,6 +33,14 @@ public class ClassSectionStat
 {
     public string SectionName{get;set;} = "";
     public int StudentCount{get;set;}
+    // The same medium split by Batch (Morning / Evening ...). Comes from the Batches master, so new batches appear by themselves.
+    public List<ClassBatchStat> Batches{get;set;} = new();
+}
+
+public class ClassBatchStat
+{
+    public string BatchName{get;set;} = "";
+    public int StudentCount{get;set;}
 }
 
 public class ClassAllStat

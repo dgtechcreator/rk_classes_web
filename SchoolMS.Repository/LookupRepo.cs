@@ -76,9 +76,32 @@ public class LookupRepo(CommonConnectivity db)
             GROUP BY c.ClassName, sec.SectionName
             ORDER BY c.ClassName, sec.SectionName",
             r => (ClassName: G.G<string>(r,"ClassName")??"", SectionName: G.G<string>(r,"SectionName")??"", Count: G.G<int>(r,"StudentCount")));
+        // ...and each medium by Batch (Morning / Evening ...), in the order of the Batches master. Students without a
+        // batch are counted as "No batch" - shown only when the medium also has students in real batches.
+        var batchSplit = db.Sql(@"
+            SELECT c.ClassName, ISNULL(sec.SectionName,'') AS SectionName, ISNULL(b.BatchName,'') AS BatchName,
+                   ISNULL(b.BatchId, 2147483647) AS BatchOrder, COUNT(DISTINCT s.StudentId) AS StudentCount
+            FROM Students s
+            JOIN Classes c ON c.ClassId = s.ClassId AND c.IsActive = 1
+            LEFT JOIN Sections sec ON sec.SectionId = s.SectionId
+            LEFT JOIN Batches b ON b.BatchId = s.BatchId
+            WHERE s.Status = 'Active'
+            GROUP BY c.ClassName, sec.SectionName, b.BatchName, b.BatchId
+            ORDER BY c.ClassName, sec.SectionName, BatchOrder",
+            r => (ClassName: G.G<string>(r,"ClassName")??"", SectionName: G.G<string>(r,"SectionName")??"",
+                  BatchName: G.G<string>(r,"BatchName")??"", Count: G.G<int>(r,"StudentCount")));
         foreach (var cs in classStrengths)
             cs.Sections = sectionSplit.Where(x => x.ClassName == cs.ClassName && x.Count > 0)
-                .Select(x => new ClassSectionStat { SectionName = x.SectionName, StudentCount = x.Count }).ToList();
+                .Select(x => {
+                    var rows = batchSplit.Where(b => b.ClassName == x.ClassName && b.SectionName == x.SectionName && b.Count > 0).ToList();
+                    var hasRealBatch = rows.Any(b => b.BatchName.Trim() != "");
+                    return new ClassSectionStat {
+                        SectionName = x.SectionName, StudentCount = x.Count,
+                        Batches = hasRealBatch
+                            ? rows.Select(b => new ClassBatchStat { BatchName = b.BatchName.Trim() == "" ? "No batch" : b.BatchName.Trim(), StudentCount = b.Count }).ToList()
+                            : new List<ClassBatchStat>(),
+                    };
+                }).ToList();
 
         stats.ClassStrengths = classStrengths.Where(c => c.StudentCount > 0).ToList();
 

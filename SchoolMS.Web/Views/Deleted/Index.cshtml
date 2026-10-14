@@ -4,6 +4,8 @@
     var students = ViewBag.Students as List<Student>     ?? new();
     var faculty  = ViewBag.Faculty  as List<Faculty>     ?? new();
     var receipts = ViewBag.Receipts as List<FeePayment>  ?? new();
+    var users    = ViewBag.Users    as List<AppUser>     ?? new();
+    var others   = ViewBag.Others   as List<DeletedItem> ?? new();
 }
 
 <div class="pg-hdr">
@@ -16,7 +18,7 @@
 </div>
 
 @* Summary cards *@
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px;">
   <div class="card" style="padding:18px 22px;border-top:3.5px solid var(--p);display:flex;align-items:center;gap:16px;">
     <div style="width:46px;height:46px;border-radius:50%;background:#fff0f0;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
       <i class="fas fa-user-graduate" style="color:var(--p);"></i>
@@ -44,13 +46,22 @@
       <div style="font-size:28px;font-weight:800;color:#7c3aed;">@receipts.Count</div>
     </div>
   </div>
+  <div class="card" style="padding:18px 22px;border-top:3.5px solid #0369a1;display:flex;align-items:center;gap:16px;">
+    <div style="width:46px;height:46px;border-radius:50%;background:#f0f9ff;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
+      <i class="fas fa-users-cog" style="color:#0369a1;"></i>
+    </div>
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Deleted Users</div>
+      <div style="font-size:28px;font-weight:800;color:#0369a1;">@users.Count</div>
+    </div>
+  </div>
   <div class="card" style="padding:18px 22px;border-top:3.5px solid var(--ok);display:flex;align-items:center;gap:16px;">
     <div style="width:46px;height:46px;border-radius:50%;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
       <i class="fas fa-database" style="color:var(--ok);"></i>
     </div>
     <div>
       <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Total Records</div>
-      <div style="font-size:28px;font-weight:800;color:var(--ok);">@(students.Count + faculty.Count + receipts.Count)</div>
+      <div style="font-size:28px;font-weight:800;color:var(--ok);">@(students.Count + faculty.Count + receipts.Count + users.Count + others.Count)</div>
     </div>
   </div>
 </div>
@@ -177,6 +188,102 @@
           <td>
             <form method="post" action="/Deleted/RestoreFaculty/@f.FacultyId"
                   onsubmit="return confirm('Restore @f.FullName to Active?')">
+              @Html.AntiForgeryToken()
+              <button type="submit" class="btn btn-outline btn-sm" title="Restore"
+                      style="color:#16a34a;border-color:#86efac;">
+                <i class="fas fa-undo"></i> Restore
+              </button>
+            </form>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+    }
+  </div>
+</div>
+
+@* Deleted Users *@
+<div class="card" id="deleted-users" style="margin-bottom:22px;">
+  <div style="padding:16px 20px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px;">
+    <i class="fas fa-users-cog" style="color:#0369a1;"></i>
+    <span style="font-weight:700;font-size:15px;">Deleted Users</span>
+    <span style="background:#f0f9ff;color:#0369a1;font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;margin-left:4px;">@users.Count</span>
+  </div>
+  <div class="tbl-wrap">
+    @if (!users.Any())
+    {
+      <div class="empty" style="padding:30px 20px;">
+        <div class="empty-ico">✅</div>
+        <h3>No deleted users</h3>
+        <p>No staff login has been deleted.</p>
+      </div>
+    }
+    else
+    {
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Username</th><th>Role</th><th>Phone</th><th>Deleted On</th><th></th></tr>
+      </thead>
+      <tbody>
+      @foreach (var u in users)
+      {
+        <tr>
+          <td><div class="fw7" style="color:var(--mu);">@u.FullName</div></td>
+          <td><span class="mono" style="font-size:12px;color:var(--mu);">@u.Username</span></td>
+          <td><span class="badge b-inactive">@u.RoleName</span></td>
+          <td style="font-size:12.5px;color:var(--mu2);">@(u.Phone ?? "—")</td>
+          <td style="font-size:12px;color:var(--mu2);">@(u.DeletedAt?.ToString("dd MMM yyyy HH:mm") ?? "—")</td>
+          <td>
+            <form method="post" action="/Deleted/RestoreUser/@u.UserId"
+                  onsubmit="return confirm('Restore @u.FullName? They can login again.')">
+              @Html.AntiForgeryToken()
+              <button type="submit" class="btn btn-outline btn-sm" title="Restore"
+                      style="color:#16a34a;border-color:#86efac;">
+                <i class="fas fa-undo"></i> Restore
+              </button>
+            </form>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+    }
+  </div>
+</div>
+
+@* Other deleted records: expenses, teacher payments, teacher attendance entries, lectures *@
+<div class="card" id="deleted-others" style="margin-bottom:22px;">
+  <div style="padding:16px 20px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px;">
+    <i class="fas fa-folder-open" style="color:#475569;"></i>
+    <span style="font-weight:700;font-size:15px;">Other Deleted Records</span>
+    <span style="background:#f1f5f9;color:#475569;font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;margin-left:4px;">@others.Count</span>
+    <span style="font-size:12px;color:var(--mu);margin-left:6px;">expenses, teacher payments, teacher attendance, lectures</span>
+  </div>
+  <div class="tbl-wrap">
+    @if (!others.Any())
+    {
+      <div class="empty" style="padding:30px 20px;">
+        <div class="empty-ico">✅</div>
+        <h3>Nothing else deleted</h3>
+      </div>
+    }
+    else
+    {
+    <table>
+      <thead><tr><th>Type</th><th>Record</th><th>Details</th><th>Deleted On</th><th>Deleted By</th><th></th></tr></thead>
+      <tbody>
+      @foreach (var o in others)
+      {
+        <tr>
+          <td><span class="badge b-inactive">@o.KindLabel</span></td>
+          <td><div class="fw7" style="color:var(--mu);">@o.Title</div></td>
+          <td style="font-size:12.5px;color:var(--mu2);">@o.Subtitle</td>
+          <td style="font-size:12px;color:var(--mu2);">@(o.DeletedAt?.ToString("dd MMM yyyy HH:mm") ?? "—")</td>
+          <td style="font-size:12.5px;">@(o.DeletedByName ?? "—")</td>
+          <td>
+            <form method="post" action="/Deleted/RestoreOther?kind=@o.Kind&id=@o.Id"
+                  onsubmit="return confirm('Restore this @o.KindLabel.ToLower()?')">
               @Html.AntiForgeryToken()
               <button type="submit" class="btn btn-outline btn-sm" title="Restore"
                       style="color:#16a34a;border-color:#86efac;">

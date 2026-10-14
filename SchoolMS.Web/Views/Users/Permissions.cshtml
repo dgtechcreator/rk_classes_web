@@ -22,6 +22,14 @@
   </div>
 </div>
 
+@if (ViewBag.Cr is SchoolMS.Domain.ClassRep crInfo)
+{
+  <div class="alert alert-info" style="margin-bottom:12px;">
+    <i class="fas fa-user-shield"></i>
+    <b>Class Representative</b> (@crInfo.ClassName@(crInfo.SectionName != null ? " · " + crInfo.SectionName : "")). A CR can hold only the two modules below and always works inside his own class.
+    Manage him on the <a href="/ClassRep/Index">Class Representatives</a> page.
+  </div>
+}
 <div id="savedMsg" style="font-size:13px;margin-bottom:12px;"></div>
 
 @* Permission groups *@

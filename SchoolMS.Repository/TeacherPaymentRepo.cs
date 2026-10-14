@@ -34,7 +34,7 @@ public class TeacherPaymentRepo(CommonConnectivity db)
                 tp.CreatedAt, tp.CreatedBy, tp.UpdatedAt, tp.UpdatedBy, tp.IsDeleted
             FROM TeacherPayments tp
             LEFT JOIN Faculty f ON tp.FacultyId = f.FacultyId
-            WHERE tp.IsDeleted = 0 AND tp.IsPaid = 0
+            WHERE tp.IsDeleted = 0 AND tp.IsPaid = 0 AND ISNULL(f.Status,'Active') = 'Active'
             {(facultyId.HasValue ? $"AND tp.FacultyId = {facultyId}" : "")}
             ORDER BY tp.PaymentYear DESC, tp.PaymentMonth DESC, f.FullName
         ";
@@ -54,7 +54,7 @@ public class TeacherPaymentRepo(CommonConnectivity db)
                 tp.CreatedAt, tp.CreatedBy, tp.UpdatedAt, tp.UpdatedBy, tp.IsDeleted
             FROM TeacherPayments tp
             LEFT JOIN Faculty f ON tp.FacultyId = f.FacultyId
-            WHERE tp.IsDeleted = 0
+            WHERE tp.IsDeleted = 0 AND ISNULL(f.Status,'Active') = 'Active'
               AND (@Year IS NULL OR tp.PaymentYear = @Year)
               AND (@Month IS NULL OR tp.PaymentMonth = @Month)
               AND (@FacultyId IS NULL OR tp.FacultyId = @FacultyId)
@@ -86,7 +86,7 @@ public class TeacherPaymentRepo(CommonConnectivity db)
                 tp.CreatedAt, tp.CreatedBy, tp.UpdatedAt, tp.UpdatedBy, tp.IsDeleted
             FROM TeacherPayments tp
             LEFT JOIN Faculty f ON tp.FacultyId = f.FacultyId
-            WHERE tp.IsDeleted = 0 AND tp.PaymentMonth = {month} AND tp.PaymentYear = {year}
+            WHERE tp.IsDeleted = 0 AND ISNULL(f.Status,'Active') = 'Active' AND tp.PaymentMonth = {month} AND tp.PaymentYear = {year}
             ORDER BY f.FullName
         ";
 
@@ -133,6 +133,23 @@ public class TeacherPaymentRepo(CommonConnectivity db)
 
         db.Sql(query, r => true);
     }
+
+    public List<DeletedItem> GetDeleted()
+        => db.Sql(@"SELECT tp.TeacherPaymentId, f.FullName AS FacultyName, tp.PaymentType, tp.TotalAmount, tp.PaymentMonth,
+                           tp.PaymentYear, tp.IsPaid, tp.DeletedAt, u.FullName AS DeletedByName
+                    FROM TeacherPayments tp
+                    LEFT JOIN Faculty f ON f.FacultyId = tp.FacultyId
+                    LEFT JOIN Users u ON u.UserId = tp.DeletedBy
+                    WHERE tp.IsDeleted = 1 ORDER BY tp.DeletedAt DESC",
+            r => new DeletedItem {
+                Kind = "teacherpayment", KindLabel = "Teacher payment", Id = G.G<int>(r,"TeacherPaymentId"),
+                Title = G.G<string>(r,"FacultyName") ?? "Teacher",
+                Subtitle = $"{G.G<string>(r,"PaymentType")} - Rs {G.G<decimal>(r,"TotalAmount"):N0} - {G.G<int>(r,"PaymentMonth"):00}/{G.G<int>(r,"PaymentYear")} - {(G.G<bool>(r,"IsPaid") ? "Paid" : "Pending")}",
+                DeletedAt = G.G<DateTime?>(r,"DeletedAt"), DeletedByName = G.G<string>(r,"DeletedByName") });
+
+    public void Restore(int paymentId)
+        => db.ExecSql("UPDATE TeacherPayments SET IsDeleted = 0, DeletedBy = NULL, DeletedAt = NULL WHERE TeacherPaymentId = @Id",
+            new() {{"@Id", paymentId}});
 
     private string GenerateReceiptNo()
     {

@@ -18,8 +18,41 @@ public class UserMgmtRepo(CommonConnectivity db)
             Email     = G.G<string>(r,"Email"),
             Phone     = G.G<string>(r,"Phone"),
             IsActive  = G.G<bool>(r,"IsActive"),
-            PermCount = G.G<int>(r,"PermCount")
+            PermCount = G.G<int>(r,"PermCount"),
+            Gender    = G.G<string>(r,"Gender"),
+            IsDeleted = G.G<bool>(r,"IsDeleted"),
+            DeletedAt = G.G<DateTime?>(r,"DeletedAt")
         });
+
+    // Soft delete: the row stays, IsActive=0 also blocks login (sp_ValidateUser filters IsActive=1).
+    public void SoftDelete(int id, int by)
+        => db.ExecSql("UPDATE Users SET IsDeleted=1, IsActive=0, DeletedAt=GETDATE(), DeletedBy=@By WHERE UserId=@Id",
+            new() {{"@Id",id},{"@By",by}});
+
+    /// <summary>Male / Female / null. Column comes from SQL/63; a missing column must never break saving a user.</summary>
+    public void SetGender(int id, string? gender)
+    {
+        var g = string.IsNullOrWhiteSpace(gender) ? null : (gender.Trim() is "Male" or "Female" ? gender.Trim() : null);
+        try { db.ExecSql("UPDATE Users SET Gender=@G WHERE UserId=@Id", new() {{"@Id",id},{"@G",g}}); }
+        catch (Microsoft.Data.SqlClient.SqlException) { /* SQL/63 not run yet */ }
+    }
+
+    public void SetActive(int id, bool active)
+        => db.ExecSql("UPDATE Users SET IsActive=@A WHERE UserId=@Id", new() {{"@Id",id},{"@A",active}});
+
+    public void ClearPermissions(int userId)
+        => db.ExecSql("DELETE FROM UserPermissions WHERE UserId=@Id", new() {{"@Id",userId}});
+
+    /// <summary>Hard delete of a user row that was just created and whose follow-up step failed (rollback only).</summary>
+    public void RemoveNewUser(int userId)
+    {
+        db.ExecSql("DELETE FROM UserPermissions WHERE UserId=@Id", new() {{"@Id",userId}});
+        db.ExecSql("DELETE FROM Users WHERE UserId=@Id", new() {{"@Id",userId}});
+    }
+
+    public void Restore(int id)
+        => db.ExecSql("UPDATE Users SET IsDeleted=0, IsActive=1, DeletedAt=NULL, DeletedBy=NULL WHERE UserId=@Id",
+            new() {{"@Id",id}});
 
     public AppUser? GetById(int id)
     {
@@ -33,7 +66,8 @@ public class UserMgmtRepo(CommonConnectivity db)
                 RoleName     = G.G<string>(r,"RoleName")??"",
                 Email        = G.G<string>(r,"Email"),
                 Phone        = G.G<string>(r,"Phone"),
-                IsActive     = G.G<bool>(r,"IsActive")
+                IsActive     = G.G<bool>(r,"IsActive"),
+                Gender       = G.G<string>(r,"Gender")
             });
         var user = users.FirstOrDefault();
         if (user == null) return null;
@@ -81,6 +115,13 @@ public class UserMgmtRepo(CommonConnectivity db)
         foreach (var row in rows) {
             d[row.key] = row.view;
             d[row.key+"_edit"] = row.edit;
+        }
+        // A module that IS an edit right ("Add/Edit Faculty" = faculty_edit) is granted when View OR Edit is ticked.
+        // The web menu asks for faculty_edit_edit, the mobile API for faculty_edit - make both agree.
+        foreach (var row in rows.Where(r => r.key.EndsWith("_edit"))) {
+            var granted = row.view || row.edit;
+            d[row.key] = granted;
+            d[row.key+"_edit"] = granted;
         }
         return d;
     }

@@ -33,10 +33,10 @@ public class RequirePermissionAttribute(string moduleKey, bool requireEdit = fal
         if (roleId == 1) return; // Admin — full access
 
         var perms = Sess.GetPermissions(ctx.HttpContext.Session);
+        // A user with no rights at all used to be bounced to Login, which sent him straight back (endless redirect).
         if (!perms.Any())
         {
-            ctx.Result = new RedirectToActionResult("Login", "Account",
-                new { returnUrl = ctx.HttpContext.Request.Path });
+            ctx.Result = new RedirectToActionResult("AccessDenied", "Home", null);
             return;
         }
 
@@ -86,6 +86,8 @@ public static class Sess
 
     public static int?    GetUserId(this ISession s)   => s.GetInt32("UserId");
     public static string? GetFullName(this ISession s) => s.GetString("FullName");
+    /// <summary>"Kapil Sir" / "Pooja Ma'am" for teachers and admins, the full name for everybody else.</summary>
+    public static string? GetDisplayName(this ISession s) => s.GetString("DisplayName") ?? s.GetString("FullName");
     public static string? GetRoleName(this ISession s) => s.GetString("RoleName");
 
     // ── Parent session helpers ────────────────────────────────────

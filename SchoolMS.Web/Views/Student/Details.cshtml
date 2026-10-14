@@ -112,7 +112,7 @@ Welcome to R K CLASSES. Wishing you a great learning experience and success in y
       if (fatherPhone && fatherPhone !== '') {
         const fatherNum = fatherPhone.replace(/[^0-9]/g, '');
         if (fatherNum.length > 0) {
-          window.open('https://wa.me/' + fatherNum + '?text=' + encodeURIComponent(combinedMsg), '_blank');
+          rkWaOpen(fatherNum, combinedMsg);
         }
       }
     }
@@ -147,7 +147,7 @@ Welcome to R K CLASSES. Wishing you a great learning experience and success in y
       if (motherPhone && motherPhone !== '') {
         const motherNum = motherPhone.replace(/[^0-9]/g, '');
         if (motherNum.length > 0) {
-          window.open('https://wa.me/' + motherNum + '?text=' + encodeURIComponent(combinedMsg), '_blank');
+          rkWaOpen(motherNum, combinedMsg);
         }
       }
     }
@@ -184,7 +184,7 @@ Welcome to R K CLASSES. Wishing you a great learning experience and success in y
       if (fatherPhone && fatherPhone !== '') {
         const fatherNum = fatherPhone.replace(/[^0-9]/g, '');
         if (fatherNum.length > 0) {
-          window.open('https://wa.me/' + fatherNum + '?text=' + encodeURIComponent(combinedMsg), '_blank');
+          rkWaOpen(fatherNum, combinedMsg);
         }
       }
 
@@ -193,7 +193,7 @@ Welcome to R K CLASSES. Wishing you a great learning experience and success in y
         if (motherPhone && motherPhone !== '') {
           const motherNum = motherPhone.replace(/[^0-9]/g, '');
           if (motherNum.length > 0) {
-            window.open('https://wa.me/' + motherNum + '?text=' + encodeURIComponent(combinedMsg), '_blank');
+            rkWaOpen(motherNum, combinedMsg);
           }
         }
       }, 300);
@@ -342,6 +342,6 @@ Welcome to R K CLASSES. Wishing you a great learning experience and success in y
     }, extra || {});
     const body = t ? t.body : (RK_FALLBACK[category] || '');
     const msg = body.replace(/\{(\w+)\}/g, (m, k) => (vars[k.toLowerCase()] !== undefined ? vars[k.toLowerCase()] : m));
-    window.open('https://wa.me/' + number + '?text=' + encodeURIComponent(msg), '_blank');
+    rkWaOpen(number, msg);
   }
 </script>

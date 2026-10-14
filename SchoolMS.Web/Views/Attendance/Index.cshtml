@@ -162,7 +162,10 @@
 <div class="pg-hdr">
     <div class="pg-row">
         <div><h1>📅 Attendance</h1><p>Mark daily student attendance</p></div>
-        <a href="/Attendance/Report" class="btn btn-outline"><i class="fas fa-chart-bar"></i> Attendance Report</a>
+        @if (Context.Session.HasPerm("attendance_report") && ViewBag.Cr == null)
+        {
+            <a href="/Attendance/Report" class="btn btn-outline"><i class="fas fa-chart-bar"></i> Attendance Report</a>
+        }
     </div>
 </div>
 
@@ -179,13 +182,15 @@
     var todayStr  = DateTime.Today.ToString("yyyy-MM-dd");
     var yestStr   = DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd");
     var isYest    = Model.Date.Date == DateTime.Today.AddDays(-1).Date;
+    var cr = ViewBag.Cr as SchoolMS.Domain.CrScope;
+    var minStr = cr != null ? ((DateTime)ViewBag.CrEarliest).ToString("yyyy-MM-dd") : "";
     string Pill(bool active) => $"display:inline-flex;align-items:center;gap:6px;background:{(active ? "#1e40af" : "#e5e7eb")};border-radius:20px;padding:8px 14px;font-size:12px;font-weight:700;color:{(active ? "#fff" : "#374151")};text-decoration:none;";
 }
 
 <div style="margin-bottom:20px;">
     <div class="ab-date" style="margin-bottom:14px;">
         <a class="ab-nav" href="?date=@prevStr@(selBatch != null ? "&attBatchId=" + selBatch.BatchId : "")" title="Previous day">&#8249;</a>
-        <input type="date" id="attDate" value="@dStr" max="@todayStr" class="fc" style="width:160px;font-weight:700;" onchange="goDate(this.value)" />
+        <input type="date" id="attDate" value="@dStr" max="@todayStr" min="@minStr" class="fc" style="width:160px;font-weight:700;" onchange="goDate(this.value)" />
         <a class="ab-nav @(isToday ? "off" : "")" href="?date=@nextStr@(selBatch != null ? "&attBatchId=" + selBatch.BatchId : "")" title="Next day">&#8250;</a>
         <a href="?date=@todayStr@(selBatch != null ? "&attBatchId=" + selBatch.BatchId : "")" style="@Pill(isToday)"><i class="fas fa-calendar-day"></i> Today</a>
         <a href="?date=@yestStr@(selBatch != null ? "&attBatchId=" + selBatch.BatchId : "")" style="@Pill(isYest)"><i class="fas fa-calendar"></i> Yesterday</a>
@@ -224,9 +229,23 @@
 <form method="get" action="/Attendance/Index" id="flt">
     <div class="card" style="margin-bottom:16px;padding:16px 18px;">
 
+        @if (cr != null)
+        {
+            @* Class Representative: locked to his own class - no class / medium / batch choice *@
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px;">
+                <input type="hidden" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" />
+                <span style="background:#eef2ff;color:#3730a3;border-radius:20px;padding:7px 14px;font-size:13px;font-weight:800;">
+                    <i class="fas fa-user-shield"></i> Class Representative
+                </span>
+                <span style="font-size:14px;font-weight:700;">
+                    @cr.ClassName@(cr.SectionName != null ? " · " + cr.SectionName : "")@(cr.EffectiveBatchId != null ? " · " + cr.BatchName : "")
+                </span>
+                <span style="font-size:12px;color:var(--mu);">You can mark today and the last @SchoolMS.Domain.CrScope.EditDays days.</span>
+            </div>
+        }
         @* Row 1: Date + dropdowns + search *@
-        <div class="filter-flex-row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px;">
-            <input type="hidden" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" />
+        <div class="filter-flex-row" style="display:@(cr != null ? "none" : "flex");flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px;">
+            @if (cr == null) { <input type="hidden" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" /> }
             <div style="display:flex;flex-direction:column;gap:4px;">
                 <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Medium / Stream</label>
                 <select name="sectionId" class="fs" style="min-width:155px;">
@@ -683,7 +702,7 @@ This is to inform you that your ward was absent from today's classes. Kindly inf
           const msg = msgDiv ? msgDiv.innerText : '';
           const clean = phone.replace(/\D/g, '');
           const num = clean.length === 10 ? '91' + clean : clean;
-          window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(msg), '_blank');
+          rkWaOpen(num, msg);
           document.getElementById('attWaModal').remove();
         }
     </script>

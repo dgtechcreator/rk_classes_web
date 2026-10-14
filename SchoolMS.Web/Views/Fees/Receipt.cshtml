@@ -270,7 +270,7 @@ function rcWhatsapp(number) {
     const body = (list && list[0] && list[0].body) ||
       'Dear Parent, thank you. Please find attached the fee receipt {receipt} of Rs {amount} for {student} ({class}). - {school}';
     const msg = body.replace(/\{(\w+)\}/g, (m, k) => (vars[k.toLowerCase()] !== undefined ? vars[k.toLowerCase()] : m));
-    window.open('https://wa.me/' + number + '?text=' + encodeURIComponent(msg), '_blank');
+    rkWaOpen(number, msg);
   });
 }
 

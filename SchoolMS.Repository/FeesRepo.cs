@@ -64,7 +64,7 @@ public class FeesRepo(CommonConnectivity db)
             LEFT JOIN Sections sec ON sec.SectionId= s.SectionId
             LEFT JOIN FeeTypes ft  ON ft.FeeTypeId = fp.FeeTypeId
             LEFT JOIN Users    u   ON u.UserId     = fp.CollectedBy
-            WHERE fp.IsDeleted=0
+            WHERE fp.IsDeleted=0 AND s.Status='Active'
               AND MONTH(fp.PaymentDate)=MONTH(GETDATE()) AND YEAR(fp.PaymentDate)=YEAR(GETDATE())
             ORDER BY fp.PaymentDate DESC, fp.CreatedAt DESC", MapFee);
 

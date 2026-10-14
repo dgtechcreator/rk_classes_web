@@ -57,6 +57,17 @@ public class CommonConnectivity
         return list;
     }
 
+    // Parameterised read (text command) - values are bound, never concatenated into the SQL
+    public List<T> SqlP<T>(string sql, Dictionary<string,object?> p, Func<SqlDataReader,T> map)
+    {
+        var list = new List<T>();
+        using var c = Open(); using var cmd = new SqlCommand(sql, c) { CommandTimeout = 60 };
+        foreach (var kv in p) cmd.Parameters.AddWithValue(kv.Key, kv.Value ?? DBNull.Value);
+        using var r = cmd.ExecuteReader();
+        while (r.Read()) list.Add(map(r));
+        return list;
+    }
+
     // Parameterised text command (for one-off updates that have no stored procedure)
     public int ExecSql(string sql, Dictionary<string,object?> p)
     {

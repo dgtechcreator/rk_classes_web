@@ -1,0 +1,278 @@
+@using SchoolMS.Domain
+@{
+    ViewData["Title"] = "Class Representatives";
+    var reps = ViewBag.Reps as List<ClassRep> ?? new();
+    var classes = ViewBag.Classes as List<SchoolMS.Domain.Class> ?? new();
+    var sections = ViewBag.Sections as List<SchoolMS.Domain.Section> ?? new();
+    bool ready = (bool?)ViewBag.Ready ?? false;
+    var rightDefs = new[] { ("attendance_entry", "Student attendance"), ("teacher_attendance", "Teacher attendance"), ("marks_entry", "Test marks") };
+}
+
+<style>
+  .cr-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; align-items:end; }
+  .cr-grid label { display:block; font-size:11px; font-weight:700; color:var(--mu); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+  .cr-note { font-size:12px; color:var(--mu); line-height:1.5; }
+  .cr-modal { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999; display:none; align-items:center; justify-content:center; padding:16px; }
+  .cr-modal.show { display:flex; }
+  .cr-box { background:#fff; border-radius:12px; padding:20px; width:100%; max-width:420px; box-shadow:0 10px 40px rgba(0,0,0,.3); }
+  @@media (max-width:768px){ table th:nth-child(n+5), table td:nth-child(n+5){ font-size:12px; } }
+</style>
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <div class="breadcrumb"><a href="/Users/Index">Users</a> / <span>Class Representatives</span></div>
+      <h1>🛡️ Class Representatives (CR / Monitor)</h1>
+      <p>Pick one student of a class as CR. He gets his own login and can only mark his own class's student attendance and add teacher attendance (subject + topic).</p>
+    </div>
+  </div>
+</div>
+
+@if (!ready)
+{
+  <div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i>
+    Class Representative tables are not created yet. Run <b>SQL/61_ClassRepresentative.sql</b> on the database, then reload this page.</div>
+}
+
+<div id="statusMsg"></div>
+
+<div class="card" style="margin-bottom:18px;">
+  <div class="card-hdr"><span class="card-ttl"><i class="fas fa-user-plus" style="color:var(--p);margin-right:7px;"></i>Make a student CR</span></div>
+  <div class="cr-grid">
+    <div>
+      <label>Std *</label>
+      <select id="selClass" class="fs" style="width:100%;" onchange="loadStudents()">
+        <option value="">— Select —</option>
+        @foreach (var c in classes) { <option value="@c.ClassId">@c.ClassName</option> }
+      </select>
+    </div>
+    <div>
+      <label>Medium / Stream</label>
+      <select id="selSection" class="fs" style="width:100%;" onchange="loadStudents()">
+        <option value="">All</option>
+        @foreach (var s in sections) { <option value="@s.SectionId">@s.SectionName</option> }
+      </select>
+    </div>
+    <div style="grid-column:span 2;">
+      <label>Student *</label>
+      <select id="selStudent" class="fs" style="width:100%;" onchange="studentPicked()">
+        <option value="">— Select Std first —</option>
+      </select>
+    </div>
+    <div>
+      <label>Login username *</label>
+      <input type="text" id="crUser" class="fc" autocomplete="off" placeholder="e.g. cr5eng"
+             oninput="this.value=this.value.toLowerCase().replace(/\s/g,'')" />
+    </div>
+    <div>
+      <label>Login password *</label>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="crPass" class="fc" autocomplete="off" placeholder="min 4 characters" style="flex:1;min-width:0;" />
+        <button type="button" class="btn btn-outline btn-sm" onclick="genPass('crPass')" title="Generate"><i class="fas fa-dice"></i></button>
+      </div>
+    </div>
+    <div style="grid-column:span 2;">
+      <label>Rights (what he can do)</label>
+      <div style="display:flex;flex-wrap:wrap;gap:14px;">
+        @foreach (var (key, label) in rightDefs)
+        {
+          <label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;color:var(--tx);display:flex;gap:6px;align-items:center;margin:0;">
+            <input type="checkbox" class="cr-right" value="@key" checked /> @label
+          </label>
+        }
+      </div>
+    </div>
+    <div id="batchBox" style="display:none;">
+      <label>Batch</label>
+      <label style="text-transform:none;letter-spacing:0;font-size:13px;font-weight:600;color:var(--tx);display:flex;gap:6px;align-items:center;">
+        <input type="checkbox" id="crLimit" checked /> <span>Only <b id="batchName"></b> batch</span>
+      </label>
+    </div>
+    <div>
+      <button type="button" class="btn btn-primary" id="btnAssign" onclick="assignCr()" @(ready ? "" : "disabled")><i class="fas fa-user-shield"></i> Make CR</button>
+    </div>
+  </div>
+  <p class="cr-note" style="margin:14px 0 0;">
+    The CR can (as ticked above): mark attendance of his own class (today + last @CrScope.EditDays days), add teacher attendance with subject and topic, and enter test marks of his class (tests of the last @CrScope.MarksEditDays days).
+    He cannot see fees, marks, other classes or any other page. You can switch him off any time.
+  </p>
+</div>
+
+<div class="card">
+  <div class="tbl-wrap">
+    @if (!reps.Any())
+    {
+      <div class="empty"><div class="empty-ico">🛡️</div><h3>No Class Representative yet</h3><p>Use the form above to make the first one.</p></div>
+    }
+    else
+    {
+    <table>
+      <thead><tr><th>Student</th><th>Class</th><th>Login</th><th>Rights</th><th>Scope</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      @foreach (var r in reps)
+      {
+        <tr>
+          <td>
+            <div class="fw7">@r.StudentName</div>
+            <div class="text-mu" style="font-size:11.5px;">Adm. @r.AdmissionNo</div>
+          </td>
+          <td>@r.ClassName@(r.SectionName != null ? " · " + r.SectionName : "")@(r.BatchName != null ? " · " + r.BatchName : "")</td>
+          <td><span class="mono" style="font-size:12px;color:var(--p);">@r.Username</span></td>
+          <td style="font-size:12px;">
+            @if (!r.Rights.Any()) { <span class="text-mu">none</span> }
+            @foreach (var (key, label) in rightDefs.Where(d => r.Rights.Contains(d.Item1))) { <span class="badge b-blue" style="font-size:10px;margin:1px;">@label</span> }
+          </td>
+          <td style="font-size:12.5px;">
+            @if (r.LimitToBatch && r.BatchName != null) { <text>Own class, <b>@r.BatchName</b> batch only</text> }
+            else { <text>Whole class (all batches)</text> }
+          </td>
+          <td>
+            @if (r.IsWorking) { <span class="badge b-active">Working</span> }
+            else if (!string.Equals(r.StudentStatus, "Active", StringComparison.OrdinalIgnoreCase)) { <span class="badge b-inactive">Student inactive</span> }
+            else { <span class="badge b-inactive">Switched off</span> }
+          </td>
+          <td>
+            <button type="button" class="btn btn-outline btn-sm" title="Edit"
+                    data-id="@r.CrId" data-name="@r.StudentName" data-limit="@(r.LimitToBatch ? "1" : "0")"
+                    data-hasbatch="@(r.BatchId != null ? "1" : "0")" data-active="@(r.IsActive ? "1" : "0")" data-rights="@string.Join(",", r.Rights)"
+                    onclick="openEdit(this)"><i class="fas fa-edit"></i> Edit</button>
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+    }
+  </div>
+</div>
+
+<div class="cr-modal" id="editModal">
+  <div class="cr-box">
+    <h3 style="margin:0 0 4px;font-size:16px;">Edit Class Representative</h3>
+    <div id="editName" class="cr-note" style="margin-bottom:14px;"></div>
+    <input type="hidden" id="editId" />
+    <label style="display:flex;gap:8px;align-items:center;font-weight:600;margin-bottom:12px;">
+      <input type="checkbox" id="editActive" /> CR access is ON
+    </label>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;margin-bottom:6px;">Rights</div>
+      @foreach (var (key, label) in rightDefs)
+      {
+        <label style="display:flex;gap:8px;align-items:center;font-weight:600;margin-bottom:6px;">
+          <input type="checkbox" class="edit-right" value="@key" /> @label
+        </label>
+      }
+    </div>
+    <label id="editLimitRow" style="display:flex;gap:8px;align-items:center;font-weight:600;margin-bottom:12px;">
+      <input type="checkbox" id="editLimit" /> Limit to the student's own batch
+    </label>
+    <label style="display:block;font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;margin-bottom:4px;">New password (leave blank to keep)</label>
+    <div style="display:flex;gap:6px;margin-bottom:16px;">
+      <input type="text" id="editPass" class="fc" autocomplete="off" style="flex:1;min-width:0;" />
+      <button type="button" class="btn btn-outline btn-sm" onclick="genPass('editPass')" title="Generate"><i class="fas fa-dice"></i></button>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button type="button" class="btn btn-outline" onclick="closeEdit()">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btnEditSave" onclick="saveEdit()"><i class="fas fa-save"></i> Save</button>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let students = [];
+
+function showMsg(ok, text) {
+  const m = document.getElementById('statusMsg');
+  m.innerHTML = '<div class="alert ' + (ok ? 'alert-success' : 'alert-danger') + '"><i class="fas ' + (ok ? 'fa-check-circle' : 'fa-exclamation-circle') + '"></i> ' + esc(text) + '</div>';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function genPass(id) { document.getElementById(id).value = String(Math.floor(100000 + Math.random() * 900000)); }
+
+async function loadStudents() {
+  const cls = document.getElementById('selClass').value;
+  const sec = document.getElementById('selSection').value;
+  const sel = document.getElementById('selStudent');
+  students = [];
+  document.getElementById('batchBox').style.display = 'none';
+  if (!cls) { sel.innerHTML = '<option value="">— Select Std first —</option>'; return; }
+  sel.innerHTML = '<option value="">Loading…</option>';
+  try {
+    const res = await fetch('/ClassRep/Students?classId=' + cls + (sec ? '&sectionId=' + sec : ''));
+    if (!res.ok) throw new Error('failed');
+    students = await res.json();
+  } catch (e) { sel.innerHTML = '<option value="">Could not load students</option>'; return; }
+  sel.innerHTML = '<option value="">— Select student (' + students.length + ') —</option>' +
+    students.map(s => '<option value="' + s.studentId + '">' + esc(s.name) + ' (' + esc(s.admissionNo) + ')</option>').join('');
+}
+
+function studentPicked() {
+  const id = parseInt(document.getElementById('selStudent').value);
+  const s = students.find(x => x.studentId === id);
+  const box = document.getElementById('batchBox');
+  if (!s) { box.style.display = 'none'; return; }
+  if (s.hasBatch) {
+    document.getElementById('batchName').textContent = s.batchName;
+    document.getElementById('crLimit').checked = true;
+    box.style.display = 'block';
+  } else box.style.display = 'none';
+  const user = document.getElementById('crUser');
+  if (!user.value) user.value = ('cr' + (s.admissionNo || '')).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+async function assignCr() {
+  const studentId = parseInt(document.getElementById('selStudent').value);
+  const username = document.getElementById('crUser').value.trim();
+  const password = document.getElementById('crPass').value.trim();
+  if (!studentId) { alert('Select the student'); return; }
+  if (username.length < 3) { alert('Username must be at least 3 characters'); return; }
+  if (password.length < 4) { alert('Password must be at least 4 characters'); return; }
+  const limit = document.getElementById('batchBox').style.display !== 'none' && document.getElementById('crLimit').checked;
+  const rights = [...document.querySelectorAll('.cr-right:checked')].map(c => c.value);
+  if (!rights.length) { alert('Tick at least one right'); return; }
+  const btn = document.getElementById('btnAssign');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/ClassRep/Assign', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId, username, password, limitToBatch: limit, rights }) });
+    const d = await res.json();
+    if (d.success) {
+      alert(d.message + '\n\nLogin: ' + username + '\nPassword: ' + password + '\n\nShare these with the student.');
+      location.reload();
+    } else { showMsg(false, d.message || 'Could not save'); btn.disabled = false; }
+  } catch (e) { showMsg(false, 'Could not reach the server. Please try again.'); btn.disabled = false; }
+}
+
+function openEdit(btn) {
+  document.getElementById('editId').value = btn.dataset.id;
+  document.getElementById('editName').textContent = btn.dataset.name;
+  document.getElementById('editActive').checked = btn.dataset.active === '1';
+  document.getElementById('editLimit').checked = btn.dataset.limit === '1';
+  document.getElementById('editLimitRow').style.display = btn.dataset.hasbatch === '1' ? 'flex' : 'none';
+  document.getElementById('editPass').value = '';
+  const have = (btn.dataset.rights || '').split(',');
+  document.querySelectorAll('.edit-right').forEach(c => c.checked = have.includes(c.value));
+  document.getElementById('editModal').classList.add('show');
+}
+function closeEdit() { document.getElementById('editModal').classList.remove('show'); }
+
+async function saveEdit() {
+  const pass = document.getElementById('editPass').value.trim();
+  if (pass && pass.length < 4) { alert('Password must be at least 4 characters'); return; }
+  const editRights = [...document.querySelectorAll('.edit-right:checked')].map(c => c.value);
+  if (!editRights.length) { alert('Tick at least one right'); return; }
+  const btn = document.getElementById('btnEditSave');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/ClassRep/Update', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ crId: parseInt(document.getElementById('editId').value),
+        limitToBatch: document.getElementById('editLimit').checked,
+        isActive: document.getElementById('editActive').checked,
+        newPassword: pass || null, rights: editRights }) });
+    const d = await res.json();
+    if (d.success) { location.reload(); }
+    else { alert(d.message || 'Could not save'); btn.disabled = false; }
+  } catch (e) { alert('Could not reach the server. Please try again.'); btn.disabled = false; }
+}
+</script>
+}

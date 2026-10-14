@@ -43,8 +43,12 @@ public static class AttendanceSaveHelper
     }
 
     public static (bool ok, string message) Save(AttSaveReq req, int userId, AttendanceService svc,
-        StudentService studentSvc, AttendanceBatchService batchSvc)
+        StudentService studentSvc, AttendanceBatchService batchSvc, SchoolMS.Domain.CrScope? cr = null)
     {
+        // Class Representative: only his own class, and only today / the last few days.
+        if (cr != null && req.Date.Date < CrScopeEarliest())
+            return (false, $"You can mark attendance only for today and the last {SchoolMS.Domain.CrScope.EditDays} days.");
+
         HashSet<int>? allowed = null;
         if (req.AttBatchId.HasValue)
         {
@@ -55,6 +59,7 @@ public static class AttendanceSaveHelper
 
         var (students, _) = studentSvc.GetAll(1, 10000, null, null, null, null, null, "Active");
         var byId = students.GroupBy(s => s.StudentId).ToDictionary(g => g.Key, g => g.First());
+        if (cr != null) byId = byId.Where(kv => cr.Matches(kv.Value)).ToDictionary(kv => kv.Key, kv => kv.Value);
 
         var (error, rows) = Plan(req, DateTime.Today, allowed, byId);
         if (error != null) return (false, error);
@@ -72,6 +77,8 @@ public static class AttendanceSaveHelper
 
         return (true, $"Attendance saved for {rows.Count} students.");
     }
+
+    static DateTime CrScopeEarliest() => SchoolMS.Domain.CrScope.EarliestDate;
 }
 
 /// <summary>

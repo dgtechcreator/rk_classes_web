@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+using SchoolMS.Domain;
 using SchoolMS.Services;
 using SchoolMS.Web.Auth;
+using SchoolMS.Web.Utils;
 
 namespace SchoolMS.Web.Controllers.Api;
 
@@ -18,11 +20,20 @@ public class TeacherAttendanceApiController(
     [HttpGet]
     public IActionResult Index()
     {
+        var cr = HttpContext.CurrentCr();   // Class Representative: only his class / batch, only his own entries
+        var classes = lookupSvc.GetClasses();
+        var batches = lookupSvc.GetBatches();
+        if (cr != null)
+        {
+            classes = classes.Where(c => c.ClassId == cr.ClassId).ToList();
+            if (cr.EffectiveBatchId != null) batches = batches.Where(b => b.BatchId == cr.EffectiveBatchId).ToList();
+        }
         return Ok(new {
             teachers = facultySvc.GetAllActive(),
-            classes = lookupSvc.GetClasses(),
-            batches = lookupSvc.GetBatches(),
-            attendance = attendanceSvc.GetAll(),
+            classes,
+            batches,
+            attendance = attendanceSvc.GetAll(createdBy: cr?.UserId),
+            classRep = cr == null ? null : new { editDays = CrScope.EditDays, classId = cr.ClassId, batchId = cr.EffectiveBatchId },
         });
     }
 
@@ -60,7 +71,17 @@ public class TeacherAttendanceApiController(
                     return Ok(new { success = false, message = $"Invalid Out Time: {req.OutTime}. Use HH:mm format (e.g., 17:00)." });
             }
 
-            var attendanceId = attendanceSvc.Save(req.FacultyId, req.ClassId, req.BatchId, req.Subject, req.Topic,
+            var invalid = TeacherAttendanceCrRules.Validate(req.Subject, req.Topic, inTimeSpan, outTimeSpan);
+            if (invalid != null) return Ok(new { success = false, message = invalid });
+            int? classId = req.ClassId, batchId = req.BatchId;
+            var cr = HttpContext.CurrentCr();
+            if (cr != null)
+            {
+                var denied = TeacherAttendanceCrRules.Apply(cr, facultySvc, req.FacultyId, date, ref classId, ref batchId);
+                if (denied != null) return Ok(new { success = false, message = denied });
+            }
+
+            var attendanceId = attendanceSvc.Save(req.FacultyId, classId, batchId, req.Subject, req.Topic,
                 date, inTimeSpan, outTimeSpan, userId.Value);
 
             return Ok(new { success = true, attendanceId, message = "Attendance recorded successfully" });
@@ -79,6 +100,13 @@ public class TeacherAttendanceApiController(
             var userId = User.UserId();
             if (!userId.HasValue) return Ok(new { success = false, message = "Unauthorized" });
 
+            if (HttpContext.CurrentCr() != null)
+            {
+                var rec = attendanceSvc.GetById(attendanceId);
+                if (rec == null || rec.CreatedBy != userId.Value || rec.AttendanceDate.Date < CrScope.EarliestDate)
+                    return Ok(new { success = false, message = "You can delete only your own recent entries." });
+            }
+
             attendanceSvc.Delete(attendanceId, userId.Value);
             return Ok(new { success = true, message = "Attendance deleted successfully" });
         }
@@ -91,8 +119,9 @@ public class TeacherAttendanceApiController(
     [HttpGet("summary")]
     public IActionResult Summary()
     {
-        var attendance = attendanceSvc.GetAll();
-        var (totalHours, totalDays) = attendanceSvc.GetSummary();
+        var onlyMine = HttpContext.CurrentCr() != null ? User.UserId() : null;
+        var attendance = attendanceSvc.GetAll(createdBy: onlyMine);
+        var (totalHours, totalDays) = attendanceSvc.GetSummary(createdBy: onlyMine);
 
         return Ok(new { attendance, totalHours, totalDays });
     }

@@ -17,6 +17,7 @@ public class TeacherAttendance
     public decimal? TotalHours { get; set; }
     public DateTime CreatedAt { get; set; }
     public int? CreatedBy { get; set; }
+    public string CreatedByName { get; set; } = "";
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }
     public int? DeletedBy { get; set; }

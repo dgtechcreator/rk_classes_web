@@ -26,6 +26,9 @@ public class AppUser
     public string? Phone{get;set;}
     public bool    IsActive{get;set;}=true;
     public int     PermCount{get;set;}
+    public string? Gender{get;set;}
+    public bool    IsDeleted{get;set;}
+    public DateTime? DeletedAt{get;set;}
     public List<Module> Permissions{get;set;}=new();
 }
 

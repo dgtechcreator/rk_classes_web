@@ -5,6 +5,8 @@
     var batches = (dynamic)ViewBag.Batches ?? new List<dynamic>();
     var subjects = (dynamic)ViewBag.Subjects ?? new List<dynamic>();
     var attendance = (List<SchoolMS.Domain.TeacherAttendance>)ViewBag.Attendance ?? new List<SchoolMS.Domain.TeacherAttendance>();
+    var cr = ViewBag.Cr as SchoolMS.Domain.CrScope;
+    var crMin = cr != null ? ((DateTime)ViewBag.CrEarliest).ToString("yyyy-MM-dd") : "";
 }
 
 <style>
@@ -37,8 +39,15 @@
         <div>
             <h1>Teachers Attendance</h1>
             <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 15px;">Manage teacher attendance and working hours</p>
+            @if (cr != null)
+            {
+                <p style="margin: 8px 0 0 0; font-size: 13px; font-weight: 700; color: #3730a3;">
+                    Class Representative &middot; @cr.ClassName@(cr.SectionName != null ? " · " + cr.SectionName : "")@(cr.EffectiveBatchId != null ? " · " + cr.BatchName : "")
+                    <span style="font-weight:500;color:#6b7280;"> &mdash; you can add entries for today and the last @SchoolMS.Domain.CrScope.EditDays days.</span>
+                </p>
+            }
         </div>
-        <a href="/TeacherAttendance/Summary">+ Summary</a>
+        <a href="/TeacherAttendance/Summary">@(cr != null ? "My Entries" : "+ Summary")</a>
     </div>
 
     <div class="att-form">
@@ -59,10 +68,10 @@
                 <div class="att-group">
                     <label for="classSelect">Class</label>
                     <select id="classSelect" name="classId">
-                        <option value="">-- Select Class --</option>
+                        @if (cr == null) { <option value="">-- Select Class --</option> }
                         @foreach (var cls in classes)
                         {
-                            <option value="@cls.ClassId">@cls.ClassName</option>
+                            <option value="@cls.ClassId" selected="@(cr != null)">@cls.ClassName</option>
                         }
                     </select>
                 </div>
@@ -70,22 +79,22 @@
                 <div class="att-group">
                     <label for="batchSelect">Batch</label>
                     <select id="batchSelect" name="batchId">
-                        <option value="">-- Select Batch --</option>
+                        @if (cr == null || cr.EffectiveBatchId == null) { <option value="">-- Select Batch --</option> }
                         @foreach (var batch in batches)
                         {
-                            <option value="@batch.BatchId">@batch.BatchName</option>
+                            <option value="@batch.BatchId" selected="@(cr != null && cr.EffectiveBatchId == batch.BatchId)">@batch.BatchName</option>
                         }
                     </select>
                 </div>
 
                 <div class="att-group">
                     <label for="subjectInput">Subject</label>
-                    <input type="text" id="subjectInput" name="subject" placeholder="Enter subject name"/>
+                    <input type="text" id="subjectInput" name="subject" maxlength="100" placeholder="Enter subject name"/>
                 </div>
 
                 <div class="att-group">
                     <label for="dateInput">Date *</label>
-                    <input type="date" id="dateInput" name="attendanceDate" required/>
+                    <input type="date" id="dateInput" name="attendanceDate" required min="@crMin" max="@(cr != null ? DateTime.Today.ToString("yyyy-MM-dd") : "")"/>
                 </div>
 
                 <div class="att-group">
@@ -106,7 +115,7 @@
 
             <div class="att-group" style="margin-bottom: 16px;">
                 <label for="topicInput">Topic</label>
-                <textarea id="topicInput" name="topic" placeholder="Enter topic details..."></textarea>
+                <textarea id="topicInput" name="topic" maxlength="500" placeholder="Enter topic details..."></textarea>
             </div>
 
             <button type="submit" class="att-btn">Save Attendance</button>

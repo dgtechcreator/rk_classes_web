@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SchoolMS.Domain;
 using SchoolMS.Services;
+using SchoolMS.Web.Auth;
 using SchoolMS.Web.Filters;
 using SchoolMS.Web.Utils;
 using SchoolMS.Web.ViewModels;
@@ -11,16 +12,26 @@ namespace SchoolMS.Web.Controllers;
 public class AttendanceController(AttendanceService svc, LookupService lookup,
     MastersService mastersSvc, FacultyService facultySvc, StudentService studentSvc, AttendanceBatchService batchSvc) : Controller
 {
+    [RequirePermission("attendance_entry")]
     public IActionResult Index(DateTime? date, int? classId, int? sectionId, int? batchId, int? attBatchId,
         string? subject, string? sirName, string? startTime, string? endTime)
     {
+        var cr = HttpContext.CurrentCr();   // Class Representative: sees and saves only his own class
         var d = (date ?? DateTime.Today).Date;
         if (d > DateTime.Today) d = DateTime.Today;   // attendance can be reviewed/edited for past days, never future ones
+        if (cr != null) d = CrScope.Clamp(d);
 
         // Every active student with this day's status (AttendanceId is set once marked) — the batch cards
         // and the entry table both read from this one list so their numbers always agree.
         var dayRecords = svc.GetForDate(d, null, null, null);
+        if (cr != null) { var crIds = cr.StudentIds(studentSvc); dayRecords = dayRecords.Where(r => crIds.Contains(r.StudentId)).ToList(); }
         var attendanceBatches = batchSvc.GetAll();
+        if (cr != null)
+        {
+            var mine = dayRecords.Select(r => r.StudentId).ToHashSet();
+            attendanceBatches = attendanceBatches.Where(b => b.StudentIds.Any(mine.Contains)).ToList();
+            classId = cr.ClassId; sectionId = cr.SectionId; batchId = cr.EffectiveBatchId;
+        }
         var summaries = batchSvc.BuildSummaries(attendanceBatches, dayRecords);
 
         AttendanceBatch? selectedBatch = null;
@@ -30,6 +41,8 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
             selectedBatch = attendanceBatches.FirstOrDefault(b => b.BatchId == attBatchId.Value);
             records = selectedBatch == null ? new() : batchSvc.RecordsFor(selectedBatch, dayRecords);
         }
+        else if (cr != null)
+            records = dayRecords;   // a CR goes straight to his whole class
         else if (classId.HasValue || sectionId.HasValue || batchId.HasValue)
             records = svc.GetForDate(d, classId, sectionId, batchId);
         else
@@ -43,6 +56,8 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
 
         ViewBag.AttendanceBatches = summaries;
         ViewBag.SelectedAttBatch = selectedBatch;
+        ViewBag.Cr = cr;
+        ViewBag.CrEarliest = CrScope.EarliestDate;
 
         return View(new AttendanceVM {
             Records=records, Date=d, ClassId=classId, SectionId=sectionId, BatchId=batchId,
@@ -60,13 +75,15 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
     }
 
     [HttpPost]
+    [RequirePermission("attendance_entry")]
     public IActionResult Save([FromBody] AttSaveReq req)
     {
         int uid = HttpContext.Session.GetUserId() ?? 1;
-        var (ok, message) = AttendanceSaveHelper.Save(req, uid, svc, studentSvc, batchSvc);
+        var (ok, message) = AttendanceSaveHelper.Save(req, uid, svc, studentSvc, batchSvc, HttpContext.CurrentCr());
         return Json(new { success = ok, message });
     }
 
+    [RequirePermission("attendance_report")]
     public IActionResult Report(int? classId, int? sectionId, int? batchId, int? month, int? year)
     {
         var (report, studentPhones) = AttendanceReportHelper.Build(classId, sectionId, batchId,
@@ -84,6 +101,7 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
         return View(report);
     }
 
+    [RequirePermission("attendance_grid")]
     public IActionResult DateGrid(int? classId, int? sectionId, int? batchId,
         DateTime? fromDate, DateTime? toDate)
     {
@@ -117,8 +135,10 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
             if (!DateTime.TryParse(date, out var selectedDate))
                 return Json(new List<object>());
 
+            var cr = HttpContext.CurrentCr();
+            var crIds = cr?.StudentIds(studentSvc);
             var records = svc.GetForDate(selectedDate, classId, sectionId, batchId)
-                .Where(r => r.AttendanceId.HasValue)
+                .Where(r => r.AttendanceId.HasValue && (crIds == null || crIds.Contains(r.StudentId)))
                 .ToList();
 
             var result = records
@@ -150,7 +170,8 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
         try
         {
             var student = studentSvc.GetById(studentId);
-            if (student == null)
+            var cr = HttpContext.CurrentCr();
+            if (student == null || (cr != null && !cr.Matches(student)))
                 return Json(new { fatherPhone = "", motherPhone = "", studentPhone = "" });
 
             return Json(new {

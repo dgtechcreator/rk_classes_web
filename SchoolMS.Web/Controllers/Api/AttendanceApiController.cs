@@ -13,10 +13,19 @@ namespace SchoolMS.Web.Controllers.Api;
 public class AttendanceApiController(AttendanceService svc, StudentService studentSvc, AttendanceBatchService batchSvc,
     FacultyService facultySvc, MastersService mastersSvc) : ControllerBase
 {
-    private static DateTime ClampDate(DateTime? date)
+    // A CR's rows: matched by student id (sp_GetAttendance does not return class / section / batch ids).
+    private Func<AttendanceRecord, bool> InScope(CrScope cr)
+    {
+        var ids = cr.StudentIds(studentSvc);
+        return r => ids.Contains(r.StudentId);
+    }
+
+    private DateTime ClampDate(DateTime? date)
     {
         var d = (date ?? DateTime.Today).Date;
-        return d > DateTime.Today ? DateTime.Today : d;
+        d = d > DateTime.Today ? DateTime.Today : d;
+        var cr = HttpContext.CurrentCr();   // Class Representative: today and the last few days only
+        return cr != null ? CrScope.Clamp(d) : d;
     }
 
     // Flat payload shared by the class-filter and batch endpoints (the mobile app parses these keys at the top level).
@@ -43,9 +52,12 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
     public IActionResult Index(DateTime? date, int? classId, int? sectionId, int? batchId)
     {
         var d = ClampDate(date);
-        var records = classId.HasValue || sectionId.HasValue || batchId.HasValue
-            ? svc.GetForDate(d, classId, sectionId, batchId)
-            : svc.GetForDate(d, null, null, null).Where(r => r.AttendanceId.HasValue).ToList();
+        var cr = HttpContext.CurrentCr();
+        var records = cr != null
+            ? svc.GetForDate(d, null, null, null).Where(InScope(cr)).ToList()   // a CR gets his whole class, whatever filter was sent
+            : classId.HasValue || sectionId.HasValue || batchId.HasValue
+                ? svc.GetForDate(d, classId, sectionId, batchId)
+                : svc.GetForDate(d, null, null, null).Where(r => r.AttendanceId.HasValue).ToList();
         return Ok(DayPayload(d, records));
     }
 
@@ -56,7 +68,15 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
     {
         var d = ClampDate(date);
         var dayRecords = svc.GetForDate(d, null, null, null);
-        var batches = batchSvc.BuildSummaries(batchSvc.GetAll(), dayRecords);
+        var allBatches = batchSvc.GetAll();
+        var cr = HttpContext.CurrentCr();
+        if (cr != null)
+        {
+            dayRecords = dayRecords.Where(InScope(cr)).ToList();
+            var mine = dayRecords.Select(r => r.StudentId).ToHashSet();
+            allBatches = allBatches.Where(b => b.StudentIds.Any(mine.Contains)).ToList();
+        }
+        var batches = batchSvc.BuildSummaries(allBatches, dayRecords);
         return Ok(new {
             date = d,
             batches = batches.Select(b => new {
@@ -73,7 +93,11 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
         var d = ClampDate(date);
         var batch = batchSvc.GetById(attBatchId);
         if (batch == null) return NotFound(new { error = "Attendance batch not found." });
-        var records = batchSvc.RecordsFor(batch, svc.GetForDate(d, null, null, null));
+        var cr = HttpContext.CurrentCr();
+        var dayRecords = svc.GetForDate(d, null, null, null);
+        if (cr != null) dayRecords = dayRecords.Where(InScope(cr)).ToList();
+        var records = batchSvc.RecordsFor(batch, dayRecords);
+        if (cr != null && records.Count == 0) return NotFound(new { error = "Attendance batch not found." });
         var payload = DayPayload(d, records);
         payload["batchId"] = batch.BatchId;
         payload["batchName"] = batch.BatchName;
@@ -97,7 +121,7 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
     public IActionResult Save([FromBody] AttSaveReq req)
     {
         int uid = User.UserId() ?? 1;
-        var (ok, message) = AttendanceSaveHelper.Save(req, uid, svc, studentSvc, batchSvc);
+        var (ok, message) = AttendanceSaveHelper.Save(req, uid, svc, studentSvc, batchSvc, HttpContext.CurrentCr());
         if (!ok) return BadRequest(new { success = false, error = message, message });
         return Ok(new { success = true, message });
     }
@@ -136,8 +160,10 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
             if (!DateTime.TryParse(date, out var selectedDate))
                 return Ok(new List<object>());
 
+            var cr = HttpContext.CurrentCr();
+            var crIds = cr?.StudentIds(studentSvc);
             var records = svc.GetForDate(selectedDate, classId, sectionId, batchId)
-                .Where(r => r.AttendanceId.HasValue)
+                .Where(r => r.AttendanceId.HasValue && (crIds == null || crIds.Contains(r.StudentId)))
                 .ToList();
 
             var result = records
@@ -169,7 +195,8 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
         try
         {
             var student = studentSvc.GetById(studentId);
-            if (student == null)
+            var cr = HttpContext.CurrentCr();
+            if (student == null || (cr != null && !cr.Matches(student)))
                 return Ok(new { fatherPhone = "", motherPhone = "", studentPhone = "" });
 
             return Ok(new {

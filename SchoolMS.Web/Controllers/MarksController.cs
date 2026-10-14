@@ -1,18 +1,26 @@
 using Microsoft.AspNetCore.Mvc;
 using SchoolMS.Domain;
 using SchoolMS.Services;
+using SchoolMS.Web.Auth;
 using SchoolMS.Web.Filters;
+using SchoolMS.Web.Utils;
 
 namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
-public class MarksController(MarksService svc, LookupService lookup, MastersService mastersSvc) : Controller
+public class MarksController(MarksService svc, LookupService lookup, MastersService mastersSvc, StudentService studentSvc) : Controller
 {
     public IActionResult Index(int? yearId, int? classId, int? sectionId, int? batchId,
         int? subjectId, string? examName, DateTime? testDate, int maxMarks = 30)
     {
         yearId   ??= lookup.GetCurrentYearId();
         testDate ??= DateTime.Today;
+        var cr = HttpContext.CurrentCr();   // Class Representative: only his own class
+        if (cr != null)
+        {
+            classId = cr.ClassId; sectionId = cr.SectionId; batchId = cr.EffectiveBatchId;
+            testDate = CrScope.ClampMarksDate(testDate.Value);
+        }
 
         var years    = lookup.GetYears();
         var classes  = lookup.GetClasses();
@@ -22,6 +30,7 @@ public class MarksController(MarksService svc, LookupService lookup, MastersServ
 
         // Get all exams for the year (no class filter)
         var examList = svc.GetExamList(yearId, null);
+        if (cr != null) examList = examList.Where(e => e.ClassId == cr.ClassId).ToList();
 
         if (subjectId == null && subjects.Count == 1) subjectId = subjects[0].SubjectId;
 
@@ -31,6 +40,8 @@ public class MarksController(MarksService svc, LookupService lookup, MastersServ
         else if (classId.HasValue)
             students = svc.GetStudentsForEntry(classId, sectionId, batchId, yearId);
 
+        ViewBag.Cr        = cr;
+        ViewBag.CrEarliest = CrScope.EarliestMarksDate;
         ViewBag.Years     = years;
         ViewBag.Classes   = classes;
         ViewBag.Sections  = sections;
@@ -54,6 +65,12 @@ public class MarksController(MarksService svc, LookupService lookup, MastersServ
         try
         {
             int uid = HttpContext.Session.GetUserId() ?? 1;
+            var cr = HttpContext.CurrentCr();
+            if (cr != null)
+            {
+                var denied = MarksCrRules.CheckSave(cr, req, studentSvc);
+                if (denied != null) return Json(new { success = false, message = denied });
+            }
             int yr  = req.YearId > 0 ? req.YearId : (lookup.GetCurrentYearId() ?? 1);
             DateTime? testDate = req.TestDate.HasValue ? req.TestDate.Value.Date : (DateTime?)null;
             foreach (var e in req.Entries)

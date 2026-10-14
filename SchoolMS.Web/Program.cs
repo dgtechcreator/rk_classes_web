@@ -10,7 +10,11 @@ using SchoolMS.Web.Auth;
 using SchoolMS.Web.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddControllersWithViews();
+builder.Services.AddSingleton<SchoolMS.Web.Auth.UserAccessCache>();
+builder.Services.AddControllersWithViews(o => {
+    o.Filters.Add<SchoolMS.Web.Auth.ClassRepGuardFilter>();
+    o.Filters.Add<SchoolMS.Web.Auth.PagePermissionFilter>();
+});
 
 // JWT auth — mobile app only. Existing MVC controllers keep using session-cookie auth (Filters/AuthFilters.cs)
 // unaffected; this scheme only activates for requests carrying an Authorization: Bearer header (or ?token=
@@ -29,6 +33,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew                = TimeSpan.FromMinutes(2),
         };
         o.Events = new JwtBearerEvents {
+            // Rights / role / on-off are read live, not from the (up to 30 day old) token.
+            OnTokenValidated = ctx => { ctx.RefreshToken(); return Task.CompletedTask; },
             OnMessageReceived = ctx => {
                 var path = ctx.HttpContext.Request.Path;
                 var qsToken = ctx.Request.Query["token"];
@@ -111,6 +117,7 @@ builder.Services.AddScoped<TeacherPaymentRepo>();
 builder.Services.AddScoped<TeacherAttendanceRepo>();
 builder.Services.AddScoped<LectureRepo>();
 builder.Services.AddScoped<DataHealthRepo>();
+builder.Services.AddScoped<ClassRepRepo>();
 
 // Services
 builder.Services.AddScoped<AuthService>();
@@ -135,6 +142,9 @@ builder.Services.AddScoped<LectureService>();
 builder.Services.AddScoped<FeePositionService>();
 builder.Services.AddScoped<DataHealthService>();
 builder.Services.AddScoped<TeacherAccountLinker>();
+builder.Services.AddScoped<ClassRepService>();
+builder.Services.AddScoped<StaffNameService>();
+builder.Services.AddScoped<DeletedRecordsService>();
 
 var app = builder.Build();
 
@@ -180,6 +190,18 @@ app.Use(async (context, next) => {
 });
 
 app.UseSession();
+
+// Keep the web session in step with the DB: changed rights apply on the next click, and a user who was
+// deactivated / deleted / switched off is signed out immediately instead of at the next login.
+app.Use(async (context, next) => {
+    var path = context.Request.Path;
+    if (!path.StartsWithSegments("/api") && !path.StartsWithSegments("/hubs"))
+    {
+        try { context.RefreshSession(context.RequestServices.GetRequiredService<SchoolMS.Web.Auth.UserAccessCache>()); }
+        catch { /* never block a request because the refresh failed */ }
+    }
+    await next();
+});
 
 // Catch ANY 403/401 → redirect to Login (but avoid redirect loop)
 app.UseStatusCodePages(async ctx => {

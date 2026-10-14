@@ -2,6 +2,7 @@
 @{
   ViewData["Title"] = "User Management";
   int roleId = Context.Session.GetInt32("RoleId") ?? 0;
+  var crByUser = ViewBag.CrByUser as Dictionary<int, SchoolMS.Domain.ClassRep> ?? new();
 }
 
 <style>
@@ -31,6 +32,11 @@
       @if (roleId == 1)
       {
         <a href="/Users/AssignRights" class="btn btn-outline"><i class="fas fa-key"></i> Assign Rights</a>
+        <a href="/ClassRep/Index" class="btn btn-outline"><i class="fas fa-user-shield"></i> Class Representatives</a>
+      }
+      @if (roleId == 1)
+      {
+        <a href="/Deleted/Index#deleted-users" class="btn btn-outline"><i class="fas fa-trash-restore"></i> Deleted Users</a>
       }
       <a href="/Users/Create" class="btn btn-primary"><i class="fas fa-user-plus"></i> Add User</a>
     </div>
@@ -54,6 +60,8 @@
           <td>
             <div class="fw7">@u.FullName</div>
             @if (u.UserId == 1){<span class="badge b-purple" style="font-size:10px;">Super Admin</span>}
+            @if (crByUser.TryGetValue(u.UserId, out var cr))
+            {<span class="badge b-blue" style="font-size:10px;">CR &middot; @cr.ClassName@(cr.SectionName != null ? " " + cr.SectionName : "")</span>}
           </td>
           <td><span class="mono" style="font-size:12px;color:var(--p);">@u.Username</span></td>
           <td><span class="badge b-blue">@u.RoleName</span></td>
@@ -83,6 +91,16 @@
                     <i class="fas @(u.IsActive?"fa-ban":"fa-check")"></i>
                   </button>
                 </form>
+                @if (roleId == 1 && u.UserId != (Context.Session.GetInt32("UserId") ?? 0))
+                {
+                <form method="post" action="/Users/Delete/@u.UserId"
+                      onsubmit="return confirm('Delete @u.FullName? They will not be able to login. You can restore them later from Deleted Records.')">
+                  @Html.AntiForgeryToken()
+                  <button type="submit" class="btn btn-outline btn-sm" title="Delete" style="color:#dc2626;border-color:#fca5a5;">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </form>
+                }
               }
             </div>
           </td>

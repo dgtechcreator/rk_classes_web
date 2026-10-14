@@ -689,9 +689,7 @@ This is to inform you that your ward was absent from today's classes. Kindly inf
         var fatherNum = data.fatherPhone.replace(/[^0-9]/g, '');
         console.log('Father number:', fatherNum);
         if (fatherNum.length > 0) {
-          var waUrl = 'https://wa.me/' + fatherNum + '?text=' + encodeURIComponent(absenceMsg);
-          console.log('Opening WhatsApp URL:', waUrl);
-          window.open(waUrl, '_blank');
+          rkWaOpen(fatherNum, absenceMsg);
           var modal = document.getElementById('parentSelectModal-' + studentId);
           if (modal) modal.remove();
         } else {
@@ -748,9 +746,7 @@ This is to inform you that your child was absent from class today. Kindly let us
         var motherNum = data.motherPhone.replace(/[^0-9]/g, '');
         console.log('Mother number:', motherNum);
         if (motherNum.length > 0) {
-          var waUrl = 'https://wa.me/' + motherNum + '?text=' + encodeURIComponent(absenceMsg);
-          console.log('Opening WhatsApp URL:', waUrl);
-          window.open(waUrl, '_blank');
+          rkWaOpen(motherNum, absenceMsg);
           var modal = document.getElementById('parentSelectModal-' + studentId);
           if (modal) modal.remove();
         } else {

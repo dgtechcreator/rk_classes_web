@@ -1,74 +1,141 @@
 using Microsoft.AspNetCore.Mvc;
 using SchoolMS.Domain;
 using SchoolMS.Services;
+using SchoolMS.Web.Auth;
 using SchoolMS.Web.Filters;
 
 namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
-public class UsersController(UserMgmtService svc) : Controller
+public class UsersController(UserMgmtService svc, ClassRepService crSvc, UserAccessCache access) : Controller
 {
+    bool IsAdmin => HttpContext.Session.GetInt32("RoleId") == 1;
+    int Me => HttpContext.Session.GetUserId() ?? 0;
+
+    /// <summary>Class Representative record of a user (null for normal users, or before SQL/61 has been run).</summary>
+    ClassRep? CrOf(int userId)
+    {
+        try { return crSvc.GetByUserId(userId); }
+        catch { return null; }
+    }
+
+    /// <summary>Roles offered in the dropdown. "Class Representative" is created only from the Class Representatives page.</summary>
+    List<Role> RolesFor(AppUser? user)
+    {
+        var crRole = SafeCrRoleId();
+        return svc.GetRoles().Where(r => r.RoleId != crRole || (user != null && user.RoleId == crRole)).ToList();
+    }
+
+    int? SafeCrRoleId()
+    {
+        try { return crSvc.RoleId(); }
+        catch { return null; }
+    }
+
     public IActionResult Index()
     {
-        if (HttpContext.Session.GetInt32("RoleId") != 1)
-            return RedirectToAction("AccessDenied", "Home");
+        if (!IsAdmin) return RedirectToAction("AccessDenied", "Home");
+        List<ClassRep> reps;
+        try { reps = crSvc.GetAll(); } catch { reps = new(); }
+        ViewBag.CrByUser = reps.GroupBy(c => c.UserId).ToDictionary(g => g.Key, g => g.First());
         return View(svc.GetAll());
     }
 
     public IActionResult Create()
     {
-        if (HttpContext.Session.GetInt32("RoleId") != 1) return RedirectToAction("AccessDenied","Home");
+        if (!IsAdmin) return RedirectToAction("AccessDenied","Home");
         ViewBag.IsAdmin = true;
-        ViewBag.Roles   = svc.GetRoles();
+        ViewBag.Roles   = RolesFor(null);
         ViewBag.Modules = svc.GetAllModules();
         return View("Form", new AppUser());
     }
 
     public IActionResult Edit(int id)
     {
-        int loggedInUserId = HttpContext.Session.GetUserId() ?? 0;
-        int loggedInRoleId = HttpContext.Session.GetInt32("RoleId") ?? 0;
-
         // Only Admin can edit others, regular users can edit only themselves
-        if (loggedInRoleId != 1 && loggedInUserId != id)
+        if (!IsAdmin && Me != id)
             return RedirectToAction("AccessDenied", "Home");
 
         var user = svc.GetById(id);
         if (user == null) return NotFound();
 
-        ViewBag.IsOwnProfile = (loggedInUserId == id);
-        ViewBag.IsAdmin = (loggedInRoleId == 1);
-        ViewBag.Roles   = svc.GetRoles();
+        ViewBag.IsOwnProfile = (Me == id);
+        ViewBag.IsAdmin = IsAdmin;
+        ViewBag.Roles   = RolesFor(user);
         ViewBag.Modules = svc.GetAllModules();
+        ViewBag.Cr      = CrOf(id);
         return View("Form", user);
     }
 
     [HttpPost]
     public IActionResult Save(AppUser model, string? newPassword)
     {
-        int uid = HttpContext.Session.GetUserId() ?? 1;
-        int loggedInRoleId = HttpContext.Session.GetInt32("RoleId") ?? 0;
+        int uid = Me;
+        bool isAdmin = IsAdmin;
 
         // Non-admin users can only edit their own profile
-        if (loggedInRoleId != 1 && uid != model.UserId)
+        if (!isAdmin && uid != model.UserId)
             return RedirectToAction("AccessDenied", "Home");
+
+        if (model.UserId > 0)
+        {
+            var existing = svc.GetById(model.UserId);
+            if (existing == null) return NotFound();
+
+            if (!isAdmin)
+            {
+                // A normal user may change his own name only. Role, status, e-mail, phone and password rights
+                // always come from the database - never from the posted form (otherwise anyone could post RoleId=1).
+                model.RoleId = existing.RoleId;
+                model.IsActive = existing.IsActive;
+                model.Email = existing.Email;
+                model.Phone = existing.Phone;
+                if (CrOf(existing.UserId) != null) model.FullName = existing.FullName;   // a CR's name is the student's name (shown as "Added by")
+                newPassword = null;
+            }
+            else
+            {
+                if (existing.UserId == 1) { model.RoleId = existing.RoleId; model.IsActive = true; }   // Super Admin stays admin + active
+                else if (existing.UserId == uid) model.IsActive = true;                                  // an admin cannot lock himself out
+                var crRole = SafeCrRoleId();
+                if (CrOf(existing.UserId) != null) model.RoleId = existing.RoleId;                       // a CR stays a CR (manage on Class Representatives page)
+                else if (crRole != null && model.RoleId == crRole)
+                {
+                    TempData["Error"] = "Use the Class Representatives page to make a student a CR.";
+                    return RedirectToAction("Edit", new { id = model.UserId });
+                }
+            }
+            model.Username = existing.Username;   // username can never change after creation
+        }
+        else
+        {
+            if (!isAdmin) return RedirectToAction("AccessDenied", "Home");
+            var crRole = SafeCrRoleId();
+            if (crRole != null && model.RoleId == crRole)
+            {
+                TempData["Error"] = "Use the Class Representatives page to make a student a CR.";
+                return RedirectToAction("Create");
+            }
+        }
 
         if (!string.IsNullOrWhiteSpace(newPassword))
             model.PasswordHash = newPassword;
         var id = svc.Save(model, uid);
         if (id == -1) { TempData["Error"] = $"Username '{model.Username}' already exists."; return RedirectToAction("Create"); }
+        if (isAdmin) svc.SetGender(id, model.Gender);   // Sir / Ma'am greeting; only the admin sets it
+        access.Invalidate(id);
         TempData["Success"] = "User saved successfully.";
 
         // Admin goes to permissions, regular users go back to index
-        if (loggedInRoleId == 1)
+        if (isAdmin)
             return RedirectToAction("Permissions", new { id });
         else
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", "Home");
     }
 
     public IActionResult AssignRights()
     {
-        if (HttpContext.Session.GetInt32("RoleId") != 1) return RedirectToAction("AccessDenied","Home");
+        if (!IsAdmin) return RedirectToAction("AccessDenied","Home");
         ViewBag.Users = svc.GetAll();
         ViewBag.AllModules = svc.GetAllModules();
         return View();
@@ -77,14 +144,16 @@ public class UsersController(UserMgmtService svc) : Controller
     [HttpGet]
     public IActionResult GetUserRights(int userId)
     {
-        if (HttpContext.Session.GetInt32("RoleId") != 1) return Unauthorized();
+        if (!IsAdmin) return Unauthorized();
         var user = svc.GetById(userId);
         if (user == null) return NotFound();
-        var allModules = svc.GetAllModules();
+        var cr = CrOf(userId) != null;
+        var allModules = svc.GetAllModules().Where(m => !cr || ClassRepService.AllowedModuleKeys.Contains(m.ModuleKey));
 
         return Json(new {
             userId = user.UserId,
             userName = user.FullName,
+            isClassRep = cr,
             modules = allModules.Select(m => new {
                 moduleId = m.ModuleId,
                 moduleName = m.ModuleName,
@@ -100,10 +169,14 @@ public class UsersController(UserMgmtService svc) : Controller
 
     public IActionResult Permissions(int id)
     {
-        if (HttpContext.Session.GetInt32("RoleId") != 1) return RedirectToAction("AccessDenied","Home");
+        if (!IsAdmin) return RedirectToAction("AccessDenied","Home");
         var user = svc.GetById(id);
         if (user == null) return NotFound();
+        var cr = CrOf(id);
+        if (cr != null)   // a CR can hold only the fixed CR modules
+            user.Permissions = user.Permissions.Where(m => ClassRepService.AllowedModuleKeys.Contains(m.ModuleKey)).ToList();
         ViewBag.Modules = svc.GetAllModules();
+        ViewBag.Cr = cr;
         return View(user);
     }
 
@@ -111,7 +184,7 @@ public class UsersController(UserMgmtService svc) : Controller
     public IActionResult SavePermissions(int id, int userId, [FromBody] List<PermEntry> entries)
     {
         try {
-            if (HttpContext.Session.GetInt32("RoleId") != 1) return Unauthorized();
+            if (!IsAdmin) return Unauthorized();
             // The Permissions page posts to /Users/SavePermissions/{id} (route value "id"), other callers
             // may send ?userId= — accept either, otherwise the user id silently binds to 0.
             if (userId <= 0) userId = id;
@@ -120,28 +193,72 @@ public class UsersController(UserMgmtService svc) : Controller
 
             var user = svc.GetById(userId);
             if (user == null) return Json(new { success = false, message = "User not found." });
+            if (userId == 1) return Json(new { success = false, message = "Super Admin always has full access - nothing to change." });
 
-            foreach (var e in entries)
-                svc.SavePermission(userId, e.ModuleId, e.CanView, e.CanEdit);
-            return Json(new { success = true, message = "Permissions saved." });
+            var error = ApplyPermissions(userId, entries);
+            if (error != null) return Json(new { success = false, message = error });
+            return Json(new { success = true, message = "Permissions saved. They apply to the user immediately." });
         } catch (Exception ex) {
             return Json(new { success = false, message = $"Error: {ex.Message}" });
         }
     }
 
+    /// <summary>Validates and stores the rights. Returns an error text, or null when saved.</summary>
+    string? ApplyPermissions(int userId, List<PermEntry> entries)
+    {
+        var modules = svc.GetAllModules().ToDictionary(m => m.ModuleId);
+        var isCr = CrOf(userId) != null;
+        foreach (var e in entries)
+        {
+            if (!modules.TryGetValue(e.ModuleId, out var m)) return "Unknown module in the request.";
+            if (isCr && (e.CanView || e.CanEdit) && !ClassRepService.AllowedModuleKeys.Contains(m.ModuleKey))
+                return $"A Class Representative cannot be given '{m.ModuleName}'.";
+        }
+        foreach (var e in entries.Where(e => modules.ContainsKey(e.ModuleId)))
+            svc.SavePermission(userId, e.ModuleId, e.CanView || e.CanEdit, e.CanEdit);   // edit always includes view
+        access.Invalidate(userId);
+        return null;
+    }
+
     [HttpPost]
     public IActionResult ChangePassword(int userId, string oldPassword, string newPassword)
     {
+        // Own password only (admins reset others from the Edit form).
+        if (userId != Me && !IsAdmin) return RedirectToAction("AccessDenied", "Home");
         var (ok, msg) = svc.ChangePassword(userId, oldPassword, newPassword);
         TempData[ok?"Success":"Error"] = msg;
         return RedirectToAction("Edit", new { id = userId });
     }
 
+    // Soft delete (admin only). The Super Admin and the logged-in admin themself cannot be deleted.
+    [HttpPost]
+    public IActionResult Delete(int id)
+    {
+        if (!IsAdmin) return RedirectToAction("AccessDenied", "Home");
+        if (id == 1 || id == Me)
+        {
+            TempData["Error"] = id == 1 ? "Super Admin cannot be deleted." : "You cannot delete your own account.";
+            return RedirectToAction("Index");
+        }
+        var user = svc.GetById(id);
+        if (user == null) return NotFound();
+        svc.Delete(id, Me);
+        access.Invalidate(id);
+        TempData["Success"] = $"{user.FullName} deleted. You can restore them from Deleted Records.";
+        return RedirectToAction("Index");
+    }
+
     [HttpPost]
     public IActionResult ToggleActive(int id)
     {
+        if (!IsAdmin) return RedirectToAction("AccessDenied", "Home");
+        if (id == 1 || id == Me)
+        {
+            TempData["Error"] = id == 1 ? "Super Admin cannot be deactivated." : "You cannot deactivate your own account.";
+            return RedirectToAction("Index");
+        }
         var user = svc.GetById(id);
-        if (user != null) { user.IsActive = !user.IsActive; svc.Save(user, HttpContext.Session.GetUserId()??1); }
+        if (user != null) { user.IsActive = !user.IsActive; svc.Save(user, Me); access.Invalidate(id); }
         TempData["Success"] = "User status updated.";
         return RedirectToAction("Index");
     }

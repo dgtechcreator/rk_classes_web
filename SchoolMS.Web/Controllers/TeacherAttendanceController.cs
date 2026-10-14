@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using SchoolMS.Domain;
 using SchoolMS.Services;
+using SchoolMS.Web.Auth;
 using SchoolMS.Web.Filters;
+using SchoolMS.Web.Utils;
 
 namespace SchoolMS.Web.Controllers;
 
@@ -13,10 +16,18 @@ public class TeacherAttendanceController(
     [HttpGet]
     public IActionResult Index()
     {
+        var cr = HttpContext.CurrentCr();   // Class Representative: only his class / batch, only his own entries
         var teachers = facultySvc.GetAllActive();
         var classes = lookupSvc.GetClasses();
         var batches = lookupSvc.GetBatches();
-        var attendance = attendanceSvc.GetAll();
+        var attendance = attendanceSvc.GetAll(createdBy: cr?.UserId);
+        if (cr != null)
+        {
+            classes = classes.Where(c => c.ClassId == cr.ClassId).ToList();
+            if (cr.EffectiveBatchId != null) batches = batches.Where(b => b.BatchId == cr.EffectiveBatchId).ToList();
+        }
+        ViewBag.Cr = cr;
+        ViewBag.CrEarliest = CrScope.EarliestDate;
 
         ViewBag.Teachers = teachers;
         ViewBag.Classes = classes;
@@ -35,6 +46,7 @@ public class TeacherAttendanceController(
         {
             var userId = HttpContext.Session.GetUserId();
             if (!userId.HasValue) return Json(new { success = false, message = "Session expired. Please login again." });
+            var cr = HttpContext.CurrentCr();
 
             // Parse date
             DateTime date = DateTime.Now;
@@ -77,6 +89,14 @@ public class TeacherAttendanceController(
                 }
             }
 
+            var invalid = TeacherAttendanceCrRules.Validate(subject, topic, inTimeSpan, outTimeSpan);
+            if (invalid != null) return Json(new { success = false, message = invalid });
+            if (cr != null)
+            {
+                var denied = TeacherAttendanceCrRules.Apply(cr, facultySvc, facultyId, date, ref classId, ref batchId);
+                if (denied != null) return Json(new { success = false, message = denied });
+            }
+
             var attendanceId = attendanceSvc.Save(facultyId, classId, batchId, subject, topic,
                 date, inTimeSpan, outTimeSpan, userId.Value);
 
@@ -96,6 +116,14 @@ public class TeacherAttendanceController(
             var userId = HttpContext.Session.GetUserId();
             if (!userId.HasValue) return Json(new { success = false, message = "Unauthorized" });
 
+            // A Class Representative may remove only the entries he made himself, and only while still editable.
+            if (HttpContext.CurrentCr() != null)
+            {
+                var rec = attendanceSvc.GetById(attendanceId);
+                if (rec == null || rec.CreatedBy != userId.Value || rec.AttendanceDate.Date < CrScope.EarliestDate)
+                    return Json(new { success = false, message = "You can delete only your own recent entries." });
+            }
+
             attendanceSvc.Delete(attendanceId, userId.Value);
             return Json(new { success = true, message = "Attendance deleted successfully" });
         }
@@ -113,8 +141,9 @@ public class TeacherAttendanceController(
         // var currentFacultyId = GetCurrentFacultyIdFromAuth();
         // var attendance = attendanceSvc.GetAll(currentFacultyId);
 
-        var attendance = attendanceSvc.GetAll();
-        var (totalHours, totalDays) = attendanceSvc.GetSummary();
+        var onlyMine = HttpContext.CurrentCr() != null ? HttpContext.Session.GetUserId() : null;
+        var attendance = attendanceSvc.GetAll(createdBy: onlyMine);
+        var (totalHours, totalDays) = attendanceSvc.GetSummary(createdBy: onlyMine);
 
         ViewBag.Attendance = attendance;
         ViewBag.TotalHours = totalHours;

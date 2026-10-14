@@ -26,13 +26,13 @@ public class TeacherAttendanceService(TeacherAttendanceRepo repo, FacultyService
         }
     }
 
-    public List<TeacherAttendance> GetAll(int? facultyId = null) => repo.GetAll(facultyId);
+    public List<TeacherAttendance> GetAll(int? facultyId = null, int? createdBy = null) => repo.GetAll(facultyId, createdBy);
     public TeacherAttendance? GetById(int attendanceId) => repo.GetById(attendanceId);
     public void Delete(int attendanceId, int deletedBy) => repo.Delete(attendanceId, deletedBy);
 
-    public (decimal TotalHours, int TotalDays) GetSummary(int? facultyId = null)
+    public (decimal TotalHours, int TotalDays) GetSummary(int? facultyId = null, int? createdBy = null)
     {
-        var records = repo.GetAll(facultyId);
+        var records = repo.GetAll(facultyId, createdBy);
         var totalHours = records.Where(r => r.TotalHours.HasValue).Sum(r => r.TotalHours.Value);
         var totalDays = records.DistinctBy(r => r.AttendanceDate).Count();
         return (totalHours, totalDays);

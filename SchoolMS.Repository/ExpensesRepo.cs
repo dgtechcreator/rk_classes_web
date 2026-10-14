@@ -24,6 +24,19 @@ public class ExpensesRepo(CommonConnectivity db)
         { "@EnteredBy",by }
     }, "@NewExpenseId");
     public void Delete(int expenseId, int deletedBy) => db.Exec("sp_DeleteExpense", new() { { "@ExpenseId",expenseId }, { "@DeletedBy",deletedBy } });
+    public List<DeletedItem> GetDeleted()
+        => db.Sql(@"SELECT e.ExpenseId, e.ExpenseNo, e.Title, e.Amount, e.ExpenseDate, e.DeletedAt, u.FullName AS DeletedByName
+                    FROM Expenses e LEFT JOIN Users u ON u.UserId = e.DeletedBy
+                    WHERE e.DeletedAt IS NOT NULL ORDER BY e.DeletedAt DESC",
+            r => new DeletedItem {
+                Kind = "expense", KindLabel = "Expense", Id = G.G<int>(r,"ExpenseId"),
+                Title = ((G.G<string>(r,"ExpenseNo") ?? "") + " " + (G.G<string>(r,"Title") ?? "")).Trim(),
+                Subtitle = $"Rs {G.G<decimal>(r,"Amount"):N0} - {G.G<DateTime>(r,"ExpenseDate"):dd MMM yyyy}",
+                DeletedAt = G.G<DateTime?>(r,"DeletedAt"), DeletedByName = G.G<string>(r,"DeletedByName") });
+
+    public void Restore(int expenseId)
+        => db.ExecSql("UPDATE Expenses SET DeletedAt = NULL, DeletedBy = NULL WHERE ExpenseId = @Id", new() {{"@Id", expenseId}});
+
     static Expense MapExp(SqlDataReader r) => new() {
         ExpenseId=G.G<int>(r,"ExpenseId"), ExpenseNo=G.G<string>(r,"ExpenseNo")??"",
         CategoryId=G.G<int?>(r,"CategoryId"), CategoryName=G.G<string>(r,"CategoryName"),
