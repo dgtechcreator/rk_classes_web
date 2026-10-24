@@ -37,7 +37,7 @@
 {<div class="alert alert-info"><i class="fas fa-user-shield"></i> This login belongs to the Class Representative <b>@crInfo.StudentName</b> (@crInfo.ClassName). Manage scope and on/off on the <a href="/ClassRep/Index">Class Representatives</a> page.</div>}
 
 <div style="max-width:600px;">
-  <form method="post" action="/Users/Save">
+  <form method="post" action="/Users/Save" enctype="multipart/form-data">
     <input type="hidden" name="UserId" value="@Model.UserId"/>
 
     <div class="card">
@@ -45,6 +45,20 @@
         <span class="card-ttl"><i class="fas fa-user" style="color:var(--p);margin-right:6px;"></i>User Details</span>
       </div>
       <div class="form-grid">
+        <div class="fg full">
+          <label>Profile Photo <span style="font-weight:400;color:var(--mu);">(JPG / PNG / WEBP, up to 5 MB)</span></label>
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <img id="userPicPrev" src="@(string.IsNullOrEmpty(Model.ProfilePicPath) ? "" : Model.ProfilePicPath)" alt=""
+                 style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--bdr2);@(string.IsNullOrEmpty(Model.ProfilePicPath) ? "display:none;" : "")"/>
+            <input type="file" name="ProfilePic" accept="image/jpeg,image/png,image/webp" onchange="previewUserPic(this)"/>
+            @if (!string.IsNullOrEmpty(Model.ProfilePicPath))
+            {
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#dc2626;font-weight:700;cursor:pointer;">
+                <input type="checkbox" name="RemovePhoto" value="true"/> Remove photo
+              </label>
+            }
+          </div>
+        </div>
         <div class="fg full">
           <label>Full Name *</label>
           <input type="text" name="FullName" value="@Model.FullName" class="fc" placeholder="User's full name" required/>
@@ -93,6 +107,25 @@
               <option value="Male" selected="@(Model.Gender=="Male")">Male (Sir)</option>
               <option value="Female" selected="@(Model.Gender=="Female")">Female (Ma'am)</option>
             </select>
+          </div>
+          <div class="fg full">
+            @{
+              var faculties = ViewBag.Faculties as List<SchoolMS.Domain.Faculty> ?? new();
+              var autoFaculty = ViewBag.AutoFaculty as SchoolMS.Domain.Faculty;
+            }
+            <label>Linked Faculty profile <span style="font-weight:400;color:var(--mu);">(the teacher this login belongs to - for photo, payments and lectures)</span></label>
+            <select name="FacultyId" class="fs">
+              <option value="">— Automatic (match by phone / name) —</option>
+              @foreach (var f in faculties)
+              {
+                <option value="@f.FacultyId" selected="@(Model.FacultyId == f.FacultyId)">@f.FullName@(string.IsNullOrEmpty(f.DesignationName) ? "" : " · " + f.DesignationName)@(string.IsNullOrEmpty(f.Phone) ? "" : " · " + f.Phone)</option>
+              }
+            </select>
+            <div style="font-size:11.5px;color:var(--mu);margin-top:4px;">
+              @if (autoFaculty != null) { <text>Automatic matching currently finds: <b>@autoFaculty.FullName</b>.</text> }
+              else { <text>Automatic matching finds no Faculty profile for this login.</text> }
+              A profile can be linked to one login only.
+            </div>
           </div>
           <div class="fg">
             <label>Status</label>
@@ -167,6 +200,13 @@
 
 @section Scripts {
 <script>
+function previewUserPic(input) {
+  if (input.files && input.files[0]) {
+    const r = new FileReader();
+    r.onload = e => { const p = document.getElementById('userPicPrev'); p.src = e.target.result; p.style.display = 'block'; };
+    r.readAsDataURL(input.files[0]);
+  }
+}
 function togglePwd(){
   const inp=document.getElementById('pwdInp');
   const ico=document.getElementById('eyeIco');

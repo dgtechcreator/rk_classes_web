@@ -11,7 +11,8 @@ namespace SchoolMS.Web.Controllers.Api;
 [ApiController]
 [Route("api/users")]
 [ApiRequireStaff]
-public class UsersApiController(UserMgmtService svc, ClassRepService crSvc, UserAccessCache access) : ControllerBase
+public class UsersApiController(UserMgmtService svc, ClassRepService crSvc, UserAccessCache access, ProfilePhotoStore photos,
+    FacultyService facultySvc, TeacherAccountLinker linker) : ControllerBase
 {
     ClassRep? CrOf(int userId)
     {
@@ -26,7 +27,7 @@ public class UsersApiController(UserMgmtService svc, ClassRepService crSvc, User
     }
 
     public record SaveUserReq(int UserId, string FullName, string Username, string? Email, string? Phone,
-        int RoleId, bool IsActive, string? NewPassword, string? Gender = null);
+        int RoleId, bool IsActive, string? NewPassword, string? Gender = null, int FacultyId = -1);   // FacultyId: -1 = leave as is, 0 = automatic matching, >0 = link to that Faculty profile
     public record SavePermissionsReq(int UserId, List<PermEntry> Entries);
     public record PermEntry(int ModuleId, bool CanView, bool CanEdit);
     public record ChangePasswordReq(int UserId, string OldPassword, string NewPassword);
@@ -47,6 +48,24 @@ public class UsersApiController(UserMgmtService svc, ClassRepService crSvc, User
         if (User.RoleId() != 1) return StatusCode(403, new { error = "Admin only." });
         var crRole = SafeCrRoleId();
         return Ok(svc.GetRoles().Where(r => r.RoleId != crRole));   // CR logins are created from the Class Representatives screen
+    }
+
+    /// <summary>Faculty profiles an admin can link a login to, plus what automatic matching finds for the given login (userId optional).</summary>
+    [HttpGet("faculty-options")]
+    public IActionResult FacultyOptions(int userId = 0)
+    {
+        if (User.RoleId() != 1) return StatusCode(403, new { error = "Admin only." });
+        var auto = userId > 0 ? linker.AutoMatch(userId) : null;
+        var linkedTo = svc.GetAll().Where(u => u.FacultyId != null).ToDictionary(u => u.FacultyId!.Value, u => new { u.UserId, u.FullName });
+        return Ok(new {
+            autoFacultyId = auto?.FacultyId,
+            autoFacultyName = auto?.FullName,
+            faculties = facultySvc.GetAllActive().Select(f => new {
+                facultyId = f.FacultyId, fullName = f.FullName, designationName = f.DesignationName, phone = f.Phone,
+                linkedUserId = linkedTo.TryGetValue(f.FacultyId, out var l) ? (int?)l.UserId : null,
+                linkedUserName = linkedTo.TryGetValue(f.FacultyId, out var l2) ? l2.FullName : null,
+            }),
+        });
     }
 
     [HttpGet("{id:int}")]
@@ -118,9 +137,53 @@ public class UsersApiController(UserMgmtService svc, ClassRepService crSvc, User
         var id = svc.Save(model, uid);
         if (id == -1) return BadRequest(new { error = $"Username '{req.Username}' already exists." });
         if (isAdmin && req.Gender != null) svc.SetGender(id, req.Gender);   // "" clears it
+        if (isAdmin && req.FacultyId >= 0)
+        {
+            var (linkOk, linkErr) = svc.LinkFaculty(id, req.FacultyId);
+            if (!linkOk) { access.Invalidate(id); return BadRequest(new { error = $"User saved, but the Faculty link failed: {linkErr}", userId = id }); }
+        }
         access.Invalidate(id);
 
         return Ok(new { userId = id });
+    }
+
+    /// <summary>
+    /// Upload / replace a login's profile photo (multipart field "photo"). Admin may do it for anyone, every other
+    /// user only for himself (the same rule as Save).
+    /// </summary>
+    [HttpPost("{id:int}/photo")]
+    public IActionResult UploadPhoto(int id, IFormFile? photo)
+    {
+        if (User.RoleId() != 1 && User.UserId() != id) return StatusCode(403, new { error = "Access denied." });
+        var existing = svc.GetById(id);
+        if (existing == null) return NotFound(new { error = "User not found." });
+        var (path, err) = photos.Save(photo, "users");
+        if (err != null) return BadRequest(new { error = err });
+        try { svc.SetPhoto(id, path); }
+        catch (Microsoft.Data.SqlClient.SqlException)
+        {
+            photos.Delete(path);
+            return StatusCode(500, new { error = "Profile photo is not enabled on the server yet (run SQL/65_UserProfilePhoto.sql)." });
+        }
+        photos.Delete(existing.ProfilePicPath);
+        access.Invalidate(id);
+        return Ok(new { profilePicPath = path });
+    }
+
+    [HttpDelete("{id:int}/photo")]
+    public IActionResult DeletePhoto(int id)
+    {
+        if (User.RoleId() != 1 && User.UserId() != id) return StatusCode(403, new { error = "Access denied." });
+        var existing = svc.GetById(id);
+        if (existing == null) return NotFound(new { error = "User not found." });
+        try { svc.SetPhoto(id, null); }
+        catch (Microsoft.Data.SqlClient.SqlException)
+        {
+            return StatusCode(500, new { error = "Profile photo is not enabled on the server yet (run SQL/65_UserProfilePhoto.sql)." });
+        }
+        photos.Delete(existing.ProfilePicPath);
+        access.Invalidate(id);
+        return Ok(new { profilePicPath = (string?)null });
     }
 
     [HttpGet("assign-rights")]

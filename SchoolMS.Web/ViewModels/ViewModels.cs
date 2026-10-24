@@ -23,6 +23,7 @@ public class StudentFormVM
     public List<Section>  Sections{get;set;}=new();
     public List<Batch>    Batches{get;set;}=new();
     public IFormFile?     ProfilePic{get;set;}
+    public bool           RemovePhoto{get;set;}
 }
 
 public class AttendanceVM

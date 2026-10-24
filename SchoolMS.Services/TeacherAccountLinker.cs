@@ -26,10 +26,28 @@ public class TeacherAccountLinker(UserMgmtService userSvc, FacultyService facult
         return d.Length >= 10 ? d[^10..] : "";
     }
 
+    /// <summary>The Faculty profile of a login: the one the admin linked explicitly (Users form), else the automatic match.</summary>
     public Faculty? FindFaculty(int userId)
     {
         var user = userSvc.GetById(userId);
         if (user == null) return null;
+        if (user.FacultyId is > 0)
+        {
+            var linked = facultySvc.GetById(user.FacultyId.Value);
+            if (linked != null) return linked;
+        }
+        return Match(user);
+    }
+
+    /// <summary>What the automatic rules alone would pick (shown as a hint next to the link dropdown).</summary>
+    public Faculty? AutoMatch(int userId)
+    {
+        var user = userSvc.GetById(userId);
+        return user == null ? null : Match(user);
+    }
+
+    Faculty? Match(AppUser user)
+    {
         var active = facultySvc.GetAllActive();
 
         var phone = Last10(user.Phone);

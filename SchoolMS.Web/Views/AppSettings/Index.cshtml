@@ -1,0 +1,50 @@
+@model SchoolMS.Services.MaintenanceState
+@{ ViewData["Title"] = "App Settings"; }
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div><h1>App Settings</h1><p>Switches the mobile app obeys right away - no new app version needed</p></div>
+  </div>
+</div>
+
+<div style="max-width:640px;">
+  <form method="post" action="/AppSettings/Save" id="maintForm">
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-ttl"><i class="fas fa-screwdriver-wrench" style="color:var(--p);margin-right:7px;"></i>Maintenance mode</span>
+        @if (Model.Enabled) { <span class="badge b-absent">ON</span> } else { <span class="badge b-active">OFF</span> }
+      </div>
+
+      <p style="font-size:13px;color:var(--mu);margin:0 0 14px;">
+        When ON, every phone (staff and parents, also already logged-in ones) shows an &ldquo;under maintenance&rdquo; page with the
+        message below and cannot use the app. This website is not affected. Turn it OFF when your update is live and the app
+        opens normally again within a few seconds.
+      </p>
+
+      <div class="fg" style="margin-bottom:14px;">
+        <label style="display:flex;align-items:center;gap:10px;font-weight:800;font-size:14px;cursor:pointer;">
+          <input type="checkbox" id="enabled" name="enabled" value="true" @(Model.Enabled ? "checked" : "") style="width:18px;height:18px;"/>
+          Put the mobile app under maintenance
+        </label>
+      </div>
+
+      <div class="fg">
+        <label>Message shown in the app</label>
+        <textarea name="message" class="fc" rows="3" maxlength="500">@Model.Message</textarea>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--bdr);">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+@section Scripts {
+<script>
+document.getElementById('maintForm').addEventListener('submit', function (e) {
+  var turningOn = document.getElementById('enabled').checked && @(Model.Enabled ? "false" : "true");
+  if (turningOn && !confirm('Maintenance mode will block EVERY phone from using the app until you turn it off again. Continue?')) e.preventDefault();
+});
+</script>
+}

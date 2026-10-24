@@ -1,4 +1,5 @@
 @using SchoolMS.Web.Filters
+@inject SchoolMS.Services.MaintenanceService Maint
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -191,6 +192,25 @@
     color: #f3f4f6 !important;
   }
 </style>
+<script>
+// A stored photo whose file is missing on the server (e.g. uploads lost in a re-deploy) must never show a broken-image
+// icon: account avatars fall back to the first letter, every other student / faculty / user photo to a neutral avatar.
+(function () {
+  var rx = /\/images\/(students|faculty|users)\//i;
+  var blank = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#e5e7eb"/><circle cx="32" cy="24" r="11" fill="#9ca3af"/><path d="M10 64c2-16 14-22 22-22s20 6 22 22z" fill="#9ca3af"/></svg>');
+  function heal(img) {
+    if (!img || img.tagName !== 'IMG' || img.getAttribute('data-healed') || !rx.test(img.getAttribute('src') || '')) return;
+    img.setAttribute('data-healed', '1');
+    var ini = img.getAttribute('data-initial');
+    if (ini) { img.replaceWith(document.createTextNode(ini)); return; }
+    img.src = blank;
+  }
+  document.addEventListener('error', function (e) { heal(e.target); }, true);
+  window.addEventListener('load', function () {
+    document.querySelectorAll('img').forEach(function (i) { if (i.complete && i.naturalWidth === 0) heal(i); });
+  });
+})();
+</script>
 </head>
 <body>
 
@@ -232,6 +252,9 @@
       <span class="nav-ic"><i class="fas fa-users-cog"></i></span> Users &amp; Permissions
     </a>}
     @if(Context.Session.GetInt32("RoleId") == 1){
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="AppSettings"?"active":"")" href="/AppSettings/Index">
+      <span class="nav-ic"><i class="fas fa-screwdriver-wrench"></i></span> App Settings
+    </a>
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="ClassRep"?"active":"")" href="/ClassRep/Index">
       <span class="nav-ic"><i class="fas fa-user-shield"></i></span> Class Representatives
     </a>}
@@ -379,7 +402,7 @@
 
   <div class="sb-foot">
     <div class="user-tile">
-      <div class="u-av">@(Context.Session.GetString("FullName")?[0].ToString().ToUpper() ?? "A")</div>
+      <div class="u-av">@if (!string.IsNullOrEmpty(Context.Session.GetString("ProfilePic"))){<img src="@Context.Session.GetString("ProfilePic")" alt="" data-initial="@(Context.Session.GetString("FullName")?[0].ToString().ToUpper() ?? "A")"/>}else{@(Context.Session.GetString("FullName")?[0].ToString().ToUpper() ?? "A")}</div>
       <div style="flex:1;min-width:0;">
         <div class="u-name">@Context.Session.GetDisplayName()</div>
         <div class="u-role">@Context.Session.GetString("RoleName")</div>
@@ -414,8 +437,8 @@
     <button onclick="toggleUserDropdown()" style="background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;">
       <!-- Desktop: Full profile card -->
       <div style="display:flex;align-items:center;gap:12px;padding:5px 16px;background:#fce5e5;border:1px solid #f5d7d7;border-radius:10px;transition:all 0.2s;" class="user-card-desktop">
-        <div style="width:40px;height:40px;border-radius:50%;background:#dc2626;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;flex-shrink:0;">
-          @(Context.Session.GetString("FullName")?.FirstOrDefault() ?? 'U')
+        <div style="width:40px;height:40px;border-radius:50%;background:#dc2626;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;flex-shrink:0;overflow:hidden;">
+          @if (!string.IsNullOrEmpty(Context.Session.GetString("ProfilePic"))){<img src="@Context.Session.GetString("ProfilePic")" alt="" data-initial="@(Context.Session.GetString("FullName")?.FirstOrDefault() ?? 'U')" style="width:100%;height:100%;object-fit:cover;"/>}else{@(Context.Session.GetString("FullName")?.FirstOrDefault() ?? 'U')}
         </div>
         <div style="flex:1;">
           <div style="font-weight:700;color:#111;font-size:13px;">@Context.Session.GetDisplayName()</div>
@@ -424,8 +447,8 @@
         <div style="color:#dc2626;font-size:18px;flex-shrink:0;">→</div>
       </div>
       <!-- Mobile: Just the initial -->
-      <div style="width:40px;height:40px;border-radius:50%;background:#dc2626;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;display:none;" class="user-card-mobile">
-        @(Context.Session.GetString("FullName")?.FirstOrDefault() ?? 'U')
+      <div style="width:40px;height:40px;border-radius:50%;background:#dc2626;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px;display:none;overflow:hidden;" class="user-card-mobile">
+        @if (!string.IsNullOrEmpty(Context.Session.GetString("ProfilePic"))){<img src="@Context.Session.GetString("ProfilePic")" alt="" data-initial="@(Context.Session.GetString("FullName")?.FirstOrDefault() ?? 'U')" style="width:100%;height:100%;object-fit:cover;"/>}else{@(Context.Session.GetString("FullName")?.FirstOrDefault() ?? 'U')}
       </div>
     </button>
 
@@ -495,6 +518,11 @@
 <span id="_te" style="display:none">@TempData["Error"]</span>
 
 <main class="main">
+  @if (Context.Session.GetInt32("RoleId") == 1 && Maint.Get().Enabled)
+  {
+    <div class="alert alert-danger" style="margin-bottom:14px;"><i class="fas fa-screwdriver-wrench"></i>
+      Mobile app maintenance mode is ON - phones are blocked. <a href="/AppSettings/Index" style="text-decoration:underline;margin-left:4px;">Turn it off</a></div>
+  }
   @RenderBody()
 </main>
 

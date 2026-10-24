@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using SchoolMS.Domain;
 using SchoolMS.Services;
+using SchoolMS.Web.Auth;
 using SchoolMS.Web.Filters;
 
 namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
-public class FacultyController(FacultyService svc, LookupService lookup) : Controller
+public class FacultyController(FacultyService svc, LookupService lookup, ProfilePhotoStore photos) : Controller
 {
     public IActionResult Index(int page=1, string? search=null, string? status="Active", int? designationId=null)
     {
@@ -41,20 +42,27 @@ public class FacultyController(FacultyService svc, LookupService lookup) : Contr
     }
 
     [HttpPost]
-    public IActionResult Save(Faculty model, IFormFile? ProfilePic)
+    public IActionResult Save(Faculty model, IFormFile? ProfilePic, bool RemovePhoto = false)
     {
         int uid = HttpContext.Session.GetUserId() ?? 1;
         string? picPath = null;
         if (ProfilePic != null && ProfilePic.Length > 0)
         {
-            var dir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "faculty");
-            Directory.CreateDirectory(dir);
-            var fn = $"{Guid.NewGuid()}{Path.GetExtension(ProfilePic.FileName)}";
-            using var fs = new FileStream(Path.Combine(dir, fn), FileMode.Create);
-            ProfilePic.CopyTo(fs);
-            picPath = $"/images/faculty/{fn}";
+            var (saved, err) = photos.Save(ProfilePic, "faculty");
+            if (err != null)
+            {
+                TempData["Error"] = err;
+                return model.FacultyId == 0 ? RedirectToAction("Create") : RedirectToAction("Edit", new { id = model.FacultyId });
+            }
+            picPath = saved;
         }
+        var oldPic = model.FacultyId == 0 ? null : svc.GetById(model.FacultyId)?.ProfilePicPath;
         var id = svc.Save(model, picPath, uid);
+        if (id > 0 && model.FacultyId != 0)
+        {
+            if (picPath != null) photos.Delete(oldPic);
+            else if (RemovePhoto) { svc.SetPhoto(id, null); photos.Delete(oldPic); }
+        }
         TempData["Success"] = "Faculty member saved successfully.";
         return RedirectToAction("Details", new { id });
     }

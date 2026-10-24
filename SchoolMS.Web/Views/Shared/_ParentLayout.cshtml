@@ -156,6 +156,19 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; color: #
   .pp-main { padding: 12px 10px 60px; }
 }
 </style>
+<script>
+// A photo whose file is missing on the server must not show a broken-image icon: use a neutral avatar instead.
+(function () {
+  var rx = /\/images\/(students|faculty|users)\//i;
+  var blank = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#e5e7eb"/><circle cx="32" cy="24" r="11" fill="#9ca3af"/><path d="M10 64c2-16 14-22 22-22s20 6 22 22z" fill="#9ca3af"/></svg>');
+  function heal(img) {
+    if (!img || img.tagName !== 'IMG' || img.getAttribute('data-healed') || !rx.test(img.getAttribute('src') || '')) return;
+    img.setAttribute('data-healed', '1'); img.src = blank;
+  }
+  document.addEventListener('error', function (e) { heal(e.target); }, true);
+  window.addEventListener('load', function () { document.querySelectorAll('img').forEach(function (i) { if (i.complete && i.naturalWidth === 0) heal(i); }); });
+})();
+</script>
 </head>
 <body>
 

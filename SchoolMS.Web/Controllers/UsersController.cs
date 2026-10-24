@@ -7,7 +7,8 @@ using SchoolMS.Web.Filters;
 namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
-public class UsersController(UserMgmtService svc, ClassRepService crSvc, UserAccessCache access) : Controller
+public class UsersController(UserMgmtService svc, ClassRepService crSvc, UserAccessCache access, ProfilePhotoStore photos,
+    FacultyService facultySvc, TeacherAccountLinker linker) : Controller
 {
     bool IsAdmin => HttpContext.Session.GetInt32("RoleId") == 1;
     int Me => HttpContext.Session.GetUserId() ?? 0;
@@ -45,6 +46,7 @@ public class UsersController(UserMgmtService svc, ClassRepService crSvc, UserAcc
     {
         if (!IsAdmin) return RedirectToAction("AccessDenied","Home");
         ViewBag.IsAdmin = true;
+        FillFacultyOptions(0);
         ViewBag.Roles   = RolesFor(null);
         ViewBag.Modules = svc.GetAllModules();
         return View("Form", new AppUser());
@@ -59,6 +61,7 @@ public class UsersController(UserMgmtService svc, ClassRepService crSvc, UserAcc
         var user = svc.GetById(id);
         if (user == null) return NotFound();
 
+        if (IsAdmin) FillFacultyOptions(id);
         ViewBag.IsOwnProfile = (Me == id);
         ViewBag.IsAdmin = IsAdmin;
         ViewBag.Roles   = RolesFor(user);
@@ -67,8 +70,44 @@ public class UsersController(UserMgmtService svc, ClassRepService crSvc, UserAcc
         return View("Form", user);
     }
 
+    /// <summary>Faculty profiles offered in the "Linked Faculty profile" dropdown, and what automatic matching would pick today.</summary>
+    void FillFacultyOptions(int userId)
+    {
+        try
+        {
+            ViewBag.Faculties = facultySvc.GetAllActive();
+            ViewBag.AutoFaculty = userId > 0 ? linker.AutoMatch(userId) : null;
+        }
+        catch { ViewBag.Faculties = new List<Faculty>(); }
+    }
+
+    /// <summary>Stores / removes the login's profile photo. A bad photo never blocks the rest of the user save - it only shows a message.</summary>
+    void ApplyPhoto(int userId, IFormFile? file, bool remove)
+    {
+        bool upload = file != null && file.Length > 0;
+        if (!upload && !remove) return;
+        try
+        {
+            var old = svc.GetById(userId)?.ProfilePicPath;
+            if (upload)
+            {
+                var (path, err) = photos.Save(file, "users");
+                if (err != null) { TempData["Error"] = err; return; }
+                try { svc.SetPhoto(userId, path); }
+                catch (Microsoft.Data.SqlClient.SqlException) { photos.Delete(path); TempData["Error"] = "Profile photo is not enabled on the server yet (run SQL/65_UserProfilePhoto.sql)."; return; }
+                photos.Delete(old);
+            }
+            else
+            {
+                svc.SetPhoto(userId, null);
+                photos.Delete(old);
+            }
+        }
+        catch (Microsoft.Data.SqlClient.SqlException) { TempData["Error"] = "Profile photo is not enabled on the server yet (run SQL/65_UserProfilePhoto.sql)."; }
+    }
+
     [HttpPost]
-    public IActionResult Save(AppUser model, string? newPassword)
+    public IActionResult Save(AppUser model, string? newPassword, IFormFile? ProfilePic, bool RemovePhoto = false)
     {
         int uid = Me;
         bool isAdmin = IsAdmin;
@@ -123,6 +162,12 @@ public class UsersController(UserMgmtService svc, ClassRepService crSvc, UserAcc
         var id = svc.Save(model, uid);
         if (id == -1) { TempData["Error"] = $"Username '{model.Username}' already exists."; return RedirectToAction("Create"); }
         if (isAdmin) svc.SetGender(id, model.Gender);   // Sir / Ma'am greeting; only the admin sets it
+        ApplyPhoto(id, ProfilePic, RemovePhoto);
+        if (isAdmin && Request.HasFormContentType && Request.Form.ContainsKey("FacultyId"))   // "" = automatic matching
+        {
+            var (linkOk, linkErr) = svc.LinkFaculty(id, model.FacultyId);
+            if (!linkOk) TempData["Error"] = linkErr;
+        }
         access.Invalidate(id);
         TempData["Success"] = "User saved successfully.";
 

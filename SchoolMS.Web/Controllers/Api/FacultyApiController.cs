@@ -8,7 +8,7 @@ namespace SchoolMS.Web.Controllers.Api;
 [ApiController]
 [Route("api/faculty")]
 [ApiRequireStaff]
-public class FacultyApiController(FacultyService svc) : ControllerBase
+public class FacultyApiController(FacultyService svc, ProfilePhotoStore photos) : ControllerBase
 {
     [HttpGet]
     [ApiRequirePermission("faculty_view")]
@@ -21,7 +21,7 @@ public class FacultyApiController(FacultyService svc) : ControllerBase
         });
     }
 
-    // Note: profile picture upload is deferred — Save accepts JSON only, no IFormFile support yet.
+    // Save takes JSON only; the photo has its own multipart endpoint below (POST {id}/photo).
     [HttpPost("save")]
     [ApiRequirePermission("faculty", requireEdit: true)]
     public IActionResult Save([FromBody] Faculty model)
@@ -37,6 +37,31 @@ public class FacultyApiController(FacultyService svc) : ControllerBase
     {
         svc.Delete(id);
         return Ok(new { success = true });
+    }
+
+    /// <summary>Upload / replace the faculty member's photo (multipart field "photo"). Same file + DB column the web form uses.</summary>
+    [HttpPost("{id:int}/photo")]
+    [ApiRequirePermission("faculty", requireEdit: true)]
+    public IActionResult UploadPhoto(int id, IFormFile? photo)
+    {
+        var f = svc.GetById(id);
+        if (f == null) return NotFound(new { error = "Faculty member not found." });
+        var (path, err) = photos.Save(photo, "faculty");
+        if (err != null) return BadRequest(new { error = err });
+        svc.SetPhoto(id, path);
+        photos.Delete(f.ProfilePicPath);
+        return Ok(new { profilePicPath = path });
+    }
+
+    [HttpDelete("{id:int}/photo")]
+    [ApiRequirePermission("faculty", requireEdit: true)]
+    public IActionResult DeletePhoto(int id)
+    {
+        var f = svc.GetById(id);
+        if (f == null) return NotFound(new { error = "Faculty member not found." });
+        svc.SetPhoto(id, null);
+        photos.Delete(f.ProfilePicPath);
+        return Ok(new { profilePicPath = (string?)null });
     }
 
     [HttpGet("{id:int}")]

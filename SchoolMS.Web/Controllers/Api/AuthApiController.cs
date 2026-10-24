@@ -34,7 +34,7 @@ public class AuthApiController(
         var token = jwt.GenerateStaffToken(u, perms);
         return Ok(new {
             token,
-            user = new { u.UserId, u.FullName, DisplayName = SafeName(u.UserId, u.FullName), u.Username, u.RoleId, u.RoleName, u.Email, u.Phone },
+            user = new { u.UserId, u.FullName, DisplayName = SafeName(u.UserId, u.FullName), u.Username, u.RoleId, u.RoleName, u.Email, u.Phone, ProfilePicPath = acc?.ProfilePicPath ?? PicOf(u.UserId) },
             permissions = perms,
             classRep = CrJson(acc?.Cr),
         });
@@ -50,10 +50,16 @@ public class AuthApiController(
         var u = userMgmt.GetById(uid);
         if (acc == null || u == null || !acc.CanUse) return Unauthorized(new { error = "Account disabled." });
         return Ok(new {
-            user = new { u.UserId, u.FullName, DisplayName = SafeName(u.UserId, u.FullName), u.Username, RoleId = acc.RoleId, RoleName = acc.RoleName, u.Email, u.Phone },
+            user = new { u.UserId, u.FullName, DisplayName = SafeName(u.UserId, u.FullName), u.Username, RoleId = acc.RoleId, RoleName = acc.RoleName, u.Email, u.Phone, ProfilePicPath = acc.ProfilePicPath ?? u.ProfilePicPath },
             permissions = acc.Known ? acc.Perms : userMgmt.GetPermissions(uid),
             classRep = CrJson(acc.Cr),
         });
+    }
+
+    string? PicOf(int userId)
+    {
+        try { return userMgmt.GetById(userId)?.ProfilePicPath; }
+        catch { return null; }
     }
 
     string SafeName(int userId, string fallback)

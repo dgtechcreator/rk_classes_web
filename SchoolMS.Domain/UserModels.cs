@@ -27,6 +27,8 @@ public class AppUser
     public bool    IsActive{get;set;}=true;
     public int     PermCount{get;set;}
     public string? Gender{get;set;}
+    public string? ProfilePicPath{get;set;}
+    public int?    FacultyId{get;set;}   // explicit link to the teacher's Faculty profile (null = match automatically by phone / name)
     public bool    IsDeleted{get;set;}
     public DateTime? DeletedAt{get;set;}
     public List<Module> Permissions{get;set;}=new();

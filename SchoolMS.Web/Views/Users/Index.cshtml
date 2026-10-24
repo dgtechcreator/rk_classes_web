@@ -58,10 +58,15 @@
       {
         <tr>
           <td>
+            <div style="display:flex;align-items:center;gap:10px;">
+              @if (!string.IsNullOrEmpty(u.ProfilePicPath)){<img src="@u.ProfilePicPath" class="stu-pic" alt=""/>}
+              <div>
             <div class="fw7">@u.FullName</div>
             @if (u.UserId == 1){<span class="badge b-purple" style="font-size:10px;">Super Admin</span>}
             @if (crByUser.TryGetValue(u.UserId, out var cr))
             {<span class="badge b-blue" style="font-size:10px;">CR &middot; @cr.ClassName@(cr.SectionName != null ? " " + cr.SectionName : "")</span>}
+              </div>
+            </div>
           </td>
           <td><span class="mono" style="font-size:12px;color:var(--p);">@u.Username</span></td>
           <td><span class="badge b-blue">@u.RoleName</span></td>

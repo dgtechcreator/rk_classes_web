@@ -31,7 +31,11 @@ public class StudentRepo(CommonConnectivity db)
         }, MapStudent);
         return l;
     }
-    public void Delete(int id)  { db.Exec("sp_DeleteStudent",  new() { { "@StudentId", id } }); StudentNameDirectory.Invalidate(); }
+    /// <summary>Sets (or clears, with null) the photo. sp_SaveStudent uses ISNULL(@pic, old), so it can never clear one.</summary>
+    public void SetPhoto(int id, string? path)
+        => db.ExecSql("UPDATE Students SET ProfilePicPath=@P WHERE StudentId=@Id", new() { { "@Id", id }, { "@P", path } });
+
+    public void Delete(int id)  { db.Exec("sp_DeleteStudent", new() { { "@StudentId", id } }); StudentNameDirectory.Invalidate(); }
     public void Restore(int id) { db.Exec("sp_RestoreStudent", new() { { "@StudentId", id } }); StudentNameDirectory.Invalidate(); }
 
     public int Save(Student s, string? pic, int by)

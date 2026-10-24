@@ -42,7 +42,11 @@ public class FacultyRepo(CommonConnectivity db)
                 SectionName      = G.G<string>(r,"SectionName")
             });
 
-    public void Delete(int id)  => db.Exec("sp_DeleteFaculty",  new() { { "@FacultyId", id } });
+    /// <summary>Sets (or clears, with null) the photo. sp_SaveFaculty uses ISNULL(@pic, old), so it can never clear one.</summary>
+    public void SetPhoto(int id, string? path)
+        => db.ExecSql("UPDATE Faculty SET ProfilePicPath=@P WHERE FacultyId=@Id", new() { { "@Id", id }, { "@P", path } });
+
+    public void Delete(int id)  => db.Exec("sp_DeleteFaculty", new() { { "@FacultyId", id } });
     public void Restore(int id) => db.Exec("sp_RestoreFaculty", new() { { "@FacultyId", id } });
 
     public int Save(Faculty f, string? pic, int by)

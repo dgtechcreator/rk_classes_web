@@ -8,7 +8,7 @@ namespace SchoolMS.Web.Controllers.Api;
 [ApiController]
 [Route("api/students")]
 [ApiRequireStaff]
-public class StudentApiController(StudentService svc, LookupService lookup, FeeStructureService feeSvc) : ControllerBase
+public class StudentApiController(StudentService svc, LookupService lookup, FeeStructureService feeSvc, ProfilePhotoStore photos) : ControllerBase
 {
     [HttpGet]
     [ApiRequirePermission("student_view")]
@@ -48,6 +48,31 @@ public class StudentApiController(StudentService svc, LookupService lookup, FeeS
         return Ok(new { success = true });
     }
 
+    /// <summary>Upload / replace the student's photo (multipart field "photo"). Same file + DB column the web form uses.</summary>
+    [HttpPost("{id:int}/photo")]
+    [ApiRequirePermission("student", requireEdit: true)]
+    public IActionResult UploadPhoto(int id, IFormFile? photo)
+    {
+        var s = svc.GetById(id);
+        if (s == null) return NotFound(new { error = "Student not found." });
+        var (path, err) = photos.Save(photo, "students");
+        if (err != null) return BadRequest(new { error = err });
+        svc.SetPhoto(id, path);
+        photos.Delete(s.ProfilePicPath);
+        return Ok(new { profilePicPath = path });
+    }
+
+    [HttpDelete("{id:int}/photo")]
+    [ApiRequirePermission("student", requireEdit: true)]
+    public IActionResult DeletePhoto(int id)
+    {
+        var s = svc.GetById(id);
+        if (s == null) return NotFound(new { error = "Student not found." });
+        svc.SetPhoto(id, null);
+        photos.Delete(s.ProfilePicPath);
+        return Ok(new { profilePicPath = (string?)null });
+    }
+
     [HttpGet("by-class-batch")]
     public IActionResult GetByClassAndBatch(string className, string batchName)
         => Ok(svc.GetByClassAndBatch(className, batchName));
@@ -71,6 +96,7 @@ public class StudentApiController(StudentService svc, LookupService lookup, FeeS
                 sectionId = s.SectionId,
                 fullName = s.DisplayName,
                 admissionNo = s.AdmissionNo,
+                profilePicPath = s.ProfilePicPath,
                 className = classes.FirstOrDefault(c => c.ClassId == s.ClassId)?.ClassName ?? "",
                 sectionName = sections.FirstOrDefault(sec => sec.SectionId == s.SectionId)?.SectionName ?? ""
             })

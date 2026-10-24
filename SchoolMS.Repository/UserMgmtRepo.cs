@@ -20,6 +20,8 @@ public class UserMgmtRepo(CommonConnectivity db)
             IsActive  = G.G<bool>(r,"IsActive"),
             PermCount = G.G<int>(r,"PermCount"),
             Gender    = G.G<string>(r,"Gender"),
+            ProfilePicPath = G.G<string>(r,"ProfilePicPath"),
+            FacultyId = G.G<int?>(r,"FacultyId"),
             IsDeleted = G.G<bool>(r,"IsDeleted"),
             DeletedAt = G.G<DateTime?>(r,"DeletedAt")
         });
@@ -35,6 +37,33 @@ public class UserMgmtRepo(CommonConnectivity db)
         var g = string.IsNullOrWhiteSpace(gender) ? null : (gender.Trim() is "Male" or "Female" ? gender.Trim() : null);
         try { db.ExecSql("UPDATE Users SET Gender=@G WHERE UserId=@Id", new() {{"@Id",id},{"@G",g}}); }
         catch (Microsoft.Data.SqlClient.SqlException) { /* SQL/63 not run yet */ }
+    }
+
+    /// <summary>Sets (or clears, with null) the profile photo path. Column comes from SQL/10 + SQL/65; throws if it is still missing.</summary>
+    public void SetPhoto(int id, string? path)
+        => db.ExecSql("UPDATE Users SET ProfilePicPath=@P WHERE UserId=@Id", new() {{"@Id",id},{"@P",path}});
+
+    /// <summary>The login (if any) a Faculty profile is already linked to. Null when none, or when SQL/67 has not been applied yet.</summary>
+    public (int userId, string name)? LinkedUserOf(int facultyId)
+    {
+        try
+        {
+            var rows = db.SqlP("SELECT TOP 1 UserId, FullName FROM Users WHERE FacultyId=@F", new() {{"@F",facultyId}},
+                r => (G.G<int>(r,"UserId"), G.G<string>(r,"FullName") ?? ""));
+            return rows.Count == 0 ? null : rows[0];
+        }
+        catch (Microsoft.Data.SqlClient.SqlException) { return null; }
+    }
+
+    /// <summary>
+    /// Sets / clears (null) the explicit Faculty link. Adds the column on first use (SQL/67). "One Faculty profile = one login" is
+    /// checked in UserMgmtService, NOT with a filtered unique index: such an index needs QUOTED_IDENTIFIER ON and the existing
+    /// stored procedures (sp_SaveUser, login...) were created with it OFF, so every UPDATE on Users would start failing.
+    /// </summary>
+    public void SetFaculty(int userId, int? facultyId)
+    {
+        db.ExecSql("IF COL_LENGTH('dbo.Users','FacultyId') IS NULL ALTER TABLE dbo.Users ADD FacultyId INT NULL;", new());
+        db.ExecSql("UPDATE Users SET FacultyId=@F WHERE UserId=@Id", new() {{"@Id",userId},{"@F",facultyId}});
     }
 
     public void SetActive(int id, bool active)
@@ -67,7 +96,9 @@ public class UserMgmtRepo(CommonConnectivity db)
                 Email        = G.G<string>(r,"Email"),
                 Phone        = G.G<string>(r,"Phone"),
                 IsActive     = G.G<bool>(r,"IsActive"),
-                Gender       = G.G<string>(r,"Gender")
+                Gender       = G.G<string>(r,"Gender"),
+                ProfilePicPath = G.G<string>(r,"ProfilePicPath"),
+                FacultyId    = G.G<int?>(r,"FacultyId")
             });
         var user = users.FirstOrDefault();
         if (user == null) return null;

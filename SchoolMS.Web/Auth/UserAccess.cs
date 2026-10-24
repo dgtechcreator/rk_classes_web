@@ -25,6 +25,7 @@ public class UserAccess
     public bool Active { get; init; }
     public int RoleId { get; init; }
     public string RoleName { get; init; } = "";
+    public string? ProfilePicPath { get; init; }
     public Dictionary<string, bool> Perms { get; init; } = new();
     public CrScope? Cr { get; init; }
 
@@ -62,9 +63,10 @@ public class UserAccessCache(CommonConnectivity db)
 
     UserAccess? Load(int userId)
     {
-        var rows = db.SqlP("SELECT u.IsActive, u.RoleId, r.RoleName FROM Users u LEFT JOIN Roles r ON r.RoleId=u.RoleId WHERE u.UserId=@Id",
+        // u.* (not named columns) so a database without Users.ProfilePicPath yet still loads - G<> returns null for a missing column.
+        var rows = db.SqlP("SELECT u.*, r.RoleName FROM Users u LEFT JOIN Roles r ON r.RoleId=u.RoleId WHERE u.UserId=@Id",
             new() { { "@Id", userId } },
-            r => new { Active = CommonConnectivity.G<bool>(r, "IsActive"), RoleId = CommonConnectivity.G<int>(r, "RoleId"), RoleName = CommonConnectivity.G<string>(r, "RoleName") ?? "" });
+            r => new { Active = CommonConnectivity.G<bool>(r, "IsActive"), RoleId = CommonConnectivity.G<int>(r, "RoleId"), RoleName = CommonConnectivity.G<string>(r, "RoleName") ?? "", Pic = CommonConnectivity.G<string>(r, "ProfilePicPath") });
         var u = rows.FirstOrDefault();
         if (u == null) return null;   // user no longer exists
 
@@ -76,8 +78,22 @@ public class UserAccessCache(CommonConnectivity db)
         }
         catch { /* ClassRepresentatives table not created yet (SQL/61 not run) -> nobody is a CR */ }
 
+        // A teacher / admin login has no foreign key to its Faculty profile (the system matches them by phone, then name -
+        // see TeacherAccountLinker). When the login has no photo of its own, show the linked Faculty profile's photo, so one
+        // photo set on the Faculty page is also the teacher's photo in the app and the website.
+        var pic = u.Pic;
+        if (string.IsNullOrEmpty(pic) && StaffNameService.IsTeacherOrAdmin(u.RoleId, u.RoleName))
+        {
+            try
+            {
+                var linker = new TeacherAccountLinker(new UserMgmtService(new UserMgmtRepo(db)), new FacultyService(new FacultyRepo(db)));
+                pic = linker.FindFaculty(userId)?.ProfilePicPath;
+            }
+            catch { /* no fallback photo - initials are shown */ }
+        }
+
         return new UserAccess {
-            Active = u.Active, RoleId = u.RoleId, RoleName = u.RoleName,
+            Active = u.Active, RoleId = u.RoleId, RoleName = u.RoleName, ProfilePicPath = pic,
             Perms = new UserMgmtRepo(db).GetPermissions(userId), Cr = cr,
         };
     }
@@ -133,6 +149,8 @@ public static class UserAccessExtensions
         }
         var isCr = acc.Cr != null ? 1 : 0;
         if (s.GetInt32("IsCr") != isCr) s.SetInt32("IsCr", isCr);
+        var pic = acc.ProfilePicPath ?? "";
+        if ((s.GetString("ProfilePic") ?? "") != pic) s.SetString("ProfilePic", pic);
     }
 
     /// <summary>Swaps the permission / role claims baked into a staff JWT for the live ones (or rejects a disabled user).</summary>
@@ -175,11 +193,12 @@ public class ClassRepGuardFilter(UserAccessCache cache) : IActionFilter
 
     static readonly Dictionary<string, string[]> Api = new(StringComparer.OrdinalIgnoreCase) {
         ["AuthApi"]              = new[] { "*" },
+        ["AppConfigApi"]         = new[] { "*" },
         ["AttendanceApi"]        = new[] { "Index", "Batches", "BatchDetail", "Options", "Save", "GetDateWiseAttendance", "GetStudentContact" },
         ["TeacherAttendanceApi"] = new[] { "*" },
         ["MarksApi"]             = new[] { "Index", "Save" },
         ["LookupApi"]            = new[] { "GetYears", "GetClasses", "GetSections", "GetBatches", "GetSubjects", "GetExams" },
-        ["UsersApi"]             = new[] { "GetById", "Save", "ChangePassword" },
+        ["UsersApi"]             = new[] { "GetById", "Save", "ChangePassword", "UploadPhoto", "DeletePhoto" },
     };
 
     public void OnActionExecuting(ActionExecutingContext ctx)

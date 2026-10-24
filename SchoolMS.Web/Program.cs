@@ -11,6 +11,9 @@ using SchoolMS.Web.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<SchoolMS.Web.Auth.UserAccessCache>();
+builder.Services.AddSingleton<SchoolMS.Web.Auth.ProfilePhotoStore>();
+builder.Services.AddSingleton<AppSettingsRepo>();
+builder.Services.AddSingleton<MaintenanceService>();
 builder.Services.AddControllersWithViews(o => {
     o.Filters.Add<SchoolMS.Web.Auth.ClassRepGuardFilter>();
     o.Filters.Add<SchoolMS.Web.Auth.PagePermissionFilter>();
@@ -190,6 +193,25 @@ app.Use(async (context, next) => {
 });
 
 app.UseSession();
+
+// Maintenance mode (website > App Settings): every mobile API call is answered with 503 + the message, except the
+// public settings call the app uses to learn the switch is off again. Even app versions without the maintenance
+// screen show that message (the API client reads the "error" field). The website itself is not affected.
+app.Use(async (context, next) => {
+    var path = context.Request.Path;
+    if (path.StartsWithSegments("/api") && !path.StartsWithSegments("/api/app-config"))
+    {
+        var m = context.RequestServices.GetRequiredService<MaintenanceService>().Get();
+        if (m.Enabled)
+        {
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            context.Response.Headers.RetryAfter = "300";
+            await context.Response.WriteAsJsonAsync(new { error = m.Message, maintenance = true });
+            return;
+        }
+    }
+    await next();
+});
 
 // Keep the web session in step with the DB: changed rights apply on the next click, and a user who was
 // deactivated / deleted / switched off is signed out immediately instead of at the next login.

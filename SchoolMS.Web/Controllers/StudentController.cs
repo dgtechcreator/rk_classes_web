@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SchoolMS.Domain;
 using SchoolMS.Services;
+using SchoolMS.Web.Auth;
 using SchoolMS.Web.Filters;
 using SchoolMS.Web.ViewModels;
 
@@ -8,7 +9,7 @@ namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
 public class StudentController(StudentService svc, LookupService lookup, FeeStructureService feeSvc,
-    AttendanceService attSvc, MarksService marksSvc, FeesService feesSvc, FeePositionService feePos) : Controller
+    AttendanceService attSvc, MarksService marksSvc, FeesService feesSvc, FeePositionService feePos, ProfilePhotoStore photos) : Controller
 {
     public IActionResult Index(int page=1, string? search=null, int? classId=null,
         int? sectionId=null, int? batchId=null, string? status="Active")
@@ -48,15 +49,22 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
         string? picPath = null;
         if (model.ProfilePic != null && model.ProfilePic.Length > 0)
         {
-            var dir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "students");
-            Directory.CreateDirectory(dir);
-            var fn = $"{Guid.NewGuid()}{Path.GetExtension(model.ProfilePic.FileName)}";
-            using var fs = new FileStream(Path.Combine(dir, fn), FileMode.Create);
-            model.ProfilePic.CopyTo(fs);
-            picPath = $"/images/students/{fn}";
+            var (saved, err) = photos.Save(model.ProfilePic, "students");
+            if (err != null)
+            {
+                TempData["Error"] = err;
+                return model.Student.StudentId == 0 ? RedirectToAction("Create") : RedirectToAction("Edit", new { id = model.Student.StudentId });
+            }
+            picPath = saved;
         }
         bool isNew = model.Student.StudentId == 0;
+        var oldPic = isNew ? null : svc.GetById(model.Student.StudentId)?.ProfilePicPath;
         var id = svc.Save(model.Student, picPath, uid);
+        if (id > 0 && !isNew)
+        {
+            if (picPath != null) photos.Delete(oldPic);
+            else if (model.RemovePhoto) { svc.SetPhoto(id, null); photos.Delete(oldPic); }
+        }
         if (id > 0) feeSvc.ApplyToStudent(id);   // also re-syncs fees when class/section changed
         TempData["Success"] = "Student saved successfully.";
         TempData["IsNewStudent"] = isNew;
