@@ -17,11 +17,16 @@
     int maxMarks    = ViewBag.MaxMarks ?? 30;
     bool hasData    = Model != null && Model.Any();
     var cr = ViewBag.Cr as SchoolMS.Domain.CrScope;
+    bool maxLocked = ViewBag.MaxLocked ?? false;
 }
 
 <div class="pg-hdr">
   <div class="pg-row">
-    <div><h1>✏️ Test Marks Entry</h1><p>Select filters, enter test name and date, then load</p></div>
+    <div><h1>✏️ Test Marks Entry</h1><p>Add a new test, or pick a test below to enter / edit marks</p></div>
+    @if (cr == null)
+    {
+      <div class="df g8"><button type="button" class="btn btn-primary" onclick="openNewTest()"><i class="fas fa-plus"></i> New Test</button></div>
+    }
     @if (hasData && !string.IsNullOrWhiteSpace(examName) && cr == null)
     {
       <div class="df g8">
@@ -46,13 +51,13 @@
      style="display:inline-flex;align-items:center;justify-content:center;gap:6px;background:@(isToday ? "#1e40af" : "#e5e7eb");border:none;border-radius:20px;padding:8px 14px;font-size:12px;font-weight:700;color:@(isToday ? "#fff" : "#374151");text-decoration:none;transition:all .2s;cursor:pointer;"
      onmouseover="this.style.background='@(isToday ? "#1e3a8a" : "#d1d5db")';this.style.boxShadow='0 4px 12px rgba(30,64,175,.3)'"
      onmouseout="this.style.background='@(isToday ? "#1e40af" : "#e5e7eb")';this.style.boxShadow='none'">
-    <i class="fas fa-calendar-day"></i> 23
+    <i class="fas fa-calendar-day"></i> Today · @DateTime.Today.ToString("dd MMM")
   </a>
   <a href="?testDate=@yesterdayStr"
      style="display:inline-flex;align-items:center;justify-content:center;gap:6px;background:@(!isToday ? "#1e40af" : "#e5e7eb");border:none;border-radius:20px;padding:8px 14px;font-size:12px;font-weight:700;color:@(!isToday ? "#fff" : "#374151");text-decoration:none;transition:all .2s;cursor:pointer;"
      onmouseover="this.style.background='@(!isToday ? "#1e3a8a" : "#d1d5db")';this.style.boxShadow='0 4px 12px rgba(30,64,175,.3)'"
      onmouseout="this.style.background='@(!isToday ? "#1e40af" : "#e5e7eb")';this.style.boxShadow='none'">
-    <i class="fas fa-calendar"></i> 22
+    <i class="fas fa-calendar"></i> Yesterday · @DateTime.Today.AddDays(-1).ToString("dd MMM")
   </a>
 </div>
 
@@ -162,7 +167,7 @@
   <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
     <label style="font-size:12px;font-weight:700;color:var(--mu);white-space:nowrap;">Out of</label>
     <input type="number" name="maxMarks" id="inp_max" value="@maxMarks" class="fc"
-           style="width:65px;" min="1" max="200"/>
+           style="width:65px;@(maxLocked ? "background:#f3f4f6;" : "")" min="1" max="200" @(maxLocked ? "readonly title=\"This test already has marks, so its total cannot change\"" : "")/>
   </div>
 
   <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Load</button>
@@ -187,8 +192,8 @@
 }
 
 @* ── States ─────────────────────────────────────────────────── *@
-@if (!examList.Any())
-{<div class="card"><div class="empty"><div class="empty-ico">📋</div><h3>No Tests Found</h3><p>No tests have been created for the current academic year yet.</p></div></div>}
+@if (!examList.Any() && (subjectId == null || string.IsNullOrWhiteSpace(examName)))
+{<div class="card"><div class="empty"><div class="empty-ico">📋</div><h3>No Tests Found</h3><p>No tests have been created for this academic year yet. Click <b>New Test</b> to add the first one.</p></div></div>}
 else if (!subjects.Any())
 {<div class="card"><div class="empty"><div class="empty-ico">📚</div><h3>No subjects found</h3><p>Add subjects in Academic Manager.</p></div></div>}
 else if (subjectId == null || string.IsNullOrWhiteSpace(examName))
@@ -254,7 +259,7 @@ else
           <th>Student Name</th>
           <th>Std / Medium/Stream</th>
           <th>Batch</th>
-          <th style="min-width:220px;">Marks (/ @maxMarks)</th>
+          <th style="min-width:220px;">Marks Obtained (out of @maxMarks)</th>
           <th style="width:60px;">Grade</th>
           <th style="width:65px;">%</th>
         </tr>
@@ -282,8 +287,8 @@ else
               <input type="number" class="fc mk-inp"
                      style="width:75px;padding:7px 10px;text-align:center;font-weight:700;@(isAb?"opacity:.3;pointer-events:none;background:#fef2f2;":"")"
                      data-sid="@s.StudentId"
-                     value="@((!isAb && s.MarksObtained.HasValue)?s.MarksObtained.Value.ToString("0"):"")"
-                     min="0" max="@maxMarks" placeholder="—"
+                     value="@((!isAb && s.MarksObtained.HasValue)?s.MarksObtained.Value.ToString("0.##"):"")"
+                     min="0" max="@maxMarks" step="any" placeholder="—"
                      oninput="onMark(this,@maxMarks)"
                      @(isAb?"disabled":"")/>
               <div style="flex:1;height:6px;background:#f3f0ff;border-radius:3px;min-width:40px;">
@@ -314,8 +319,120 @@ else
   </div>
 }
 
-@section Scripts {
+@* ── NEW TEST (modal) ───────────────────────────────────────── *@
+@if (cr == null)
+{
 <style>
+.nt-bg { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:10000; padding:12px; }
+.nt-bg.open { display:flex; }
+.nt-box { background:var(--sur,#fff); border-radius:14px; width:100%; max-width:560px; max-height:92vh; overflow:auto; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+.nt-hdr { display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--bdr); }
+.nt-hdr h3 { margin:0; font-size:16px; font-weight:800; }
+.nt-body { padding:18px 20px; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.nt-body .full { grid-column:1 / -1; }
+.nt-body label { display:block; font-size:11.5px; font-weight:800; color:var(--mu); text-transform:uppercase; letter-spacing:.4px; margin-bottom:5px; }
+.nt-body .fc, .nt-body .fs { width:100%; }
+.nt-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.nt-chip { border:1.5px solid var(--bdr); background:var(--sur2); border-radius:99px; padding:4px 11px; font-size:12px; font-weight:700; cursor:pointer; }
+.nt-chip:hover { border-color:var(--p); color:var(--p); }
+.nt-foot { padding:14px 20px; border-top:1px solid var(--bdr); display:flex; justify-content:flex-end; gap:10px; }
+.nt-err { color:#b91c1c; font-size:12.5px; font-weight:700; padding:0 20px 12px; display:none; }
+@@media (max-width:560px) { .nt-body { grid-template-columns:1fr; } }
+</style>
+<div class="nt-bg" id="ntBg" onclick="if(event.target===this)closeNewTest()">
+  <div class="nt-box">
+    <div class="nt-hdr"><h3><i class="fas fa-plus-circle" style="color:var(--p);margin-right:7px;"></i>Add New Test</h3>
+      <button type="button" class="btn btn-outline btn-sm" onclick="closeNewTest()"><i class="fas fa-times"></i></button></div>
+    <div class="nt-body">
+      <div class="full">
+        <label>Test name *</label>
+        <input type="text" id="nt_name" class="fc" maxlength="100" placeholder="e.g. Unit Test 1, Weekly Test, Monthly Test"/>
+      </div>
+      <div>
+        <label>Std *</label>
+        <select id="nt_class" class="fs">
+          <option value="">— Select —</option>
+          @foreach (var c in classes) { <option value="@c.ClassId" selected="@(classId == c.ClassId)">@c.ClassName</option> }
+        </select>
+      </div>
+      <div>
+        <label>Subject *</label>
+        <select id="nt_subject" class="fs">
+          <option value="">— Select —</option>
+          @foreach (var sb in subjects) { <option value="@sb.SubjectId" selected="@(subjectId == sb.SubjectId)">@sb.SubjectName</option> }
+        </select>
+      </div>
+      <div>
+        <label>Medium / Stream <span style="font-weight:600;text-transform:none;">(optional)</span></label>
+        <select id="nt_section" class="fs">
+          <option value="">All</option>
+          @foreach (var sc in sections) { <option value="@sc.SectionId" selected="@(sectionId == sc.SectionId)">@sc.SectionName</option> }
+        </select>
+      </div>
+      <div>
+        <label>Batch <span style="font-weight:600;text-transform:none;">(optional)</span></label>
+        <select id="nt_batch" class="fs">
+          <option value="">All</option>
+          @foreach (var b in batches) { <option value="@b.BatchId" selected="@(batchId == b.BatchId)">@b.BatchName</option> }
+        </select>
+      </div>
+      <div>
+        <label>Test date *</label>
+        <input type="date" id="nt_date" class="fc" value="@DateTime.Today.ToString("yyyy-MM-dd")"/>
+      </div>
+      <div>
+        <label>Total marks (out of) *</label>
+        <input type="number" id="nt_max" class="fc" min="1" max="200" step="1" value="30"/>
+        <div class="nt-chips">
+          @foreach (var m in new[] { 10, 20, 25, 30, 40, 50, 100 }) { <span class="nt-chip" onclick="document.getElementById('nt_max').value=@m">@m</span> }
+        </div>
+      </div>
+      <div class="full" style="font-size:12px;color:var(--mu);">
+        Next you enter each student's <b>marks obtained</b> (or mark Absent) and press <b>Save All Marks</b>. Other subjects of the same test
+        can be added afterwards from the subject buttons.
+      </div>
+    </div>
+    <div class="nt-err" id="nt_err"></div>
+    <div class="nt-foot">
+      <button type="button" class="btn btn-outline" onclick="closeNewTest()">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="startNewTest()"><i class="fas fa-arrow-right"></i> Start Entering Marks</button>
+    </div>
+  </div>
+</div>
+}
+
+@section Scripts {
+<script>
+// ── New Test ──────────────────────────────────────────────────
+const NT_EXAMS = @Json.Serialize(examList.Select(e => new { name = e.ExamName, classId = e.ClassId, year = e.AcademicYearId, max = e.MaxMarks, date = e.TestDate.HasValue ? e.TestDate.Value.ToString("yyyy-MM-dd") : "" }));
+const NT_YEAR = @(yearId ?? 0);
+function openNewTest() { const b = document.getElementById('ntBg'); if (b) { b.classList.add('open'); setTimeout(() => document.getElementById('nt_name').focus(), 50); } }
+function closeNewTest() { const b = document.getElementById('ntBg'); if (b) b.classList.remove('open'); }
+function ntError(t) { const e = document.getElementById('nt_err'); e.textContent = t; e.style.display = t ? 'block' : 'none'; }
+function startNewTest() {
+  const v = id => document.getElementById(id).value.trim();
+  const name = v('nt_name'), cls = v('nt_class'), sub = v('nt_subject'), date = v('nt_date'), max = parseInt(v('nt_max'), 10);
+  if (!name) return ntError('Please enter the test name.');
+  if (!cls) return ntError('Please select the Std.');
+  if (!sub) return ntError('Please select the subject.');
+  if (!date) return ntError('Please select the test date.');
+  if (!(max >= 1 && max <= 200)) return ntError('Total marks must be between 1 and 200.');
+  ntError('');
+  // A test is identified by its name + Std: re-using a name opens that test (and keeps its original total) instead of making a copy.
+  const same = NT_EXAMS.find(e => e.name.toLowerCase() === name.toLowerCase() && String(e.classId) === cls);
+  let useMax = max, useDate = date, useName = name;
+  if (same) {
+    if (!confirm('A test named "' + same.name + '" already exists for this Std' + (same.max ? ' (out of ' + same.max + ')' : '') + '. Open it and add or edit the marks for this subject?')) return;
+    useName = same.name; if (same.max) useMax = same.max; if (same.date) useDate = same.date;
+  }
+  const q = new URLSearchParams({ yearId: NT_YEAR || '', classId: cls, sectionId: v('nt_section'), batchId: v('nt_batch'), subjectId: sub, examName: useName, testDate: useDate, maxMarks: useMax });
+  window.location.href = '/Marks/Index?' + q.toString();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNewTest(); });
+</script>
+
+<style>
+.mk-inp.mk-bad { border-color:#dc2626!important; background:#fef2f2!important; color:#991b1b; }
 .ab-btn.ab-active { background:#fef2f2!important; color:#991b1b!important; border-color:#fca5a5!important; }
 .ab-btn:hover:not(.ab-active) { background:#fef2f2!important; color:#991b1b!important; border-color:#fca5a5!important; }
 </style>
@@ -363,7 +480,11 @@ function onMark(inp, max) {
   if (absentSet.has(parseInt(inp.dataset.sid))) return;
   let v = parseFloat(inp.value);
   if (isNaN(v)) { setRow(inp,null,max); return; }
-  if (v>max){ inp.value=max; v=max; } if (v<0){ inp.value=0; v=0; }
+  // Never silently change what was typed (40 out of 25 must not become full marks): flag it and block Save until fixed.
+  const bad = v > max || v < 0;
+  inp.classList.toggle('mk-bad', bad);
+  inp.title = bad ? 'Marks must be between 0 and ' + max : '';
+  if (bad) { setRow(inp, null, max); return; }
   setRow(inp, v, max);
 }
 function setRow(inp, val, max) {
@@ -387,6 +508,8 @@ function updateStats() {
 function clearAll(){if(!confirm('Clear all on-screen values?'))return;document.querySelectorAll('.mk-inp').forEach(i=>{if(!absentSet.has(parseInt(i.dataset.sid))){i.value='';setRow(i,null,MAX_MARKS);}});}
 
 async function saveMarks(btn) {
+  const badInp = document.querySelector('.mk-inp.mk-bad');
+  if (badInp) { alert('Marks cannot be more than ' + MAX_MARKS + ' (or less than 0). Please correct the highlighted entry.'); badInp.focus(); return; }
   const entries=[];
   // Add absent students first
   absentSet.forEach(sid=>entries.push({studentId:sid,subjectId:@(subjectId??0),marks:0,isAbsent:true}));

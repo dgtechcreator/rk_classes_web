@@ -31,7 +31,11 @@ public class MarksRepo(CommonConnectivity db)
                     {"@BatchId",bat}, {"@ExamName",examName},
                     {"@TestDate",DBNull.Value},
                     {"@AcademicYearId",DBNull.Value} },
-            r => new { sid=G.G<int>(r,"StudentId"), m=G.G<decimal?>(r,"MarksObtained"), mx=G.G<int>(r,"MaxMarks"), g=G.G<string>(r,"Grade"), td=G.G<DateTime?>(r,"TestDate") });
+            r => new { sid=G.G<int>(r,"StudentId"), m=G.G<decimal?>(r,"MarksObtained"), mx=G.G<int>(r,"MaxMarks"), g=G.G<string>(r,"Grade"), td=G.G<DateTime?>(r,"TestDate"), en=G.G<string>(r,"ExamName") });
+        // sp_GetMarksBySubject returns the marks of EVERY test of that subject when no test with this name exists yet, so a brand-new
+        // test used to open pre-filled with another test's marks (and its total). Keep only rows of the test that was asked for.
+        var wanted = (examName ?? "").Trim();
+        marks = marks.Where(m => string.Equals((m.en ?? "").Trim(), wanted, StringComparison.OrdinalIgnoreCase)).ToList();
         foreach (var s in students) {
             var mark = marks.FirstOrDefault(m => m.sid == s.StudentId);
             if (mark != null) {

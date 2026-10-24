@@ -40,6 +40,13 @@ public class MarksController(MarksService svc, LookupService lookup, MastersServ
         else if (classId.HasValue)
             students = svc.GetStudentsForEntry(classId, sectionId, batchId, yearId);
 
+        // A test that already has marks keeps the total ("out of") it was created with - changing it on a re-save would
+        // silently rescale every student's percentage / grade.
+        bool maxLocked = false;
+        var stored = students.Where(s => (s.MarksObtained.HasValue || s.IsAbsent) && s.MaxMarks > 0).Select(s => s.MaxMarks).FirstOrDefault();
+        if (stored > 0) { maxMarks = stored; maxLocked = true; }
+        ViewBag.MaxLocked = maxLocked;
+
         ViewBag.Cr        = cr;
         ViewBag.CrEarliest = CrScope.EarliestMarksDate;
         ViewBag.Years     = years;
