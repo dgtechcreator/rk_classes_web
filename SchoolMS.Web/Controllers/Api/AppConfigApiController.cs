@@ -11,11 +11,14 @@ namespace SchoolMS.Web.Controllers.Api;
 [Route("api/app-config")]
 public class AppConfigApiController(MaintenanceService maintenance) : ControllerBase
 {
+    /// <summary>When this website build was compiled (UTC) - open /api/app-config to see which build is live after a deploy.</summary>
+    static readonly string BuildStamp = System.IO.File.GetLastWriteTimeUtc(typeof(AppConfigApiController).Assembly.Location).ToString("yyyy-MM-dd HH:mm 'UTC'");
+
     [HttpGet]
     public IActionResult Get()
     {
         var m = maintenance.Get();
         Response.Headers.CacheControl = "no-store";
-        return Ok(new { maintenanceEnabled = m.Enabled, maintenanceMessage = m.Message });
+        return Ok(new { maintenanceEnabled = m.Enabled, maintenanceMessage = m.Message, serverBuild = BuildStamp });
     }
 }

@@ -15,6 +15,7 @@ public class MarksController(MarksService svc, LookupService lookup, MastersServ
     {
         yearId   ??= lookup.GetCurrentYearId();
         testDate ??= DateTime.Today;
+        maxMarks = Math.Clamp(maxMarks, 1, 200);
         var cr = HttpContext.CurrentCr();   // Class Representative: only his own class
         if (cr != null)
         {
@@ -71,6 +72,8 @@ public class MarksController(MarksService svc, LookupService lookup, MastersServ
     {
         try
         {
+            var invalid = req.Validate();
+            if (invalid != null) return Json(new { success = false, message = invalid });
             int uid = HttpContext.Session.GetUserId() ?? 1;
             var cr = HttpContext.CurrentCr();
             if (cr != null)
@@ -383,6 +386,28 @@ public class MarksController(MarksService svc, LookupService lookup, MastersServ
 
 public class MarksSaveReq
 {
+    /// <summary>
+    /// Server-side rules, so a wrong value can never be stored whatever the client (website, app, old app build) sent:
+    /// test name required, total 1-200, every obtained mark 0..total with at most 2 decimals, absent entries carry no mark.
+    /// Returns the first problem, or null when the request is fine.
+    /// </summary>
+    public string? Validate()
+    {
+        if (string.IsNullOrWhiteSpace(ExamName)) return "Test name is required.";
+        if (ExamName.Trim().Length > 100) return "Test name is too long (max 100 characters).";
+        if (MaxMarks < 1 || MaxMarks > 200) return "Total marks must be between 1 and 200.";
+        if (Entries == null || Entries.Count == 0) return "No marks to save.";
+        foreach (var e in Entries)
+        {
+            if (e.StudentId <= 0 || e.SubjectId <= 0) return "Invalid student or subject in the request.";
+            if (e.IsAbsent) continue;
+            if (e.Marks < 0 || e.Marks > MaxMarks)
+                return $"Marks must be between 0 and {MaxMarks} (received {e.Marks:0.##} for student #{e.StudentId}).";
+            if (decimal.Round(e.Marks, 2) != e.Marks) return $"Marks can have at most 2 decimal places (student #{e.StudentId}).";
+        }
+        return null;
+    }
+
     public string    ExamName{get;set;}="";
     public int       ClassId{get;set;}
     public int       YearId{get;set;}

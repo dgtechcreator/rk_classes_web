@@ -19,6 +19,7 @@ public class MarksApiController(MarksService svc, LookupService lookup, MastersS
     {
         yearId ??= lookup.GetCurrentYearId();
         testDate ??= DateTime.Today;
+        maxMarks = Math.Clamp(maxMarks, 1, 200);
         var cr = HttpContext.CurrentCr();   // Class Representative: only his own class
         if (cr != null)
         {
@@ -56,6 +57,8 @@ public class MarksApiController(MarksService svc, LookupService lookup, MastersS
     {
         try
         {
+            var invalid = req.Validate();
+            if (invalid != null) return BadRequest(new { success = false, message = invalid, error = invalid });
             int uid = User.UserId() ?? 1;
             var cr = HttpContext.CurrentCr();
             if (cr != null)
