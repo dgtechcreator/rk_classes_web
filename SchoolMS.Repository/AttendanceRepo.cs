@@ -56,7 +56,7 @@ public class AttendanceRepo(CommonConnectivity db)
             SELECT a.StudentId, a.AttendanceDate, a.Status
             FROM Attendance a
             INNER JOIN Students s ON s.StudentId = a.StudentId
-            WHERE s.Status = 'Active' AND a.AttendanceDate BETWEEN '{from.Date:yyyy-MM-dd}' AND '{to.Date:yyyy-MM-dd}'
+            WHERE s.Status = 'Active' AND s.AcademicYearId = {CurrentYear.Id} AND a.AttendanceDate BETWEEN '{from.Date:yyyy-MM-dd}' AND '{to.Date:yyyy-MM-dd}'
               {(cls.HasValue    ? $"AND s.ClassId={cls}"       : "")}
               {(sec.HasValue    ? $"AND s.SectionId={sec}"     : "")}
               {(bat.HasValue    ? $"AND s.BatchId={bat}"       : "")}",
@@ -160,7 +160,7 @@ public class AttendanceRepo(CommonConnectivity db)
             LEFT JOIN Sections sec ON sec.SectionId = a.SectionId
             LEFT JOIN Batches b ON b.BatchId = a.BatchId
             WHERE CAST(a.AttendanceDate AS DATE) = '{today}'
-              AND s.Status = 'Active'
+              AND s.Status = 'Active' AND s.AcademicYearId = {CurrentYear.Id}
               AND a.Status = '{status}'
             ORDER BY s.FullName",
             r => (

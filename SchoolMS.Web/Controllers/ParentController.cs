@@ -90,6 +90,7 @@ public class ParentController(
             vm.TotalPaid  = pos.Paid;
             vm.ActualFee  = pos.NetTotal;     // fee + additional charges - discount
             vm.Balance    = pos.Balance;
+            vm.InstallmentDate = pos.InstallmentDate;
 
             // Get class fees summary for all students
             if (selected.ClassId.HasValue)

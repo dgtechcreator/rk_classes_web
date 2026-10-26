@@ -14,7 +14,7 @@ DECLARE @Yr INT = (SELECT TOP 1 YearId FROM AcademicYears WHERE IsCurrent = 1 OR
 
 ;WITH st AS (
     SELECT s.StudentId, s.AdmissionNo, s.FullName, s.AcademicYearId, s.ClassId, s.SectionId, s.BatchId,
-           s.Phone, s.FatherPhone, s.MotherPhone,
+           s.Phone, s.FatherPhone, s.MotherPhone, ISNULL(s.AgreedDiscount, 0) AS AgreedDiscount,
            LTRIM(RTRIM(ISNULL(c.ClassName,'')))   AS ClassName,
            LTRIM(RTRIM(ISNULL(sec.SectionName,''))) AS SectionName,
            LTRIM(RTRIM(ISNULL(b.BatchName,'')))   AS BatchName
@@ -28,7 +28,7 @@ DECLARE @Yr INT = (SELECT TOP 1 YearId FROM AcademicYears WHERE IsCurrent = 1 OR
 SELECT st.StudentId, st.AdmissionNo, st.FullName, st.ClassName, st.SectionName, st.BatchName,
        ISNULL((SELECT SUM(sf.Amount) FROM StudentFees sf WHERE sf.StudentId = st.StudentId AND sf.IsActive = 1), 0) AS Fee,
        ISNULL((SELECT SUM(fp.NetAmount) FROM FeePayments fp WHERE fp.StudentId = st.StudentId AND fp.IsDeleted = 0), 0) AS Paid,
-       ISNULL((SELECT SUM(fp.Discount)  FROM FeePayments fp WHERE fp.StudentId = st.StudentId AND fp.IsDeleted = 0), 0) AS Discount
+       ISNULL((SELECT SUM(fp.Discount)  FROM FeePayments fp WHERE fp.StudentId = st.StudentId AND fp.IsDeleted = 0), 0) + ISNULL(st.AgreedDiscount, 0) AS Discount
 FROM st ORDER BY st.FullName;
 
 -- result 2: payment remarks that carry additional charges
@@ -61,8 +61,9 @@ WHERE fp.IsDeleted = 0 AND fp.Remarks LIKE '%Additional Charges:%';
     LEFT JOIN FeeTypes ft ON ft.FeeTypeId = fs.FeeTypeId
     WHERE sf.IsActive = 1
 ), pay AS (
-    SELECT StudentId, SUM(NetAmount) AS Paid, SUM(Discount) AS Disc
-    FROM FeePayments WHERE IsDeleted = 0 GROUP BY StudentId
+    SELECT fp.StudentId, SUM(fp.NetAmount) AS Paid, SUM(fp.Discount) + MAX(ISNULL(s2.AgreedDiscount, 0)) AS Disc
+    FROM FeePayments fp JOIN Students s2 ON s2.StudentId = fp.StudentId
+    WHERE fp.IsDeleted = 0 GROUP BY fp.StudentId
 )
 SELECT StudentId, AdmissionNo, FullName, ClassName, SectionName, BatchName, Code, [Group], Severity, Title, Detail, [Action], CanApplyFee
 FROM (

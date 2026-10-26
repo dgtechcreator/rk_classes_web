@@ -10,6 +10,7 @@ public class StudentService(StudentRepo repo)
     public Student? GetById(int id) => repo.GetById(id);
     public int Save(Student s, string? pic, int by) => repo.Save(s, pic, by);
     public void SetPhoto(int id, string? path) => repo.SetPhoto(id, path);
+    public void SetAgreedDiscount(int id, decimal amount, string? reason, int by) => repo.SetAgreedDiscount(id, amount, reason, by);
     public void Delete(int id)  => repo.Delete(id);
     public void Restore(int id) => repo.Restore(id);
     public List<Student> GetByClassAndBatch(string className, string batchName)

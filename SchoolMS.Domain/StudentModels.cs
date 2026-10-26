@@ -48,6 +48,9 @@ public class Student
     public string?   District{get;set;}
     public string?   Pincode{get;set;}
     public string?   PermanentAddress{get;set;}
+    /// <summary>Discount agreed at admission (class fee 16,000, agreed 15,000 -> 1,000). Counted as Discount everywhere.</summary>
+    public decimal   AgreedDiscount{get;set;}
+    public string?   AgreedDiscountReason{get;set;}
     public DateTime  CreatedAt{get;set;}
     public int?      CreatedBy{get;set;}
     public string?   CreatedByName{get;set;}

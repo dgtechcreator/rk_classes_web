@@ -37,22 +37,22 @@ public class LookupRepo(CommonConnectivity db)
 
         // Present / Absent today count ACTIVE students only, so the cards always equal the lists they open
         // (sp_GetDashboardStats counted every attendance row, including those of inactive students).
-        var att = db.Sql(@"
+        var att = db.Sql($@"
             SELECT SUM(CASE WHEN a.Status='Present' THEN 1 ELSE 0 END) AS P,
                    SUM(CASE WHEN a.Status='Absent'  THEN 1 ELSE 0 END) AS A
             FROM Attendance a
             JOIN Students s ON s.StudentId = a.StudentId
-            WHERE a.AttendanceDate = CAST(GETDATE() AS DATE) AND s.Status = 'Active'",
+            WHERE a.AttendanceDate = CAST(GETDATE() AS DATE) AND s.Status = 'Active' AND s.AcademicYearId = {CurrentYear.Id}",
             r => (P: G.G<int>(r, "P"), A: G.G<int>(r, "A"))).FirstOrDefault();
         stats.PresentToday = att.P;
         stats.AbsentToday = att.A;
 
         // Populate dynamic class strengths
         var colors = new[] { "#6d28d9", "#db2777", "#2563eb", "#059669", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899" };
-        var classStrengths = db.Sql(@"
+        var classStrengths = db.Sql($@"
             SELECT c.ClassId, c.ClassName, c.OrderNo, COUNT(DISTINCT s.StudentId) as StudentCount
             FROM Classes c
-            LEFT JOIN Students s ON s.ClassId=c.ClassId AND s.Status='Active'
+            LEFT JOIN Students s ON s.ClassId=c.ClassId AND s.Status='Active' AND s.AcademicYearId={CurrentYear.Id}
             WHERE c.IsActive=1
             GROUP BY c.ClassId, c.ClassName, c.OrderNo
             ORDER BY c.OrderNo",
@@ -67,25 +67,25 @@ public class LookupRepo(CommonConnectivity db)
         }
 
         // Split each class by Section (Medium) so the dashboard can show "5th English Medium: 30".
-        var sectionSplit = db.Sql(@"
+        var sectionSplit = db.Sql($@"
             SELECT c.ClassName, ISNULL(sec.SectionName,'') AS SectionName, COUNT(DISTINCT s.StudentId) AS StudentCount
             FROM Students s
             JOIN Classes c ON c.ClassId = s.ClassId AND c.IsActive = 1
             LEFT JOIN Sections sec ON sec.SectionId = s.SectionId
-            WHERE s.Status = 'Active'
+            WHERE s.Status = 'Active' AND s.AcademicYearId = {CurrentYear.Id}
             GROUP BY c.ClassName, sec.SectionName
             ORDER BY c.ClassName, sec.SectionName",
             r => (ClassName: G.G<string>(r,"ClassName")??"", SectionName: G.G<string>(r,"SectionName")??"", Count: G.G<int>(r,"StudentCount")));
         // ...and each medium by Batch (Morning / Evening ...), in the order of the Batches master. Students without a
         // batch are counted as "No batch" - shown only when the medium also has students in real batches.
-        var batchSplit = db.Sql(@"
+        var batchSplit = db.Sql($@"
             SELECT c.ClassName, ISNULL(sec.SectionName,'') AS SectionName, ISNULL(b.BatchName,'') AS BatchName,
                    ISNULL(b.BatchId, 2147483647) AS BatchOrder, COUNT(DISTINCT s.StudentId) AS StudentCount
             FROM Students s
             JOIN Classes c ON c.ClassId = s.ClassId AND c.IsActive = 1
             LEFT JOIN Sections sec ON sec.SectionId = s.SectionId
             LEFT JOIN Batches b ON b.BatchId = s.BatchId
-            WHERE s.Status = 'Active'
+            WHERE s.Status = 'Active' AND s.AcademicYearId = {CurrentYear.Id}
             GROUP BY c.ClassName, sec.SectionName, b.BatchName, b.BatchId
             ORDER BY c.ClassName, sec.SectionName, BatchOrder",
             r => (ClassName: G.G<string>(r,"ClassName")??"", SectionName: G.G<string>(r,"SectionName")??"",
@@ -106,10 +106,10 @@ public class LookupRepo(CommonConnectivity db)
         stats.ClassStrengths = classStrengths.Where(c => c.StudentCount > 0).ToList();
 
         // Populate all classes
-        stats.AllClasses = db.Sql(@"
+        stats.AllClasses = db.Sql($@"
             SELECT c.ClassId, c.ClassName, c.OrderNo, c.IsActive, COUNT(DISTINCT s.StudentId) as StudentCount
             FROM Classes c
-            LEFT JOIN Students s ON s.ClassId=c.ClassId AND s.Status='Active'
+            LEFT JOIN Students s ON s.ClassId=c.ClassId AND s.Status='Active' AND s.AcademicYearId={CurrentYear.Id}
             WHERE c.IsActive=1
             GROUP BY c.ClassId, c.ClassName, c.OrderNo, c.IsActive
             ORDER BY c.OrderNo",
@@ -143,6 +143,6 @@ public class LookupRepo(CommonConnectivity db)
 
         return stats;
     }
-    public List<Student> GetStudentDropdown() => db.Sql("SELECT StudentId,FullName,AdmissionNo,ClassId FROM Students WHERE Status='Active' ORDER BY FullName",
+    public List<Student> GetStudentDropdown() => db.Sql($"SELECT StudentId,FullName,AdmissionNo,ClassId FROM Students WHERE Status='Active' AND AcademicYearId={CurrentYear.Id} ORDER BY FullName",
         r => new Student { StudentId=G.G<int>(r,"StudentId"), FullName=r.StudentName(db)??"", AdmissionNo=G.G<string>(r,"AdmissionNo")??"", ClassId=G.G<int?>(r,"ClassId") });
 }

@@ -10,6 +10,10 @@ public class StudentRepo(CommonConnectivity db)
 {
     public (List<Student> data, int total) GetAll(int pg, int ps, string? search, int? cls, int? sec, int? bat, int? yr, string? status)
     {
+        // No year given -> the Current academic year, so every list/picker follows the Current year set in Masters.
+        // Deleted (Inactive) students stay visible across years so they can always be restored.
+        if (yr == null && status != "Inactive")
+            yr = db.Sql($"SELECT {CurrentYear.Id} AS YearId", r => (int?)G.G<int?>(r, "YearId")).FirstOrDefault();
         var op = new SqlParameter("@TotalCount", SqlDbType.Int) { Direction = ParameterDirection.Output };
         var data = db.ReadPaged("sp_GetStudents", new() {
             { "@PageNo",pg }, { "@PageSize",ps }, { "@Search",search }, { "@ClassId",cls },
@@ -34,6 +38,10 @@ public class StudentRepo(CommonConnectivity db)
     /// <summary>Sets (or clears, with null) the photo. sp_SaveStudent uses ISNULL(@pic, old), so it can never clear one.</summary>
     public void SetPhoto(int id, string? path)
         => db.ExecSql("UPDATE Students SET ProfilePicPath=@P WHERE StudentId=@Id", new() { { "@Id", id }, { "@P", path } });
+
+    /// <summary>Saves the discount agreed at admission (0 clears it). The SP rejects a negative amount or a missing reason.</summary>
+    public void SetAgreedDiscount(int id, decimal amount, string? reason, int by)
+        => db.Exec("sp_SetStudentAgreedDiscount", new() { { "@StudentId", id }, { "@Amount", amount }, { "@Reason", reason }, { "@By", by } });
 
     public void Delete(int id)  { db.Exec("sp_DeleteStudent", new() { { "@StudentId", id } }); StudentNameDirectory.Invalidate(); }
     public void Restore(int id) { db.Exec("sp_RestoreStudent", new() { { "@StudentId", id } }); StudentNameDirectory.Invalidate(); }
@@ -109,6 +117,7 @@ public class StudentRepo(CommonConnectivity db)
         GuardianOccupation=G.G<string>(r,"GuardianOccupation"), GuardianPhone=G.G<string>(r,"GuardianPhone"),
         City=G.G<string>(r,"City"), State=G.G<string>(r,"State"), District=G.G<string>(r,"District"),
         Pincode=G.G<string>(r,"Pincode"), PermanentAddress=G.G<string>(r,"PermanentAddress"),
+        AgreedDiscount=G.G<decimal>(r,"AgreedDiscount"), AgreedDiscountReason=G.G<string>(r,"AgreedDiscountReason"),
         CreatedBy=G.G<int?>(r,"CreatedBy"), CreatedByName=G.G<string>(r,"CreatedByName"),
         DeletedBy=G.G<int?>(r,"DeletedBy"), DeletedByName=G.G<string>(r,"DeletedByName")
     };

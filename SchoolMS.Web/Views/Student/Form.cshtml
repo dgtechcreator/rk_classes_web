@@ -168,6 +168,28 @@
           </div>
         </div>
 
+        @if (Context.Session.HasPerm("fee_collection"))
+        {
+          <div style="margin-top:18px;padding-top:14px;border-top:1px dashed var(--bdr);">
+            <div style="font-weight:800;font-size:13px;margin-bottom:4px;"><i class="fas fa-handshake" style="color:var(--p);margin-right:6px;"></i>Agreed Discount</div>
+            <div class="text-mu" style="font-size:12px;margin-bottom:10px;">
+              Fee settled at admission, e.g. class fee ₹16,000 agreed at ₹15,000 → enter <b>1000</b>. It is counted in the student's total, balance and Finance from today — no need to wait for the first receipt.
+            </div>
+            <div class="form-grid">
+              <div class="fg">
+                <label>Discount Amount (₹)</label>
+                <input type="number" min="0" step="1" name="Student.AgreedDiscount" id="agreedDiscount"
+                       value="@(Model.Student.AgreedDiscount > 0 ? Model.Student.AgreedDiscount.ToString("0.##") : "")" class="fc" placeholder="0" oninput="syncAgreedReason()"/>
+              </div>
+              <div class="fg">
+                <label>Reason <span id="agreedReasonStar" style="color:#dc2626;display:none;">*</span></label>
+                <input type="text" maxlength="200" name="Student.AgreedDiscountReason" id="agreedReason"
+                       value="@Model.Student.AgreedDiscountReason" class="fc" placeholder="e.g. Sibling / early admission / negotiated fee"/>
+              </div>
+            </div>
+          </div>
+        }
+
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:1px solid var(--bdr);">
           <a href="/Student/Index" class="btn btn-outline"><i class="fas fa-times"></i> Cancel</a>
           <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Student</button>
@@ -180,6 +202,14 @@
 
 @section Scripts {
 <script>
+function syncAgreedReason() {
+  const amt = document.getElementById('agreedDiscount'), why = document.getElementById('agreedReason');
+  if (!amt || !why) return;
+  const need = (parseFloat(amt.value) || 0) > 0;
+  why.required = need;
+  document.getElementById('agreedReasonStar').style.display = need ? 'inline' : 'none';
+}
+document.addEventListener('DOMContentLoaded', syncAgreedReason);
 function previewPic(input) {
   if (input.files && input.files[0]) {
     const reader = new FileReader();

@@ -99,7 +99,12 @@ public class FeePayVM
     public decimal ActualFee{get;set;}
     public decimal TotalPaid{get;set;}
     public decimal Balance{get;set;}
+    /// All discount so far = payment discounts + the one agreed at admission (used for totals).
     public decimal ExistingDiscount{get;set;}
+    public decimal AgreedDiscount{get;set;}
+    public string? AgreedDiscountReason{get;set;}
+    /// Discount given on payments only - the Pay page's "once per student" discount rule looks at this.
+    public decimal PaymentDiscount => ExistingDiscount - AgreedDiscount;
     /// Total additional charges already saved on this student's payments (editable on the Pay page).
     public decimal AdditionalCharges{get;set;}
     public DateTime? DueDate{get;set;}
@@ -115,7 +120,7 @@ public class FeePayVM
     // Previous payments for this student
     public List<SchoolMS.Domain.FeePayment> PaymentHistory{get;set;}=new();
 
-    public bool DiscountAlreadyGiven => ExistingDiscount > 0;
+    public bool DiscountAlreadyGiven => PaymentDiscount > 0;
 }
 
 // New ViewModel for Fees Index (student search)
@@ -177,6 +182,7 @@ public class ParentDashboardVM
     public decimal             ActualFee      { get; set; }
     public decimal             TotalPaid      { get; set; }
     public decimal             Balance        { get; set; }
+    public DateTime?           InstallmentDate { get; set; }
     public string              ActiveTab      { get; set; } = "attendance";
     public string?             ParentName     { get; set; }
     public string?             ParentPhone    { get; set; }

@@ -55,11 +55,19 @@ public class FeePositionService(FeesService feesSvc, FeeStructureService feeStru
 
         var history = feesSvc.GetStudentHistory(student.StudentId);
         decimal extra = AdditionalCharges.Total(history);
+        decimal agreed = feesSvc.GetAgreedDiscount(student.StudentId);
+
+        // The installment date staff typed on the most recent payment wins; the fee-structure due day is the fallback.
+        var installment = history.Where(p => p.DueDate.HasValue)
+            .OrderByDescending(p => p.PaymentDate).ThenByDescending(p => p.PaymentId)
+            .Select(p => p.DueDate).FirstOrDefault() ?? dueDate;
 
         return new FeePosition {
+            InstallmentDate = installment,
             BaseFee = structures.Sum(x => x.Amount),
             AdditionalCharges = extra,
-            Discount = history.Sum(x => x.Discount),
+            AgreedDiscount = agreed,
+            Discount = history.Sum(x => x.Discount) + agreed,
             Paid = history.Sum(x => x.NetAmount),
             DueDate = dueDate,
             Structures = structures,

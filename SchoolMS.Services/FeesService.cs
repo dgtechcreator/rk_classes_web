@@ -11,6 +11,8 @@ public class FeesService(FeesRepo repo)
         => repo.Save(sid, ftId, amt, disc, fine, date, mode, txRef, yrId, month, remarks, by, dueDate);
     public FeePayment? GetPaymentById(int id) => repo.GetById(id);
     public List<FeePayment> GetStudentHistory(int sid) => repo.GetStudentHistory(sid);
+    /// Discount agreed at admission; every fee total = fee + charges - (payment discounts + this) - paid.
+    public decimal GetAgreedDiscount(int sid) => repo.GetAgreedDiscount(sid);
     public List<FeePayment> GetPaymentsThisMonth() => repo.GetPaymentsThisMonth();
     public List<FinanceStudentRow> GetFinanceStudents(string? className, string? batchName, string? sectionName = null, bool anyBatch = false)
         => repo.GetFinanceStudents(className, batchName, sectionName, anyBatch);

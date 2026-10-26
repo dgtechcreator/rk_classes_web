@@ -50,7 +50,8 @@ public class ParentApiController(
             discount = fee.Discount,
             netTotal = fee.NetTotal,          // fee + charges - discount
             balance = fee.Balance,
-            dueDate = fee.DueDate,
+            dueDate = fee.InstallmentDate,    // next installment date (older app builds read this key)
+            installmentDate = fee.InstallmentDate,
             feeStructures = fee.Structures,
         });
     }

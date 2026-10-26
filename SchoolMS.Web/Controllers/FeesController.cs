@@ -93,7 +93,7 @@ public class FeesController(FeesService svc, LookupService lookup,
         // Total paid and discounts so far
         var history = svc.GetStudentHistory(id);
         var totalPaid = history.Sum(x => x.NetAmount);
-        var totalDiscount = history.Sum(x => x.Discount);
+        var totalDiscount = history.Sum(x => x.Discount) + student.AgreedDiscount;   // payments + agreed at admission
 
         // Additional charges already saved on previous payments
         decimal totalAdditionalCharges = AdditionalCharges.Total(history);
@@ -113,6 +113,8 @@ public class FeesController(FeesService svc, LookupService lookup,
             FeeStructures = structures,
             PaymentHistory = history,
             ExistingDiscount = totalDiscount,
+            AgreedDiscount = student.AgreedDiscount,
+            AgreedDiscountReason = student.AgreedDiscountReason,
             AdditionalCharges = totalAdditionalCharges,
             EditPaymentId = null
         };
@@ -400,7 +402,7 @@ public class FeesController(FeesService svc, LookupService lookup,
         decimal totalFee = structures.Sum(x => x.Amount);
         var history = svc.GetStudentHistory(paymentData.StudentId);
         decimal totalPaid = history.Sum(x => x.NetAmount);
-        decimal totalDiscount = history.Sum(x => x.Discount);
+        decimal totalDiscount = history.Sum(x => x.Discount) + student.AgreedDiscount;
 
         decimal totalAdditionalCharges = AdditionalCharges.Total(history);
 

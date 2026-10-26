@@ -279,6 +279,7 @@ Welcome to R K CLASSES. Wishing you a great learning experience and success in y
           <div class="text-mu" style="font-size:12px;margin-bottom:8px;">
             @if (feeExtra > 0) {<span>Includes ₹@feeExtra.ToString("N0") additional charges. </span>}
             @if (feeDisc > 0) {<span>Total is after the ₹@feeDisc.ToString("N0") discount.</span>}
+            @if (Model.AgreedDiscount > 0) {<span><br/><i class="fas fa-handshake"></i> Agreed discount ₹@Model.AgreedDiscount.ToString("N0") (included above) — @(string.IsNullOrWhiteSpace(Model.AgreedDiscountReason) ? "no reason noted" : Model.AgreedDiscountReason)</span>}
           </div>
         }
         @if (feeHistory.Any())

@@ -264,7 +264,7 @@
 
             // Get student payment history
             var history = feesService.GetStudentHistory(s.StudentId);
-            var totalDiscount = history.Sum(h => h.Discount);
+            var totalDiscount = history.Sum(h => h.Discount) + s.AgreedDiscount;   // payments + agreed at admission
             var totalCollected = history.Sum(h => h.NetAmount);
 
             // Extract additional charges from remarks

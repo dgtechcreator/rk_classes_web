@@ -56,7 +56,7 @@ public class FeesRepo(CommonConnectivity db)
 
     // Same rule as sp_GetDashboardStats.FeesThisMonth: PaymentDate in the current month, not deleted.
     public List<FeePayment> GetPaymentsThisMonth()
-        => db.Sql(@"SELECT fp.*,s.FullName AS StudentName,s.AdmissionNo,s.RollNo,
+        => db.Sql($@"SELECT fp.*,s.FullName AS StudentName,s.AdmissionNo,s.RollNo,
             c.ClassName,sec.SectionName,ft.TypeName AS FeeTypeName,u.FullName AS CollectorName
             FROM FeePayments fp
             LEFT JOIN Students s   ON s.StudentId  = fp.StudentId
@@ -64,7 +64,7 @@ public class FeesRepo(CommonConnectivity db)
             LEFT JOIN Sections sec ON sec.SectionId= s.SectionId
             LEFT JOIN FeeTypes ft  ON ft.FeeTypeId = fp.FeeTypeId
             LEFT JOIN Users    u   ON u.UserId     = fp.CollectedBy
-            WHERE fp.IsDeleted=0 AND s.Status='Active'
+            WHERE fp.IsDeleted=0 AND s.Status='Active' AND s.AcademicYearId={CurrentYear.Id}
               AND MONTH(fp.PaymentDate)=MONTH(GETDATE()) AND YEAR(fp.PaymentDate)=YEAR(GETDATE())
             ORDER BY fp.PaymentDate DESC, fp.CreatedAt DESC", MapFee);
 
@@ -91,14 +91,14 @@ public class FeesRepo(CommonConnectivity db)
                 sec.SectionName,
                 ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fs.Amount ELSE 0 END), 0) AS TotalFeesOwed,
                 ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fp.NetAmount ELSE 0 END), 0) AS TotalCollected,
-                ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fp.Discount ELSE 0 END), 0) AS TotalDiscount,
-                ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fs.Amount ELSE 0 END), 0) - ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fp.NetAmount ELSE 0 END), 0) AS Balance
+                ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fp.Discount ELSE 0 END), 0) + ISNULL(MAX(s.AgreedDiscount), 0) AS TotalDiscount,
+                ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fs.Amount ELSE 0 END), 0) - ISNULL(SUM(CASE WHEN fp.IsDeleted=0 THEN fp.NetAmount ELSE 0 END), 0) - ISNULL(MAX(s.AgreedDiscount), 0) AS Balance
             FROM Students s
             LEFT JOIN Classes c ON c.ClassId = s.ClassId
             LEFT JOIN Sections sec ON sec.SectionId = s.SectionId
             LEFT JOIN FeeStructure fs ON fs.ClassId = s.ClassId AND (fs.SectionId IS NULL OR fs.SectionId = s.SectionId)
             LEFT JOIN FeePayments fp ON fp.StudentId = s.StudentId AND YEAR(fp.PaymentDate) = YEAR(GETDATE())
-            WHERE s.ClassId = {classId} {(sectionId.HasValue ? $"AND s.SectionId = {sectionId}" : "")} AND s.Status = 'Active'
+            WHERE s.ClassId = {classId} {(sectionId.HasValue ? $"AND s.SectionId = {sectionId}" : "")} AND s.Status = 'Active' AND s.AcademicYearId = {CurrentYear.Id}
             GROUP BY s.StudentId, s.FullName, s.AdmissionNo, c.ClassName, sec.SectionName
             ORDER BY s.FullName
         ";
@@ -234,6 +234,17 @@ public class FeesRepo(CommonConnectivity db)
         );
     }
 
+    /// <summary>Discount agreed at admission (Students.AgreedDiscount). 0 when none - or when SQL/70 has not been run yet.</summary>
+    public decimal GetAgreedDiscount(int studentId)
+    {
+        try
+        {
+            return db.Sql($"SELECT ISNULL(AgreedDiscount, 0) AS D FROM Students WHERE StudentId = {studentId}",
+                r => G.G<decimal>(r, "D")).FirstOrDefault();
+        }
+        catch { return 0; }
+    }
+
     public (decimal TotalFees, decimal TotalCollected, decimal TotalDiscount) GetStudentFeeDetails(int studentId, int yearId)
     {
         var query = $@"
@@ -286,7 +297,7 @@ public class FeesRepo(CommonConnectivity db)
                    LTRIM(RTRIM(ISNULL(b.BatchName,''))) AS BatchName,
                    ISNULL((SELECT SUM(sf.Amount) FROM StudentFees sf WHERE sf.StudentId = s.StudentId AND sf.IsActive = 1), 0) AS TotalFees,
                    ISNULL((SELECT SUM(fp.Amount) FROM FeePayments fp WHERE fp.StudentId = s.StudentId AND fp.IsDeleted = 0), 0) AS Collected,
-                   ISNULL((SELECT SUM(fp.Discount) FROM FeePayments fp WHERE fp.StudentId = s.StudentId AND fp.IsDeleted = 0), 0) AS Discount
+                   ISNULL((SELECT SUM(fp.Discount) FROM FeePayments fp WHERE fp.StudentId = s.StudentId AND fp.IsDeleted = 0), 0) + ISNULL(s.AgreedDiscount, 0) AS Discount
             FROM Students s
             LEFT JOIN Classes  c   ON c.ClassId     = s.ClassId
             LEFT JOIN Sections sec ON sec.SectionId = s.SectionId

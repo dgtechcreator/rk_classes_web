@@ -40,6 +40,28 @@ public class StudentApiController(StudentService svc, LookupService lookup, FeeS
         return Ok(new { studentId = id, isNew });
     }
 
+    public record AgreedDiscountReq(decimal Amount, string? Reason);
+
+    /// <summary>
+    /// Sets the discount agreed at admission (0 clears it). Separate from save on purpose: an older app build that
+    /// edits a student never sends this, so it can never wipe an agreed discount by accident.
+    /// </summary>
+    [HttpPost("{id:int}/agreed-discount")]
+    [ApiRequirePermission("fee_collection")]
+    public IActionResult SetAgreedDiscount(int id, [FromBody] AgreedDiscountReq req)
+    {
+        if (svc.GetById(id) == null) return NotFound(new { error = "Student not found." });
+        var amount = req.Amount;
+        var reason = string.IsNullOrWhiteSpace(req.Reason) ? null : req.Reason.Trim();
+        if (amount < 0) return BadRequest(new { error = "Agreed discount cannot be negative." });
+        if (amount > 0 && reason == null) return BadRequest(new { error = "Please enter the reason for the agreed discount." });
+        var baseFee = feeSvc.GetAllForStudent(id).Sum(x => x.Amount);
+        if (baseFee > 0 && amount > baseFee)
+            return BadRequest(new { error = $"Agreed discount (₹{amount:N0}) is more than the fee (₹{baseFee:N0})." });
+        svc.SetAgreedDiscount(id, amount, reason, User.UserId() ?? 1);
+        return Ok(new { success = true, agreedDiscount = amount, agreedDiscountReason = amount > 0 ? reason : null });
+    }
+
     [HttpPost("{id:int}/delete")]
     [ApiRequirePermission("student", requireEdit: true)]
     public IActionResult Delete(int id)

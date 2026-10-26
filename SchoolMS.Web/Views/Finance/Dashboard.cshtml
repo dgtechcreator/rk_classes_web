@@ -87,7 +87,7 @@
                             <td style="text-align: right;">₹@((long)row.EstimatedCollected)</td>
                             <td style="text-align: right; color: @(balance > 0 ? "#ef4444" : "#10b981"); font-weight: 600;">₹@((long)balance)</td>
                             <td style="text-align: center;">
-                                <a href="/Finance/Students?className=@Uri.EscapeDataString(((string)row.ClassName).Trim())&batchName=@Uri.EscapeDataString(((string)row.BatchName).Trim())&view=due" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-block;">Students</a>
+                                <a href="/Finance/Students?className=@Uri.EscapeDataString(((string)row.ClassName).Trim())&batchName=@Uri.EscapeDataString(((string)row.BatchName).Trim())&view=all" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; text-decoration: none; display: inline-block;">Students</a>
                             </td>
                         </tr>
                     }

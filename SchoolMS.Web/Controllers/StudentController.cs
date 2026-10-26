@@ -58,6 +58,15 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
             picPath = saved;
         }
         bool isNew = model.Student.StudentId == 0;
+        // Agreed discount (fee settled at admission): only staff who handle fees may set it, and a reason is mandatory.
+        bool canSetDiscount = HttpContext.Session.HasPerm("fee_collection");
+        decimal agreed = Math.Max(0, model.Student.AgreedDiscount);
+        string? agreedReason = string.IsNullOrWhiteSpace(model.Student.AgreedDiscountReason) ? null : model.Student.AgreedDiscountReason.Trim();
+        if (canSetDiscount && agreed > 0 && agreedReason == null)
+        {
+            TempData["Error"] = "Please enter the reason for the agreed discount.";
+            return isNew ? RedirectToAction("Create") : RedirectToAction("Edit", new { id = model.Student.StudentId });
+        }
         var oldPic = isNew ? null : svc.GetById(model.Student.StudentId)?.ProfilePicPath;
         var id = svc.Save(model.Student, picPath, uid);
         if (id > 0 && !isNew)
@@ -66,6 +75,17 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
             else if (model.RemovePhoto) { svc.SetPhoto(id, null); photos.Delete(oldPic); }
         }
         if (id > 0) feeSvc.ApplyToStudent(id);   // also re-syncs fees when class/section changed
+        if (id > 0 && canSetDiscount)
+        {
+            var baseFee = feeSvc.GetAllForStudent(id).Sum(x => x.Amount);
+            if (baseFee > 0 && agreed > baseFee)
+                TempData["Error"] = $"Student saved, but the agreed discount (₹{agreed:N0}) is more than the fee (₹{baseFee:N0}) — it was not saved.";
+            else
+            {
+                try { svc.SetAgreedDiscount(id, agreed, agreedReason, uid); }
+                catch (Exception ex) { TempData["Error"] = "Student saved, but the agreed discount was not saved: " + ex.Message; }
+            }
+        }
         TempData["Success"] = "Student saved successfully.";
         TempData["IsNewStudent"] = isNew;
         TempData["StudentName"] = model.Student.FullName;
@@ -379,7 +399,7 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
 
         decimal totalActualFees = feeStructures.Sum(f => f.Amount);
         decimal totalPaidFees = fees.Sum(f => f.NetAmount);
-        decimal totalDiscount = fees.Sum(f => f.Discount);
+        decimal totalDiscount = fees.Sum(f => f.Discount) + (student?.AgreedDiscount ?? 0);   // payments + agreed at admission
 
         // Extract additional charges from remarks
         decimal totalAdditionalCharges = SchoolMS.Domain.AdditionalCharges.Total(fees);
@@ -401,6 +421,8 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
         ViewBag.TotalActualFees = totalActualFees;
         ViewBag.TotalPaidFees = totalPaidFees;
         ViewBag.TotalDiscount = totalDiscount;
+        ViewBag.AgreedDiscount = student?.AgreedDiscount ?? 0m;
+        ViewBag.AgreedDiscountReason = student?.AgreedDiscountReason;
         ViewBag.FeesAfterDiscount = feesAfterDiscount;
         ViewBag.BalanceDue = balanceDue;
         return View(student);

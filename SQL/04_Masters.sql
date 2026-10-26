@@ -8,7 +8,7 @@ GO
 -- ── sp_GetMasters ─────────────────────────────────────────────
 IF OBJECT_ID('sp_GetAcademicYears','P') IS NOT NULL DROP PROC sp_GetAcademicYears; GO
 CREATE PROCEDURE sp_GetAcademicYears AS BEGIN
-    SELECT *, (SELECT COUNT(*) FROM Students WHERE AcademicYearId=AcademicYears.YearId) AS StudentCount
+    SELECT *, (SELECT COUNT(*) FROM Students WHERE AcademicYearId=AcademicYears.YearId AND Status='Active') AS StudentCount
     FROM AcademicYears WHERE IsActive=1 ORDER BY YearId DESC;
 END
 GO

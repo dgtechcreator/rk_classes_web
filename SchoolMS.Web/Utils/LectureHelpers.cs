@@ -153,7 +153,7 @@ public static class LectureHelpers
         {
             date = date.ToString("yyyy-MM-dd"),
             lectures = day.Select(l => Dto(l, now)),
-            month = Block(date.ToString("MMMM yyyy"), mFrom, mTo, month, now),
+            month = (object?)null,    // parents no longer get the monthly lecture summary, only the day's schedule
             monthDays = month.GroupBy(l => l.LectureDate.Date).OrderBy(g => g.Key)
                 .Select(g => new { date = g.Key.ToString("yyyy-MM-dd"), count = g.Count(l => l.Status != LectureStatus.Cancelled) }),
         };

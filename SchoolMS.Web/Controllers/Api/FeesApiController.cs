@@ -71,6 +71,8 @@ public class FeesApiController(FeesService svc, LookupService lookup,
             student, actualFee = fee.BaseFee, totalPaid = fee.Paid, balance = fee.Balance, dueDate = fee.DueDate,
             additionalCharges = fee.AdditionalCharges, netTotal = fee.NetTotal,
             feeStructures = structures, paymentHistory = history, existingDiscount = fee.Discount,
+            agreedDiscount = fee.AgreedDiscount, agreedDiscountReason = student.AgreedDiscountReason,
+            paymentDiscount = fee.Discount - fee.AgreedDiscount,   // discount already given on payments (locks the field)
             existingPayment,
         });
     }
