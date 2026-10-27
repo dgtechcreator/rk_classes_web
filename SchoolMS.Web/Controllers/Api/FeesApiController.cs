@@ -15,6 +15,8 @@ public class FeesApiController(FeesService svc, LookupService lookup,
         decimal AdditionalCharges, DateTime? PaymentDate, DateTime? DueDate,
         string PaymentMode, string? TransactionRef, string? Remarks);
 
+    public record PreviousDuesReq(int StudentId, decimal Amount, string? Note);
+
     public record SavePaymentReq(int StudentId, int FeeTypeId, decimal Amount, decimal Discount,
         decimal LateFine, string PaymentMode, string? TransactionRef, string? Month, string? Remarks, int? AcademicYearId);
 
@@ -69,12 +71,23 @@ public class FeesApiController(FeesService svc, LookupService lookup,
 
         return Ok(new {
             student, actualFee = fee.BaseFee, totalPaid = fee.Paid, balance = fee.Balance, dueDate = fee.DueDate,
-            additionalCharges = fee.AdditionalCharges, netTotal = fee.NetTotal,
+            additionalCharges = fee.AdditionalCharges, netTotal = fee.NetTotal, previousFees = fee.PreviousYearsFee, previousDue = fee.PreviousYearsDue,
             feeStructures = structures, paymentHistory = history, existingDiscount = fee.Discount,
             agreedDiscount = fee.AgreedDiscount, agreedDiscountReason = student.AgreedDiscountReason,
             paymentDiscount = fee.Discount - fee.AgreedDiscount,   // discount already given on payments (locks the field)
             existingPayment,
+            previousDuesEntry = svc.GetPreviousDues(id),
         });
+    }
+
+    /// <summary>Sets the dues of earlier years for a student (0 clears). They are added to the student's fee, balance and every Finance total.</summary>
+    [HttpPost("previous-dues")]
+    [ApiRequirePermission("fee_collection", requireEdit: true)]
+    public IActionResult SetPreviousDues([FromBody] PreviousDuesReq req)
+    {
+        if (studentSvc.GetById(req.StudentId) == null) return NotFound(new { error = "Student not found." });
+        var err = svc.SetPreviousDues(req.StudentId, req.Amount, req.Note, User.UserId() ?? 0);
+        return err == null ? Ok(new { success = true }) : BadRequest(new { error = err });
     }
 
     [HttpPost("save-pay")]

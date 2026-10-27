@@ -99,6 +99,10 @@ public class FeePayVM
     public decimal ActualFee{get;set;}
     public decimal TotalPaid{get;set;}
     public decimal Balance{get;set;}
+    /// Part of the balance owed from EARLIER academic years (money received counts against the oldest fees first).
+    public decimal PreviousYearsDue{get;set;}
+    /// Dues of earlier years typed in by staff on this page (already part of ActualFee / Balance).
+    public SchoolMS.Domain.PreviousDuesEntry PreviousDuesEntry{get;set;}=new();
     /// All discount so far = payment discounts + the one agreed at admission (used for totals).
     public decimal ExistingDiscount{get;set;}
     public decimal AgreedDiscount{get;set;}
@@ -183,6 +187,7 @@ public class ParentDashboardVM
     public decimal             TotalPaid      { get; set; }
     public decimal             Balance        { get; set; }
     public DateTime?           InstallmentDate { get; set; }
+    public decimal             PreviousYearsDue { get; set; }
     public string              ActiveTab      { get; set; } = "attendance";
     public string?             ParentName     { get; set; }
     public string?             ParentPhone    { get; set; }

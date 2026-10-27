@@ -9,6 +9,10 @@ public class FeePosition
     public decimal Discount { get; set; }           // payment discounts + AgreedDiscount
     public decimal AgreedDiscount { get; set; }     // the part agreed at admission (already inside Discount)
     public decimal Paid { get; set; }
+    /// Fees of EARLIER academic years (9th / 10th / 11th for a student now in 12th). Already inside BaseFee.
+    public decimal PreviousYearsFee { get; set; }
+    /// How much of the Balance is still owed from earlier years: money received is counted against the oldest fees first.
+    public decimal PreviousYearsDue => Math.Min(Balance, Math.Max(0, PreviousYearsFee - Paid - Discount));
     public decimal NetTotal => BaseFee + AdditionalCharges - Discount;
     public decimal Balance => Math.Max(0, NetTotal - Paid);
     public DateTime? DueDate { get; set; }

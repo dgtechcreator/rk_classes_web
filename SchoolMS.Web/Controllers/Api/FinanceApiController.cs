@@ -56,7 +56,7 @@ public class FinanceApiController(FeesService feesSvc, StudentService studentSvc
                     studentId = r.StudentId, fullName = r.FullName, admissionNo = r.AdmissionNo,
                     className = r.ClassName, sectionName = r.SectionName, batchName = r.BatchName,
                     phone = r.Phone, fatherPhone = r.FatherPhone, motherPhone = r.MotherPhone,
-                    totalFees = r.TotalFees, collected = r.Collected, discount = r.Discount, balance = r.Balance,
+                    totalFees = r.TotalFees, collected = r.Collected, discount = r.Discount, balance = r.Balance, previousDue = r.PreviousDue,
                 }),
             });
         }

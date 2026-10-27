@@ -65,6 +65,7 @@ public class FeePositionService(FeesService feesSvc, FeeStructureService feeStru
         return new FeePosition {
             InstallmentDate = installment,
             BaseFee = structures.Sum(x => x.Amount),
+            PreviousYearsFee = structures.Where(x => AcademicYearOrder.IsEarlier(x.YearName, student.YearName)).Sum(x => x.Amount),
             AdditionalCharges = extra,
             AgreedDiscount = agreed,
             Discount = history.Sum(x => x.Discount) + agreed,

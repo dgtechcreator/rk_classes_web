@@ -9,12 +9,21 @@ namespace SchoolMS.Repository;
 public class MastersRepo(CommonConnectivity db)
 {
     // ── Academic Year ─────────────────────────────────────────
-    public List<AcademicYear> GetYears() => db.Read("sp_GetAcademicYears", new(),
-        r => new AcademicYear {
-            YearId=G.G<int>(r,"YearId"), YearName=G.G<string>(r,"YearName")??"",
-            IsCurrent=G.G<bool>(r,"IsCurrent"), IsActive=G.G<bool>(r,"IsActive"),
-            StudentCount=G.G<int>(r,"StudentCount")
-        });
+    // The stored procedure counts every student of the year (left / deleted too: 502 vs 438 on the dashboard), and a database
+    // without SQL/68 keeps doing so - so the count is taken here: ACTIVE students only, exactly like the dashboards.
+    public List<AcademicYear> GetYears()
+    {
+        var years = db.Read("sp_GetAcademicYears", new(),
+            r => new AcademicYear {
+                YearId=G.G<int>(r,"YearId"), YearName=G.G<string>(r,"YearName")??"",
+                IsCurrent=G.G<bool>(r,"IsCurrent"), IsActive=G.G<bool>(r,"IsActive"),
+                StudentCount=G.G<int>(r,"StudentCount")
+            });
+        var counts = db.Sql("SELECT AcademicYearId, COUNT(*) AS Cnt FROM Students WHERE Status='Active' GROUP BY AcademicYearId",
+            r => (Id: G.G<int?>(r,"AcademicYearId"), Cnt: G.G<int>(r,"Cnt"))).Where(x => x.Id.HasValue).ToDictionary(x => x.Id!.Value, x => x.Cnt);
+        foreach (var y in years) y.StudentCount = counts.TryGetValue(y.YearId, out var c) ? c : 0;
+        return years;
+    }
 
     public int SaveYear(AcademicYear m) => db.ExecOut("sp_SaveAcademicYear", new() {
         {"@YearId",m.YearId}, {"@YearName",m.YearName},

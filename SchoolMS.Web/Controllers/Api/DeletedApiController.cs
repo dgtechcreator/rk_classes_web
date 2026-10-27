@@ -21,7 +21,8 @@ public class DeletedApiController(StudentService studentSvc, FacultyService facu
         var (students, _) = studentSvc.GetAll(1, 10000, null, null, null, null, null, "Inactive");
         var (faculty, _) = facultySvc.GetAll(null, "Inactive", null, 1, 10000);
         var receipts = feesSvc.GetDeletedPayments();
-        var users = userSvc.GetDeleted().Select(u => new { u.UserId, u.FullName, u.Username, u.RoleId, u.RoleName, u.Email, u.Phone, u.DeletedAt });
+        othersSvc.Enrich(students, faculty, studentSvc, facultySvc);
+        var users = userSvc.GetDeleted().Select(u => new { u.UserId, u.FullName, u.Username, u.RoleId, u.RoleName, u.Email, u.Phone, u.DeletedAt, u.DeletedByName });
         return Ok(new { students, faculty, receipts, users, others = othersSvc.GetOthers() });
     }
 

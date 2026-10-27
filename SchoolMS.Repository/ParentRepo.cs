@@ -49,7 +49,10 @@ public class ParentRepo(CommonConnectivity db)
     // The portal is for the parents AND for the student: the phone may be the father's, the mother's or the student's own
     // number (the stored procedure only knew the first two, so a student could never register).
     public List<Student> GetChildren(string phone)
-        => db.SqlP(@"
+    {
+        var key = PhoneMatch.Key(phone);
+        if (key == "") return new();   // not a usable number: never match every student whose phone is empty
+        return db.SqlP($@"
             SELECT s.StudentId, s.AdmissionNo, s.FullName, s.DateOfBirth, s.Gender,
                    s.FatherName, s.MotherName, s.Phone, s.FatherPhone, s.MotherPhone,
                    s.ProfilePicPath, s.RollNo, s.BloodGroup, s.Status, s.AdmissionDate,
@@ -62,10 +65,11 @@ public class ParentRepo(CommonConnectivity db)
             LEFT JOIN Classes       c   ON c.ClassId     = s.ClassId
             LEFT JOIN Sections      sec ON sec.SectionId = s.SectionId
             LEFT JOIN Batches       b   ON b.BatchId     = s.BatchId
-            WHERE  (s.FatherPhone = @Phone OR s.MotherPhone = @Phone OR s.Phone = @Phone)
+            WHERE  {PhoneMatch.AnyPhoneOf("s", "@Phone")}
               AND  ISNULL(s.Status, 'Active') <> 'Deleted'
-            ORDER BY s.FullName", new() { { "@Phone", phone } }, MapStudent)
+            ORDER BY s.FullName", new() { { "@Phone", key } }, MapStudent)
              .Where(s => string.Equals(s.Status, "Active", StringComparison.OrdinalIgnoreCase)).ToList();
+    }
 
     static Student MapStudent(SqlDataReader r) => new() {
         StudentId      = G.G<int>(r, "StudentId"),

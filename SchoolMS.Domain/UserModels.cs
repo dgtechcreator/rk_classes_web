@@ -31,6 +31,10 @@ public class AppUser
     public int?    FacultyId{get;set;}   // explicit link to the teacher's Faculty profile (null = match automatically by phone / name)
     public bool    IsDeleted{get;set;}
     public DateTime? DeletedAt{get;set;}
+    public string? DeletedByName{get;set;}
+    /// <summary>When / by whom the login was last switched off (Inactive). Empty for logins switched off before this was recorded.</summary>
+    public DateTime? DeactivatedAt{get;set;}
+    public string? DeactivatedByName{get;set;}
     public List<Module> Permissions{get;set;}=new();
 }
 

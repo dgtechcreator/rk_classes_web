@@ -78,7 +78,12 @@
             else
             {<span class="badge @(u.PermCount>0?"b-present":"b-inactive")">@u.PermCount module@(u.PermCount==1?"":"s")</span>}
           </td>
-          <td><span class="badge @(u.IsActive?"b-active":"b-inactive")">@(u.IsActive?"Active":"Inactive")</span></td>
+          <td><span class="badge @(u.IsActive?"b-active":"b-inactive")">@(u.IsActive?"Active":"Inactive")</span>
+            @if (!u.IsActive)
+            {
+              <div style="font-size:11px;color:#dc2626;margin-top:3px;">@(u.DeactivatedByName == null && u.DeactivatedAt == null ? "who / when not recorded" : "by " + (u.DeactivatedByName ?? "—") + (u.DeactivatedAt.HasValue ? " · " + u.DeactivatedAt.Value.ToString("dd MMM yyyy HH:mm") : ""))</div>
+            }
+          </td>
           <td>
             <div class="df g8">
               <a href="/Users/Permissions/@u.UserId" class="btn btn-outline btn-sm" title="Permissions"

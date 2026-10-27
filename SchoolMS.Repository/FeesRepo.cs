@@ -25,6 +25,89 @@ public class FeesRepo(CommonConnectivity db)
             {"@Month",month}, {"@Remarks",remarks}, {"@CollectedBy",by}, {"@DueDate",(object?)dueDate ?? DBNull.Value}
         }, "@NewPaymentId");
 
+    // ── Previous dues (dues of earlier years, typed in by staff) ────────────────────────────────
+    // The money is kept as ONE ordinary StudentFees row of an EARLIER academic year (hidden head, Status 'Carried'), so every total -
+    // student balance, Finance dashboard, parent view, receipts - picks it up without any other change. StudentPreviousDues only
+    // remembers the note, who typed it and when.
+    const string PrevDuesSchema = @"
+IF OBJECT_ID('dbo.StudentPreviousDues', 'U') IS NULL
+    CREATE TABLE dbo.StudentPreviousDues (
+        StudentId INT NOT NULL CONSTRAINT PK_StudentPreviousDues PRIMARY KEY,
+        Amount    DECIMAL(10,2) NOT NULL,
+        Note      NVARCHAR(500) NULL,
+        UpdatedBy INT NULL,
+        UpdatedAt DATETIME NOT NULL CONSTRAINT DF_StudentPreviousDues_At DEFAULT GETDATE()
+    );";
+
+    public PreviousDuesEntry GetPreviousDues(int studentId)
+    {
+        try
+        {
+            db.ExecSql(PrevDuesSchema, new());
+            return db.SqlP(@"SELECT p.Amount, p.Note, p.UpdatedAt, u.FullName AS ByName
+                             FROM StudentPreviousDues p LEFT JOIN Users u ON u.UserId = p.UpdatedBy WHERE p.StudentId = @S",
+                new() { { "@S", studentId } },
+                r => new PreviousDuesEntry { Amount = G.G<decimal>(r, "Amount"), Note = G.G<string>(r, "Note"),
+                                             UpdatedAt = G.G<DateTime?>(r, "UpdatedAt"), UpdatedByName = G.G<string>(r, "ByName") })
+                .FirstOrDefault() ?? new PreviousDuesEntry();
+        }
+        catch { return new PreviousDuesEntry(); }
+    }
+
+    /// <summary>Sets the student's carried-forward dues to [amount] (0 clears it). Returns an error text, or null on success.</summary>
+    public string? SetPreviousDues(int studentId, decimal amount, string? note, int by)
+    {
+        db.ExecSql(PrevDuesSchema, new());
+        try
+        {
+            db.ExecSql(@"
+SET XACT_ABORT ON;
+BEGIN TRAN;
+DECLARE @cls INT, @sec INT, @stuYear NVARCHAR(50), @yr INT, @st INT, @ft INT;
+SELECT @cls = s.ClassId, @sec = s.SectionId, @stuYear = y.YearName
+FROM Students s LEFT JOIN AcademicYears y ON y.YearId = s.AcademicYearId WHERE s.StudentId = @S;
+IF @cls IS NULL OR @sec IS NULL RAISERROR('The student has no class / medium yet.', 16, 1);
+
+-- the latest academic year that starts BEFORE the student's year (ids are not in date order, so by name)
+SELECT TOP 1 @yr = YearId FROM AcademicYears
+WHERE TRY_CAST(LEFT(LTRIM(YearName), 4) AS INT) < TRY_CAST(LEFT(LTRIM(@stuYear), 4) AS INT)
+ORDER BY TRY_CAST(LEFT(LTRIM(YearName), 4) AS INT) DESC;
+IF @yr IS NULL RAISERROR('There is no earlier academic year. Add the earlier year in Masters > Academic Years first.', 16, 1);
+
+SELECT TOP 1 @st = StructureId FROM FeeStructure WHERE AcademicYearId = @yr AND ClassId = @cls AND SectionId = @sec AND Remarks = 'PREVIOUS_DUES';
+IF @st IS NULL
+BEGIN
+    SELECT TOP 1 @ft = t.FeeTypeId FROM FeeTypes t
+    WHERE NOT EXISTS (SELECT 1 FROM FeeStructure f WHERE f.AcademicYearId = @yr AND f.ClassId = @cls AND f.SectionId = @sec AND f.FeeTypeId = t.FeeTypeId)
+    ORDER BY t.FeeTypeId;
+    IF @ft IS NULL RAISERROR('No free fee type to hold the previous dues.', 16, 1);
+    INSERT INTO FeeStructure (AcademicYearId, ClassId, SectionId, FeeTypeId, Amount, DueDay, IsMonthly, Remarks, IsActive, CreatedBy)
+    VALUES (@yr, @cls, @sec, @ft, 0, 10, 0, 'PREVIOUS_DUES', 0, @By);   -- IsActive = 0: a hidden holder, never applied to other students
+    SET @st = SCOPE_IDENTITY();
+END
+
+IF EXISTS (SELECT 1 FROM StudentFees WHERE StudentId = @S AND StructureId = @st)
+    UPDATE StudentFees
+    SET Amount = @Amt, Status = 'Carried', IsCustomAmount = 1,
+        IsActive = CASE WHEN @Amt > 0 THEN 1 ELSE 0 END,
+        DeactivatedAt = CASE WHEN @Amt > 0 THEN NULL ELSE GETDATE() END,
+        DeactivatedReason = CASE WHEN @Amt > 0 THEN NULL ELSE 'Previous dues cleared' END
+    WHERE StudentId = @S AND StructureId = @st;
+ELSE IF @Amt > 0
+    INSERT INTO StudentFees (StudentId, StructureId, AcademicYearId, FeeTypeId, Amount, Status, IsCustomAmount)
+    SELECT @S, @st, @yr, FeeTypeId, @Amt, 'Carried', 1 FROM FeeStructure WHERE StructureId = @st;
+
+IF EXISTS (SELECT 1 FROM StudentPreviousDues WHERE StudentId = @S)
+    UPDATE StudentPreviousDues SET Amount = @Amt, Note = @Note, UpdatedBy = @By, UpdatedAt = GETDATE() WHERE StudentId = @S;
+ELSE
+    INSERT INTO StudentPreviousDues (StudentId, Amount, Note, UpdatedBy) VALUES (@S, @Amt, @Note, @By);
+COMMIT;",
+                new() { { "@S", studentId }, { "@Amt", amount }, { "@Note", string.IsNullOrWhiteSpace(note) ? null : note.Trim() }, { "@By", by > 0 ? by : (object?)null } });
+            return null;
+        }
+        catch (Microsoft.Data.SqlClient.SqlException ex) { return ex.Message; }
+    }
+
     public FeePayment? GetById(int paymentId)
     {
         var l = db.Sql($@"SELECT fp.*,s.FullName AS StudentName,s.AdmissionNo,s.RollNo,
@@ -296,9 +379,13 @@ public class FeesRepo(CommonConnectivity db)
                    LTRIM(RTRIM(ISNULL(sec.SectionName,''))) AS SectionName,
                    LTRIM(RTRIM(ISNULL(b.BatchName,''))) AS BatchName,
                    ISNULL((SELECT SUM(sf.Amount) FROM StudentFees sf WHERE sf.StudentId = s.StudentId AND sf.IsActive = 1), 0) AS TotalFees,
+                   ISNULL((SELECT SUM(sf.Amount) FROM StudentFees sf JOIN AcademicYears fy ON fy.YearId = sf.AcademicYearId
+                           WHERE sf.StudentId = s.StudentId AND sf.IsActive = 1
+                             AND TRY_CAST(LEFT(LTRIM(fy.YearName), 4) AS INT) < TRY_CAST(LEFT(LTRIM(sy.YearName), 4) AS INT)), 0) AS PreviousFees,
                    ISNULL((SELECT SUM(fp.Amount) FROM FeePayments fp WHERE fp.StudentId = s.StudentId AND fp.IsDeleted = 0), 0) AS Collected,
                    ISNULL((SELECT SUM(fp.Discount) FROM FeePayments fp WHERE fp.StudentId = s.StudentId AND fp.IsDeleted = 0), 0) + ISNULL(s.AgreedDiscount, 0) AS Discount
             FROM Students s
+            LEFT JOIN AcademicYears sy ON sy.YearId = s.AcademicYearId
             LEFT JOIN Classes  c   ON c.ClassId     = s.ClassId
             LEFT JOIN Sections sec ON sec.SectionId = s.SectionId
             LEFT JOIN Batches  b   ON b.BatchId     = s.BatchId
@@ -324,7 +411,7 @@ public class FeesRepo(CommonConnectivity db)
                 BatchName = G.G<string>(r, "BatchName") ?? "",
                 Phone = G.G<string>(r, "Phone") ?? "", FatherPhone = G.G<string>(r, "FatherPhone") ?? "",
                 MotherPhone = G.G<string>(r, "MotherPhone") ?? "",
-                TotalFees = G.G<decimal>(r, "TotalFees"), Collected = G.G<decimal>(r, "Collected"),
+                TotalFees = G.G<decimal>(r, "TotalFees"), PreviousFees = G.G<decimal>(r, "PreviousFees"), Collected = G.G<decimal>(r, "Collected"),
                 Discount = G.G<decimal>(r, "Discount"),
             });
         return list;

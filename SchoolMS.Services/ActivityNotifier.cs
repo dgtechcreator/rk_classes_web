@@ -160,7 +160,7 @@ public class ActivityNotifier(ActivityRepo repo, NotificationService staffNotifs
         catch { /* Users.FacultyId (SQL/67) not there yet - fall back to the automatic match */ }
         try
         {
-            return users.GetAll().Where(u => u.IsActive && u.RoleId != 1)
+            return users.GetAll().Where(u => u.IsActive)
                 .FirstOrDefault(u => linker.FindFaculty(u.UserId)?.FacultyId == facultyId)?.UserId;
         }
         catch { return null; }

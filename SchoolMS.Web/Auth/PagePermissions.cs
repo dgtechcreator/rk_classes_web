@@ -40,7 +40,7 @@ public class PagePermissionFilter : IActionFilter
         Add("Student",      new("student_profile"), "Profile360", "ExportProfile360");
 
         Add("Fees",         new("fee_collection"), "Index", "Pay", "SavePay", "UpdateAdditionalCharges", "Summary", "SummaryJson");
-        Add("Fees",         new("fee_collection", true), "DeletePayment");
+        Add("Fees",         new("fee_collection", true), "DeletePayment", "SetPreviousDues");
         Add("Fees",         new("fee_collect"), "Collect", "SavePayment");
 
         Add("FeeStructure", new("fee_structure"), "Index", "Create", "Edit", "Save", "Delete");

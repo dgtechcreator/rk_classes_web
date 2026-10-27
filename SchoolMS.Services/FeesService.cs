@@ -14,6 +14,14 @@ public class FeesService(FeesRepo repo, ActivityNotifier? notify = null)
         return paymentId;
     }
     public FeePayment? GetPaymentById(int id) => repo.GetById(id);
+    /// Dues of earlier years typed in by staff (the amount is part of every fee total).
+    public PreviousDuesEntry GetPreviousDues(int sid) => repo.GetPreviousDues(sid);
+    public string? SetPreviousDues(int sid, decimal amount, string? note, int by)
+    {
+        if (amount < 0) return "Previous dues cannot be negative.";
+        if (amount > 10000000) return "That amount looks wrong.";
+        return repo.SetPreviousDues(sid, amount, note, by);
+    }
     public List<FeePayment> GetStudentHistory(int sid) => repo.GetStudentHistory(sid);
     /// Discount agreed at admission; every fee total = fee + charges - (payment discounts + this) - paid.
     public decimal GetAgreedDiscount(int sid) => repo.GetAgreedDiscount(sid);

@@ -35,7 +35,7 @@ public class FacultyApiController(FacultyService svc, ProfilePhotoStore photos) 
     [ApiRequirePermission("faculty", requireEdit: true)]
     public IActionResult Delete(int id)
     {
-        svc.Delete(id);
+        svc.Delete(id, User.UserId() ?? 0);
         return Ok(new { success = true });
     }
 

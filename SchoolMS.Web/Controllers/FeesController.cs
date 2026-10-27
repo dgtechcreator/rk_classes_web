@@ -108,6 +108,8 @@ public class FeesController(FeesService svc, LookupService lookup,
             ActualFee = actualFee,
             TotalPaid = totalPaid,
             Balance = Math.Max(0, balance),
+            PreviousDuesEntry = svc.GetPreviousDues(student.StudentId),
+            PreviousYearsDue = Math.Min(Math.Max(0, balance), Math.Max(0, structures.Where(x => AcademicYearOrder.IsEarlier(x.YearName, student.YearName)).Sum(x => x.Amount) - totalPaid - totalDiscount)),
             DueDate = dueDate,
             PaymentDate = DateTime.Today,
             FeeStructures = structures,
@@ -250,6 +252,19 @@ public class FeesController(FeesService svc, LookupService lookup,
             Console.WriteLine($"[UpdateAdditionalCharges Error] StudentId={studentId}, Error: {ex.Message}");
             TempData["Error"] = "Error updating additional charges: " + ex.Message;
         }
+        return RedirectToAction("Pay", new { id = studentId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequireLogin]
+    public IActionResult SetPreviousDues(int studentId, decimal amount, string? note)
+    {
+        if (!HttpContext.Session.HasEditPerm("fee_collection") && HttpContext.Session.GetInt32("RoleId") != 1)
+            return RedirectToAction("AccessDenied", "Home");
+        var err = svc.SetPreviousDues(studentId, amount, note, HttpContext.Session.GetUserId() ?? 0);
+        if (err != null) TempData["Error"] = err;
+        else TempData["Success"] = amount > 0 ? $"Previous dues saved: ₹{amount:N0}." : "Previous dues cleared.";
         return RedirectToAction("Pay", new { id = studentId });
     }
 

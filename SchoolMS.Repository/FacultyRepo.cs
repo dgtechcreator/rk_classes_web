@@ -46,8 +46,13 @@ public class FacultyRepo(CommonConnectivity db)
     public void SetPhoto(int id, string? path)
         => db.ExecSql("UPDATE Faculty SET ProfilePicPath=@P WHERE FacultyId=@Id", new() { { "@Id", id }, { "@P", path } });
 
-    public void Delete(int id)  => db.Exec("sp_DeleteFaculty", new() { { "@FacultyId", id } });
-    public void Restore(int id) => db.Exec("sp_RestoreFaculty", new() { { "@FacultyId", id } });
+    public void Delete(int id, int by = 0)
+    {
+        db.Exec("sp_DeleteFaculty", new() { { "@FacultyId", id } });
+        ActionAudit.StampDeleted(db, "faculty", id, by);
+    }
+    public Dictionary<int, (DateTime? at, string? by)> GetDeletedInfo() => ActionAudit.DeletedInfo(db, "faculty");
+    public void Restore(int id) { db.Exec("sp_RestoreFaculty", new() { { "@FacultyId", id } }); ActionAudit.ClearDeleted(db, "faculty", id); }
 
     public int Save(Faculty f, string? pic, int by)
         => db.ExecOut("sp_SaveFaculty", new() {

@@ -67,7 +67,7 @@ public class StudentApiController(StudentService svc, LookupService lookup, FeeS
     [ApiRequirePermission("student", requireEdit: true)]
     public IActionResult Delete(int id)
     {
-        svc.Delete(id);
+        svc.Delete(id, User.UserId() ?? 0);
         return Ok(new { success = true });
     }
 
@@ -123,6 +123,8 @@ public class StudentApiController(StudentService svc, LookupService lookup, FeeS
             discount = fee.Discount,
             netTotal = fee.NetTotal,
             balance = fee.Balance,
+            previousFees = fee.PreviousYearsFee,      // fees of earlier years (already inside the totals)
+            previousDue = fee.PreviousYearsDue,       // part of the balance still owed from earlier years
             dueDate = fee.InstallmentDate,
             installmentDate = fee.InstallmentDate,
             feeStructures = fee.Structures,

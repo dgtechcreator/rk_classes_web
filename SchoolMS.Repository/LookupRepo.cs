@@ -8,8 +8,10 @@ namespace SchoolMS.Repository;
 
 public class LookupRepo(CommonConnectivity db)
 {
-    public List<AcademicYear> GetYears()  => db.Sql("SELECT * FROM AcademicYears WHERE IsActive=1 ORDER BY YearId DESC",
-        r => new AcademicYear { YearId=G.G<int>(r,"YearId"), YearName=G.G<string>(r,"YearName")??"", IsCurrent=G.G<bool>(r,"IsCurrent") });
+    // StudentCount = ACTIVE students of that year (left / deleted ones are not counted), the same number the dashboards show.
+    public List<AcademicYear> GetYears()  => db.Sql(@"SELECT y.*, (SELECT COUNT(*) FROM Students s WHERE s.AcademicYearId = y.YearId AND s.Status = 'Active') AS StudentCount
+            FROM AcademicYears y WHERE y.IsActive=1 ORDER BY y.YearId DESC",
+        r => new AcademicYear { YearId=G.G<int>(r,"YearId"), YearName=G.G<string>(r,"YearName")??"", IsCurrent=G.G<bool>(r,"IsCurrent"), StudentCount=G.G<int>(r,"StudentCount") });
     public List<Class> GetClasses() => db.Sql("SELECT * FROM Classes WHERE IsActive=1 ORDER BY OrderNo",
         r => new Class { ClassId=G.G<int>(r,"ClassId"), ClassName=G.G<string>(r,"ClassName")??"", OrderNo=G.G<int>(r,"OrderNo") });
     public List<Section> GetSections() => db.Sql("SELECT * FROM Sections WHERE IsActive=1",
@@ -46,6 +48,18 @@ public class LookupRepo(CommonConnectivity db)
             r => (P: G.G<int>(r, "P"), A: G.G<int>(r, "A"))).FirstOrDefault();
         stats.PresentToday = att.P;
         stats.AbsentToday = att.A;
+
+        // "Fees This Month" and "Total Students" follow the Current academic year in C# too: a database that has not had
+        // SQL/69 yet still runs the old procedure, which added up the receipts / students of EVERY year - so switching
+        // the Current year changed nothing on the card, and the card disagreed with the list it opens.
+        var cur = db.Sql($@"
+            SELECT (SELECT ISNULL(SUM(fp.NetAmount), 0) FROM FeePayments fp JOIN Students s ON s.StudentId = fp.StudentId
+                    WHERE fp.IsDeleted = 0 AND s.Status = 'Active' AND s.AcademicYearId = {CurrentYear.Id}
+                      AND MONTH(fp.PaymentDate) = MONTH(GETDATE()) AND YEAR(fp.PaymentDate) = YEAR(GETDATE())) AS Fees,
+                   (SELECT COUNT(*) FROM Students WHERE Status = 'Active' AND AcademicYearId = {CurrentYear.Id}) AS Studs",
+            r => (Fees: G.G<decimal>(r, "Fees"), Studs: G.G<int>(r, "Studs"))).FirstOrDefault();
+        stats.FeesThisMonth = cur.Fees;
+        stats.TotalStudents = cur.Studs;
 
         // Populate dynamic class strengths
         var colors = new[] { "#6d28d9", "#db2777", "#2563eb", "#059669", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899" };

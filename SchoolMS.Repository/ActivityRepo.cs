@@ -123,11 +123,11 @@ IF COL_LENGTH('dbo.ParentAccounts', 'NotifSeenAt') IS NULL
 
     // ── parent side ─────────────────────────────────────────────────────────────────────────
 
-    const string ParentScope = @"
+    static readonly string ParentScope = @"
         FROM StudentActivities a
         JOIN Students s ON s.StudentId = a.StudentId
         LEFT JOIN Classes c ON c.ClassId = s.ClassId
-        WHERE (s.FatherPhone = @P OR s.MotherPhone = @P OR s.Phone = @P)
+        WHERE " + PhoneMatch.AnyPhoneOf("s", "@PK") + @"
           AND ISNULL(s.Status, 'Active') = 'Active'";
 
     DateTime SeenAt(string phone)
@@ -145,7 +145,7 @@ IF COL_LENGTH('dbo.ParentAccounts', 'NotifSeenAt') IS NULL
             {ParentScope}
               AND (@Child IS NULL OR a.StudentId = @Child)
             ORDER BY a.CreatedAt DESC, a.ActivityId DESC",
-            new() { { "@P", phone }, { "@Child", studentId }, { "@Take", Math.Clamp(take, 1, 300) } },
+            new() { { "@PK", PhoneMatch.Key(phone) }, { "@Child", studentId }, { "@Take", Math.Clamp(take, 1, 300) } },
             r =>
             {
                 var created = G.G<DateTime>(r, "CreatedAt");
@@ -164,7 +164,7 @@ IF COL_LENGTH('dbo.ParentAccounts', 'NotifSeenAt') IS NULL
         EnsureSchema();
         var seen = SeenAt(phone);
         return db.SqlP($"SELECT COUNT(*) AS cnt {ParentScope} AND a.CreatedAt > @Seen",
-            new() { { "@P", phone }, { "@Seen", seen } }, r => G.G<int>(r, "cnt")).FirstOrDefault();
+            new() { { "@PK", PhoneMatch.Key(phone) }, { "@Seen", seen } }, r => G.G<int>(r, "cnt")).FirstOrDefault();
     }
 
     public void MarkSeen(string phone)

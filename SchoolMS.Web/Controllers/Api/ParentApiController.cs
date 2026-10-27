@@ -99,6 +99,8 @@ public class ParentApiController(
             discount = fee.Discount,
             netTotal = fee.NetTotal,          // fee + charges - discount
             balance = fee.Balance,
+            previousFees = fee.PreviousYearsFee,      // fees of earlier years (already inside the totals)
+            previousDue = fee.PreviousYearsDue,       // part of the balance still owed from earlier years
             dueDate = fee.InstallmentDate,    // next installment date (older app builds read this key)
             installmentDate = fee.InstallmentDate,
             feeStructures = fee.Structures,

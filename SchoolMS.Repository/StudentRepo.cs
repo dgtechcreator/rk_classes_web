@@ -67,8 +67,21 @@ public class StudentRepo(CommonConnectivity db)
     public void SetAgreedDiscount(int id, decimal amount, string? reason, int by)
         => db.Exec("sp_SetStudentAgreedDiscount", new() { { "@StudentId", id }, { "@Amount", amount }, { "@Reason", reason }, { "@By", by } });
 
-    public void Delete(int id)  { db.Exec("sp_DeleteStudent", new() { { "@StudentId", id } }); StudentNameDirectory.Invalidate(); }
-    public void Restore(int id) { db.Exec("sp_RestoreStudent", new() { { "@StudentId", id } }); StudentNameDirectory.Invalidate(); }
+    /// <summary>[by] = the logged-in user, remembered as "deleted by" (0 = unknown).</summary>
+    public void Delete(int id, int by = 0)
+    {
+        db.Exec("sp_DeleteStudent", new() { { "@StudentId", id } });
+        ActionAudit.StampDeleted(db, "student", id, by);
+        StudentNameDirectory.Invalidate();
+    }
+    public void Restore(int id)
+    {
+        db.Exec("sp_RestoreStudent", new() { { "@StudentId", id } });
+        ActionAudit.ClearDeleted(db, "student", id);
+        StudentNameDirectory.Invalidate();
+    }
+    /// <summary>StudentId -> (when, who) of every deleted student whose deletion was recorded.</summary>
+    public Dictionary<int, (DateTime? at, string? by)> GetDeletedInfo() => ActionAudit.DeletedInfo(db, "student");
 
     public int Save(Student s, string? pic, int by)
     {

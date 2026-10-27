@@ -209,7 +209,31 @@
         <div class="fp-info-item" style="font-weight:700;color:@(Model.Balance > 0 ? "#dc2626" : "#15803d");">
             <strong>Balance Due:</strong> ₹ @Model.Balance.ToString("N0")
         </div>
+        @if (Model.PreviousYearsDue > 0)
+        {
+            <div class="fp-info-item" style="font-weight:700;color:#dc2626;"><strong>Of which earlier years:</strong> ₹ @Model.PreviousYearsDue.ToString("N0")</div>
+        }
     </div>
+
+    @* Dues of EARLIER years (9th / 10th / 11th ...) that were never in this system: type the amount here once. It is added to this
+       student's fee, balance, the Finance totals and the parent's view. 0 clears it. *@
+    <form method="post" action="/Fees/SetPreviousDues" style="margin:12px 0;padding:12px 14px;border:1px solid #fecaca;background:#fff7f7;border-radius:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="studentId" value="@Model.Student.StudentId" />
+        <div style="min-width:170px;">
+            <label style="font-size:11px;font-weight:700;color:#991b1b;display:block;margin-bottom:3px;">PREVIOUS YEARS' DUES (₹)</label>
+            <input type="number" name="amount" min="0" step="1" value="@Model.PreviousDuesEntry.Amount.ToString("0")" style="width:100%;padding:7px 9px;border:1px solid #fca5a5;border-radius:7px;" />
+        </div>
+        <div style="flex:1;min-width:220px;">
+            <label style="font-size:11px;font-weight:700;color:#991b1b;display:block;margin-bottom:3px;">NOTE (which years / classes)</label>
+            <input type="text" name="note" maxlength="500" value="@Model.PreviousDuesEntry.Note" placeholder="e.g. 9th 10000 + 10th 12000 + 11th 5000" style="width:100%;padding:7px 9px;border:1px solid #fca5a5;border-radius:7px;" />
+        </div>
+        <button type="submit" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-weight:800;cursor:pointer;">Save</button>
+        @if (Model.PreviousDuesEntry.UpdatedAt.HasValue)
+        {
+            <div style="width:100%;font-size:11px;color:#6b7280;">Last set by @(Model.PreviousDuesEntry.UpdatedByName ?? "—") on @Model.PreviousDuesEntry.UpdatedAt.Value.ToString("dd MMM yyyy HH:mm")</div>
+        }
+    </form>
 
     @if (!Model.FeeStructures.Any())
     {

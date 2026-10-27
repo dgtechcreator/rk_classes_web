@@ -9,6 +9,15 @@ namespace SchoolMS.Services;
 /// </summary>
 public class DeletedRecordsService(ExpensesRepo expenses, TeacherPaymentRepo payments, TeacherAttendanceRepo attendance, LectureRepo lectures)
 {
+    /// <summary>Puts "deleted by / on" on the deleted students and faculty (the stored procedures do not return them).</summary>
+    public void Enrich(List<Student> students, List<Faculty> faculty, StudentService studentSvc, FacultyService facultySvc)
+    {
+        var s = studentSvc.GetDeletedInfo();
+        foreach (var x in students) if (s.TryGetValue(x.StudentId, out var i)) { x.DeletedAt = i.at; x.DeletedByName = i.by; }
+        var f = facultySvc.GetDeletedInfo();
+        foreach (var x in faculty) if (f.TryGetValue(x.FacultyId, out var i)) { x.DeletedAt = i.at; x.DeletedByName = i.by; }
+    }
+
     public List<DeletedItem> GetOthers()
         => expenses.GetDeleted().Concat(payments.GetDeleted()).Concat(attendance.GetDeleted()).Concat(lectures.GetDeleted())
             .OrderByDescending(d => d.DeletedAt).ToList();

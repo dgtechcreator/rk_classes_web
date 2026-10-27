@@ -9,6 +9,27 @@ namespace SchoolMS.Repository;
 public class UserMgmtRepo(CommonConnectivity db)
 {
     public List<AppUser> GetAll()
+    {
+        var list = GetAllRaw();
+        try
+        {
+            ActionAudit.Ensure(db);
+            var info = db.Sql(@"SELECT u.UserId, u.DeletedAt, d.FullName AS DeletedByName, u.DeactivatedAt, a.FullName AS DeactivatedByName
+                                FROM Users u LEFT JOIN Users d ON d.UserId = u.DeletedBy LEFT JOIN Users a ON a.UserId = u.DeactivatedBy",
+                r => (Id: G.G<int>(r, "UserId"), DelAt: G.G<DateTime?>(r, "DeletedAt"), DelBy: G.G<string>(r, "DeletedByName"),
+                      DeAt: G.G<DateTime?>(r, "DeactivatedAt"), DeBy: G.G<string>(r, "DeactivatedByName"))).ToDictionary(x => x.Id);
+            foreach (var u in list.Where(x => info.ContainsKey(x.UserId)))
+            {
+                var i = info[u.UserId];
+                u.DeletedAt = i.DelAt; u.DeletedByName = i.DelBy;
+                if (!u.IsActive) { u.DeactivatedAt = i.DeAt; u.DeactivatedByName = i.DeBy; }
+            }
+        }
+        catch { /* the audit columns are extra information - never break the list */ }
+        return list;
+    }
+
+    List<AppUser> GetAllRaw()
         => db.Read("sp_GetUsers", new(), r => new AppUser {
             UserId    = G.G<int>(r,"UserId"),
             FullName  = G.G<string>(r,"FullName")??"",
@@ -66,8 +87,23 @@ public class UserMgmtRepo(CommonConnectivity db)
         db.ExecSql("UPDATE Users SET FacultyId=@F WHERE UserId=@Id", new() {{"@Id",userId},{"@F",facultyId}});
     }
 
-    public void SetActive(int id, bool active)
-        => db.ExecSql("UPDATE Users SET IsActive=@A WHERE UserId=@Id", new() {{"@Id",id},{"@A",active}});
+    public void SetActive(int id, bool active, int by = 0)
+    {
+        db.ExecSql("UPDATE Users SET IsActive=@A WHERE UserId=@Id", new() {{"@Id",id},{"@A",active}});
+        RecordActiveChange(id, active, by);
+    }
+
+    /// <summary>Remembers who switched the login off and when (cleared when it is switched on again).</summary>
+    public void RecordActiveChange(int id, bool active, int by)
+    {
+        try
+        {
+            ActionAudit.Ensure(db);
+            if (active) db.ExecSql("UPDATE Users SET DeactivatedBy=NULL, DeactivatedAt=NULL WHERE UserId=@Id", new() {{"@Id",id}});
+            else db.ExecSql("UPDATE Users SET DeactivatedBy=@By, DeactivatedAt=GETDATE() WHERE UserId=@Id", new() {{"@Id",id},{"@By",by > 0 ? by : (object?)null}});
+        }
+        catch { }
+    }
 
     public void ClearPermissions(int userId)
         => db.ExecSql("DELETE FROM UserPermissions WHERE UserId=@Id", new() {{"@Id",userId}});

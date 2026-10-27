@@ -11,7 +11,8 @@ public class StudentService(StudentRepo repo)
     public int Save(Student s, string? pic, int by) => repo.Save(s, pic, by);
     public void SetPhoto(int id, string? path) => repo.SetPhoto(id, path);
     public void SetAgreedDiscount(int id, decimal amount, string? reason, int by) => repo.SetAgreedDiscount(id, amount, reason, by);
-    public void Delete(int id)  => repo.Delete(id);
+    public void Delete(int id, int by = 0)  => repo.Delete(id, by);
+    public Dictionary<int, (DateTime? at, string? by)> GetDeletedInfo() => repo.GetDeletedInfo();
     public void Restore(int id) => repo.Restore(id);
     public List<Student> GetByClassAndBatch(string className, string batchName)
         => repo.GetByClassAndBatch(className, batchName);

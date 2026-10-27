@@ -70,7 +70,7 @@ public class FacultyController(FacultyService svc, LookupService lookup, Profile
     [HttpPost]
     public IActionResult Delete(int id)
     {
-        svc.Delete(id);
+        svc.Delete(id, HttpContext.Session.GetUserId() ?? 0);
         TempData["Success"] = "Faculty member marked as Inactive.";
         return RedirectToAction("Index");
     }

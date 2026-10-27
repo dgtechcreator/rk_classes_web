@@ -79,4 +79,8 @@ public class FinanceStudentRow
     public decimal Collected{get;set;}
     public decimal Discount{get;set;}
     public decimal Balance => TotalFees - Collected - Discount;
+    /// <summary>Fees of earlier academic years inside TotalFees.</summary>
+    public decimal PreviousFees{get;set;}
+    /// <summary>Part of the balance owed from earlier years (money received counts against the oldest fees first).</summary>
+    public decimal PreviousDue => Math.Min(Math.Max(0, Balance), Math.Max(0, PreviousFees - Collected - Discount));
 }

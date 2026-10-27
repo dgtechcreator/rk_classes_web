@@ -97,7 +97,7 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
     [HttpPost]
     public IActionResult Delete(int id)
     {
-        svc.Delete(id);
+        svc.Delete(id, HttpContext.Session.GetUserId() ?? 0);
         TempData["Success"] = "Student marked as Inactive.";
         return RedirectToAction("Index");
     }

@@ -26,11 +26,18 @@ public class UserMgmtService(UserMgmtRepo repo)
         try { repo.SetFaculty(userId, facultyId); return (true, null); }
         catch (Exception ex) { return (false, "Could not save the Faculty link (" + ex.Message + "). Run SQL/67_UserFacultyLink.sql on the database and try again."); }
     }
-    public void                    SetActive(int id, bool active)                    => repo.SetActive(id, active);
+    public void                    SetActive(int id, bool active, int by = 0)        => repo.SetActive(id, active, by);
     public void                    ClearPermissions(int userId)                      => repo.ClearPermissions(userId);
     public void                    RemoveNewUser(int userId)                         => repo.RemoveNewUser(userId);
     public AppUser?                GetById(int id)                                   => repo.GetById(id);
-    public int                     Save(AppUser u, int by)                           => repo.Save(u, by);
+    public int                     Save(AppUser u, int by)
+    {
+        // remember who switched a login off / on (the toggle button and the user form both come through here)
+        var before = u.UserId > 0 ? repo.GetById(u.UserId)?.IsActive : null;
+        var id = repo.Save(u, by);
+        if (before.HasValue && before.Value != u.IsActive) repo.RecordActiveChange(u.UserId, u.IsActive, by);
+        return id;
+    }
     public void                    SavePermission(int uid, int mid, bool v, bool e)  => repo.SavePermission(uid, mid, v, e);
     public Dictionary<string,bool> GetPermissions(int userId)                        => repo.GetPermissions(userId);
     public (bool ok, string msg)   ChangePassword(int uid, string o, string n)       => repo.ChangePassword(uid, o, n);

@@ -15,6 +15,7 @@ public class DeletedController(StudentService studentSvc, FacultyService faculty
         var (students, _) = studentSvc.GetAll(1, 10000, null, null, null, null, null, "Inactive");
         var (faculty, _)  = facultySvc.GetAll(null, "Inactive", null, 1, 10000);
         var receipts      = feesSvc.GetDeletedPayments();
+        othersSvc.Enrich(students, faculty, studentSvc, facultySvc);
         ViewBag.Students = students;
         ViewBag.Faculty  = faculty;
         ViewBag.Receipts = receipts;
