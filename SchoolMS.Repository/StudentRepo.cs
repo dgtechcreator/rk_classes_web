@@ -15,11 +15,35 @@ public class StudentRepo(CommonConnectivity db)
         if (yr == null && status != "Inactive")
             yr = db.Sql($"SELECT {CurrentYear.Id} AS YearId", r => (int?)G.G<int?>(r, "YearId")).FirstOrDefault();
         var op = new SqlParameter("@TotalCount", SqlDbType.Int) { Direction = ParameterDirection.Output };
+        // The stored procedure only looks at name / admission no / father's name. A search is done here instead, so a
+        // parent can be found by father, mother, any word of the name or a phone number (see MatchesSearch).
+        var tokens = SearchTokens(search);
+        if (tokens.Length > 0)
+        {
+            var everyone = db.ReadPaged("sp_GetStudents", new() {
+                { "@PageNo",1 }, { "@PageSize",1000000 }, { "@Search",null }, { "@ClassId",cls },
+                { "@SectionId",sec }, { "@BatchId",bat }, { "@AcademicYearId",yr }, { "@Status",status }
+            }, MapStudent, op);
+            var hits = everyone.Where(s => MatchesSearch(s, tokens)).ToList();
+            var skip = Math.Max(0, (pg - 1) * ps);
+            return (hits.Skip(skip).Take(ps).ToList(), hits.Count);
+        }
         var data = db.ReadPaged("sp_GetStudents", new() {
-            { "@PageNo",pg }, { "@PageSize",ps }, { "@Search",search }, { "@ClassId",cls },
+            { "@PageNo",pg }, { "@PageSize",ps }, { "@Search",null }, { "@ClassId",cls },
             { "@SectionId",sec }, { "@BatchId",bat }, { "@AcademicYearId",yr }, { "@Status",status }
         }, MapStudent, op);
         return (data, op.Value is DBNull ? 0 : Convert.ToInt32(op.Value));
+    }
+
+    static string[] SearchTokens(string? search)
+        => (search ?? "").Split(new[] { ' ', ',', '.', '-' }, StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim().ToLowerInvariant()).Where(t => t.Length > 0).ToArray();
+
+    /// <summary>Every typed word must appear somewhere in: the student's name (as stored and as displayed), father, mother, admission no, roll no or a phone number.</summary>
+    public static bool MatchesSearch(Student s, string[] tokens)
+    {
+        var hay = string.Join(' ', new[] { s.FullName, s.DisplayName, s.FatherName, s.MotherName, s.AdmissionNo, s.RollNo, s.Phone, s.FatherPhone, s.MotherPhone }
+            .Where(x => !string.IsNullOrWhiteSpace(x))).ToLowerInvariant();
+        return tokens.All(hay.Contains);
     }
     public Student? GetById(int id)
     {

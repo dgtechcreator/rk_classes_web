@@ -118,6 +118,21 @@ public class TaskApiController(TaskService taskSvc, NotificationService notifSvc
         }
     }
 
+    /// <summary>Opening the notifications tab marks everything of the signed-in user as read.</summary>
+    [HttpPost("notifications/read-all")]
+    public IActionResult MarkAllNotificationsRead()
+    {
+        try
+        {
+            notifSvc.MarkAllAsRead(User.UserId() ?? 0);
+            return Ok(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return Ok(new { success = false, message = ex.Message });
+        }
+    }
+
     [HttpPost("notifications/{notificationId:int}/dismiss")]
     public IActionResult DismissNotification(int notificationId)
     {

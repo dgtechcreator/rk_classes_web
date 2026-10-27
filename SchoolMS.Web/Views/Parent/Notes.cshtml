@@ -1,0 +1,33 @@
+@model List<SchoolMS.Domain.ClassNote>
+@{
+  Layout = "_ParentLayout";
+  ViewData["Title"] = "Notes & Practice Papers";
+  string Size(long b) => b >= 1048576 ? (b / 1048576.0).ToString("0.0") + " MB" : Math.Max(1, b / 1024) + " KB";
+}
+<style>
+  .pn-card { display:flex; gap:12px; align-items:center; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:12px; margin-bottom:8px; flex-wrap:wrap; }
+  .pn-ic { width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+  .pn-t { font-weight:800; font-size:14px; color:#111; }
+  .pn-s { font-size:12px; color:#6b7280; }
+  .pn-b { background:#cc0000; color:#fff; border-radius:8px; padding:8px 14px; font-weight:800; font-size:12.5px; text-decoration:none; }
+</style>
+<div style="max-width:760px;margin:0 auto;">
+  <h2 style="font-size:18px;font-weight:800;margin-bottom:12px;"><i class="fas fa-file-lines" style="color:#cc0000;"></i> Notes &amp; Practice Papers</h2>
+  @if (Model.Count == 0)
+  {
+    <div style="text-align:center;color:#9ca3af;padding:40px;background:#fff;border:1px dashed #e5e7eb;border-radius:12px;">Nothing uploaded for your class yet.</div>
+  }
+  @foreach (var n in Model)
+  {
+    var practice = n.Kind == "Practice";
+    <div class="pn-card">
+      <div class="pn-ic" style="background:@(practice ? "#fef3c7" : "#dbeafe");color:@(practice ? "#b45309" : "#1d4ed8");"><i class="fas @(practice ? "fa-pen-ruler" : "fa-file-lines")"></i></div>
+      <div style="flex:1;min-width:160px;">
+        <div class="pn-t">@n.Title</div>
+        <div class="pn-s">@(practice ? "Practice paper" : "Notes") @(string.IsNullOrWhiteSpace(n.SubjectName) ? "" : "· " + n.SubjectName) · @n.PaperDate.ToString("d MMM yyyy") · @Size(n.FileSize)</div>
+        @if (!string.IsNullOrWhiteSpace(n.Description)) { <div class="pn-s">@n.Description</div> }
+      </div>
+      <a class="pn-b" href="/Parent/NoteFile/@n.NoteId?studentId=@ViewBag.SelectedStudentId"><i class="fas fa-download"></i> Download</a>
+    </div>
+  }
+</div>

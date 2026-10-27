@@ -237,6 +237,26 @@ else
           <div class="kl">Late Days</div>
         </div>
       </div>
+      @if (att.TotalDays > 0)
+      {
+        <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:14px;">
+          <div style="position:relative;width:170px;height:170px;"><canvas id="ppAttPie"></canvas></div>
+          <div style="font-size:13px;display:flex;flex-direction:column;gap:6px;">
+            <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#16a34a;margin-right:6px;"></span>Present <b>@att.PresentDays</b></div>
+            <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#dc2626;margin-right:6px;"></span>Absent <b>@att.AbsentDays</b></div>
+            <div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#d97706;margin-right:6px;"></span>Late <b>@att.LateDays</b></div>
+          </div>
+        </div>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+        <script>
+          window.addEventListener('load', function () {
+            var c = document.getElementById('ppAttPie'); if (!c || !window.Chart) return;
+            new Chart(c, { type: 'doughnut', data: { labels: ['Present', 'Absent', 'Late'],
+              datasets: [{ data: [@att.PresentDays, @att.AbsentDays, @att.LateDays], backgroundColor: ['#16a34a', '#dc2626', '#d97706'], borderWidth: 2 }] },
+              options: { maintainAspectRatio: false, cutout: '58%', plugins: { legend: { display: false } } } });
+          });
+        </script>
+      }
     }
 
     @if (Model.AttDetail.Any())

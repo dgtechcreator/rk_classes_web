@@ -116,6 +116,9 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; color: #
 }
 .pp-topbar-title { font-size: 16px; font-weight: 700; color: #111; }
 .pp-topbar-space { flex: 1; }
+.pp-bell { position: relative; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #444; font-size: 17px; text-decoration: none; }
+.pp-bell:hover { background: #f3f4f6; color: #cc0000; }
+.pp-bell-badge { position: absolute; top: 1px; right: 0; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #cc0000; color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-sizing: content-box; }
 
 /* ── Main content ── */
 .pp-main {
@@ -253,6 +256,12 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; color: #
         <span class="nav-ic"><i class="fas fa-rupee-sign"></i></span> Fees
       </a>
       <div class="pp-nav-label" style="margin-top:12px;">Support</div>
+      <a class="pp-nav-item @(activeTab=="notes"?"active":"")" href="/Parent/Notes?studentId=@selId" onclick="closeSb()">
+        <span class="nav-ic"><i class="fas fa-file-lines"></i></span> Notes &amp; Papers
+      </a>
+      <a class="pp-nav-item @(activeTab=="notifications"?"active":"")" href="/Parent/Notifications" onclick="closeSb()">
+        <span class="nav-ic"><i class="fas fa-bell"></i></span> Notifications
+      </a>
       <a class="pp-nav-item" href="/Parent/ContactUs" onclick="closeSb()">
         <span class="nav-ic"><i class="fas fa-envelope"></i></span> Contact Us
       </a>
@@ -279,6 +288,9 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; color: #
   <button class="pp-menu-tog" id="menuTog" onclick="openSb()"><i class="fas fa-bars"></i></button>
   <span class="pp-topbar-title">@(ViewData["Title"] ?? "Parent Portal")</span>
   <div class="pp-topbar-space"></div>
+  <a href="/Parent/Notifications" class="pp-bell" title="Notifications" aria-label="Notifications">
+    <i class="fas fa-bell"></i><span class="pp-bell-badge" id="ppBellBadge" style="display:none;"></span>
+  </a>
   <a href="/Parent/Logout" style="font-size:12px;color:#888;text-decoration:none;display:flex;align-items:center;gap:5px;">
     <i class="fas fa-sign-out-alt"></i> Logout
   </a>
@@ -304,6 +316,13 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; color: #
 
 <script>
 function openSb()  { document.getElementById('ppSidebar').classList.add('open'); document.getElementById('ppOverlay').classList.add('show'); }
+function ppBell() {
+  fetch('/Parent/NotificationCount', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (d) {
+    var b = document.getElementById('ppBellBadge'); if (!b) return;
+    if (d.unreadCount > 0) { b.textContent = d.unreadCount > 99 ? '99+' : d.unreadCount; b.style.display = 'flex'; } else { b.style.display = 'none'; }
+  }).catch(function () {});
+}
+ppBell(); setInterval(ppBell, 60000);
 function closeSb() { document.getElementById('ppSidebar').classList.remove('open'); document.getElementById('ppOverlay').classList.remove('show'); }
 </script>
 @await RenderSectionAsync("Scripts", required: false)

@@ -14,7 +14,10 @@ public class ParentController(
     FeeStructureService feeStructureSvc,
     FeePositionService feePos,
     LookupService lookup,
-    LectureService lectureSvc) : Controller
+    LectureService lectureSvc,
+    ActivityNotifier activity,
+    ClassNotesService notesSvc,
+    SchoolMS.Web.Auth.NoteFileStore noteFiles) : Controller
 {
     // ── Login ────────────────────────────────────────────────────
     [HttpGet]
@@ -161,6 +164,76 @@ public class ParentController(
         var child = parentSvc.GetChildren(phone).FirstOrDefault(c => c.StudentId == studentId);
         if (child == null) return NotFound(new { error = "Student not found for this parent." });
         return Json(LectureHelpers.ParentPayload(lectureSvc, child, date ?? DateTime.Today));
+    }
+
+    // ── Notifications (what happened to my children) ─────────────
+    [RequireParentLogin]
+    public IActionResult Notifications(int? studentId)
+    {
+        var phone = HttpContext.Session.GetParentPhone() ?? "";
+        var children = parentSvc.GetChildren(phone);
+        var selected = studentId.HasValue ? children.FirstOrDefault(c => c.StudentId == studentId.Value) : null;
+
+        List<SchoolMS.Domain.StudentActivity> items;
+        try
+        {
+            items = activity.ForParent(phone, selected?.StudentId, 150);
+            activity.MarkParentSeen(phone);   // the list below still shows what was new; the bell badge clears
+        }
+        catch { items = new(); }
+
+        ViewBag.Children = children;
+        ViewBag.SelectedChild = selected;
+        ViewBag.FilterStudentId = selected?.StudentId;
+        ViewBag.SelectedStudentId = children.FirstOrDefault()?.StudentId;
+        ViewBag.SidebarChildren = children;
+        ViewBag.ActiveTab = "notifications";
+        return View(items);
+    }
+
+    [HttpGet]
+    [RequireParentLogin]
+    public IActionResult NotificationCount()
+    {
+        try { return Json(new { unreadCount = activity.UnreadForParent(HttpContext.Session.GetParentPhone() ?? "") }); }
+        catch { return Json(new { unreadCount = 0 }); }
+    }
+
+    // ── Notes & practice papers of my child's class ──────────────
+    [RequireParentLogin]
+    public IActionResult Notes(int? studentId)
+    {
+        var phone = HttpContext.Session.GetParentPhone() ?? "";
+        var children = parentSvc.GetChildren(phone);
+        var selected = studentId.HasValue ? children.FirstOrDefault(c => c.StudentId == studentId.Value) : children.FirstOrDefault();
+
+        List<SchoolMS.Domain.ClassNote> items = new();
+        if (selected != null)
+        {
+            try
+            {
+                items = notesSvc.Search(new SchoolMS.Domain.ClassNoteFilter {
+                    ForStudentClassId = selected.ClassId ?? 0, ForStudentSectionId = selected.SectionId, ForStudentBatchId = selected.BatchId });
+            }
+            catch { }
+        }
+        ViewBag.SelectedStudentId = selected?.StudentId;
+        ViewBag.SidebarChildren = children;
+        ViewBag.ActiveTab = "notes";
+        return View(items);
+    }
+
+    [RequireParentLogin]
+    public IActionResult NoteFile(int id, int? studentId)
+    {
+        var phone = HttpContext.Session.GetParentPhone() ?? "";
+        var note = notesSvc.GetById(id);
+        if (note == null) return NotFound();
+        var allowed = parentSvc.GetChildren(phone).Any(c => ClassNotesService.AppliesTo(note, c.ClassId, c.SectionId, c.BatchId));
+        if (!allowed) return Forbid();
+        var fs = noteFiles.Open(note.StoredName);
+        if (fs == null) return NotFound();
+        return File(fs, SchoolMS.Web.Auth.NoteFileStore.ContentType(note.FileName), note.FileName);
     }
 
     // ── Contact Us ──────────────────────────────────────────────

@@ -40,7 +40,7 @@ public class ParentService(ParentRepo repo)
         // Phone must be in student records (FatherPhone or MotherPhone)
         var children = repo.GetChildren(phone);
         if (!children.Any())
-            return (false, null, "This phone number is not found in any student record. Contact school.");
+            return (false, null, "This phone number is not found in any student record (father, mother or student number). Contact school.");
 
         var id = repo.Save(new ParentAccount { Phone = phone, Password = password, FullName = fullName });
         if (id <= 0) return (false, null, "Registration failed. Please try again.");

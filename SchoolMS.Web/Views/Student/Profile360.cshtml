@@ -101,6 +101,11 @@ body { font-family:'Segoe UI',Arial,sans-serif; background:#ffffff; }
 .s-l { background:#fef3c7; color:#d97706; border-radius:10px; padding:1px 8px; font-size:11px; font-weight:700; }
 
 /* Attendance progress */
+.chart-row { display:flex; align-items:center; gap:18px; flex-wrap:wrap; margin:6px 0 14px; }
+.chart-box { position:relative; width:200px; height:200px; }
+.chart-box.wide { width:100%; max-width:560px; height:230px; margin-bottom:14px; }
+.chart-note { font-size:13px; display:flex; flex-direction:column; gap:6px; }
+.chart-note .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; }
 .att-prog-bg { background:#e2e8f0; border-radius:6px; height:12px; margin:8px 0 4px; overflow:hidden; }
 .att-prog-fill { height:100%; border-radius:6px; background:linear-gradient(90deg,#2563eb,#60a5fa); }
 .att-nums { display:flex; gap:16px; margin:10px 0; flex-wrap:wrap; }
@@ -329,6 +334,14 @@ body { font-family:'Segoe UI',Arial,sans-serif; background:#ffffff; }
       else
       {
         <div class="pr-sh">Summary</div>
+        <div class="chart-row">
+          <div class="chart-box"><canvas id="chAtt"></canvas></div>
+          <div class="chart-note">
+            <div><span class="dot" style="background:#16a34a"></span> Present <b>@att.PresentDays</b></div>
+            <div><span class="dot" style="background:#dc2626"></span> Absent <b>@att.AbsentDays</b></div>
+            <div><span class="dot" style="background:#d97706"></span> Late <b>@att.LateDays</b></div>
+          </div>
+        </div>
         <div class="att-nums">
           <div class="att-num"><div class="n n-p">@att.PresentDays</div><div class="l">Present</div></div>
           <div class="att-num"><div class="n n-a">@att.AbsentDays</div><div class="l">Absent</div></div>
@@ -412,6 +425,7 @@ body { font-family:'Segoe UI',Arial,sans-serif; background:#ffffff; }
       }
       else
       {
+        <div class="chart-box wide"><canvas id="chMarks"></canvas></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:14px;">
           <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:10px 12px;text-align:center;">
             <div style="font-size:18px;font-weight:900;color:#15803d;">@totObt.ToString("0") / @totMax.ToString("0")</div>
@@ -501,6 +515,14 @@ body { font-family:'Segoe UI',Arial,sans-serif; background:#ffffff; }
       }
       else
       {
+        <div class="chart-row">
+          <div class="chart-box"><canvas id="chFees"></canvas></div>
+          <div class="chart-note">
+            <div><span class="dot" style="background:#16a34a"></span> Paid <b>₹@totalPaid.ToString("N0")</b></div>
+            <div><span class="dot" style="background:#2563eb"></span> Discount <b>₹@totalDiscount.ToString("N0")</b></div>
+            <div><span class="dot" style="background:#d97706"></span> Balance <b>₹@(balanceDue > 0 ? balanceDue : 0m).ToString("N0")</b></div>
+          </div>
+        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:14px;">
           <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:7px;padding:12px;text-align:center;">
             <div style="font-size:16px;font-weight:900;color:#b45309;">₹@totalPaid.ToString("N0")</div>
@@ -556,7 +578,33 @@ body { font-family:'Segoe UI',Arial,sans-serif; background:#ffffff; }
 </div>
 
 @section Scripts {
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
+var _charts = {};
+var _chartInit = {
+  att: function () {
+    var c = document.getElementById('chAtt'); if (!c) return;
+    new Chart(c, { type: 'doughnut', data: { labels: ['Present', 'Absent', 'Late'],
+      datasets: [{ data: [@(att?.PresentDays ?? 0), @(att?.AbsentDays ?? 0), @(att?.LateDays ?? 0)], backgroundColor: ['#16a34a', '#dc2626', '#d97706'], borderWidth: 2 }] },
+      options: { maintainAspectRatio: false, cutout: '58%', plugins: { legend: { display: false } } } });
+  },
+  fees: function () {
+    var c = document.getElementById('chFees'); if (!c) return;
+    new Chart(c, { type: 'doughnut', data: { labels: ['Paid', 'Discount', 'Balance'],
+      datasets: [{ data: [@totalPaid.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), @totalDiscount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), @((balanceDue > 0 ? balanceDue : 0m).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))], backgroundColor: ['#16a34a', '#2563eb', '#d97706'], borderWidth: 2 }] },
+      options: { maintainAspectRatio: false, cutout: '58%', plugins: { legend: { display: false } } } });
+  },
+  marks: function () {
+    var c = document.getElementById('chMarks'); if (!c) return;
+    var bySubject = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        marks.Where(m => m.MarksObtained.HasValue && m.MaxMarks > 0)
+             .GroupBy(m => m.SubjectName ?? "")
+             .Select(g => new { s = g.Key, pct = Math.Round(g.Sum(x => x.MarksObtained!.Value) * 100m / g.Sum(x => (decimal)x.MaxMarks), 1) })));
+    new Chart(c, { type: 'bar', data: { labels: bySubject.map(function (x) { return x.s; }),
+      datasets: [{ label: 'Average %', data: bySubject.map(function (x) { return x.pct; }), backgroundColor: '#7c3aed', borderRadius: 6 }] },
+      options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } }, plugins: { legend: { display: false } } } });
+  }
+};
 var _mode = 'print';
 var _sid  = @(Model?.StudentId ?? 0);
 
@@ -566,6 +614,7 @@ function showTab(name, btn) {
   document.querySelectorAll('.pr-tab').forEach(el => el.classList.remove('active'));
   document.getElementById('tc-' + name).classList.add('active');
   btn.classList.add('active');
+  if (_chartInit[name] && !_charts[name]) { _charts[name] = true; try { _chartInit[name](); } catch (e) {} }
 }
 
 /* ── Attendance filter ── */

@@ -326,6 +326,10 @@
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Lecture" && ViewContext.RouteData.Values["action"]?.ToString()=="Index"?"active":"")" href="/Lecture/Index">
       <span class="nav-ic"><i class="fas fa-chalkboard-teacher"></i></span> Lecture Schedule
     </a>}
+    @if(Context.Session.HasPerm("class_notes")){
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Notes"?"active":"")" href="/Notes/Index">
+      <span class="nav-ic"><i class="fas fa-file-lines"></i></span> Notes &amp; Papers
+    </a>}
     @if(Context.Session.HasPerm("lecture_summary")){
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Lecture" && ViewContext.RouteData.Values["action"]?.ToString()=="Summary"?"active":"")" href="/Lecture/Summary">
       <span class="nav-ic"><i class="fas fa-chart-pie"></i></span> Lecture Summary
@@ -604,7 +608,7 @@ function showNotifications() {
     fetch('/Task/GetNotifications')
       .then(r => r.json())
       .then(data => {
-        let html = `
+        let html = nfSectionHtml(data.notifications || []) + `
           <div style="padding:12px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;">
             <div style="font-weight:700;">📋 Tasks</div>
             <button onclick="showAddTaskModal()" style="background:#2563eb;color:#fff;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:700;">+ Add</button>
@@ -644,6 +648,44 @@ function showNotifications() {
   } else {
     panel.style.display = 'none';
   }
+}
+
+function nfEsc(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Activity notifications (a lecture given to a teacher, a reminder...) - newest first, unread highlighted.
+function nfSectionHtml(list) {
+  const look = {
+    Lecture: ['🎓', '#dbeafe'], FeesDue: ['₹', '#fef3c7'], Attendance: ['📅', '#fee2e2'], Task: ['📋', '#fef3c7']
+  };
+  const items = list.filter(n => n.status !== 'Dismissed').slice(0, 15);
+  let html = `<div style="padding:12px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-weight:700;">🔔 Notifications</div>
+      ${items.some(n => n.status === 'Unread') ? '<button onclick="markAllNotifsRead()" style="background:none;border:none;color:#2563eb;cursor:pointer;font-size:11px;font-weight:700;">Mark all read</button>' : ''}
+    </div>`;
+  if (items.length === 0) return html + '<div style="padding:14px;text-align:center;color:#999;font-size:12px;">No notifications</div>';
+  items.forEach(n => {
+    const l = look[n.type] || ['🔔', '#f1f5f9'];
+    const unread = n.status === 'Unread';
+    const when = new Date(n.createdAt).toLocaleString([], { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+    html += `<div onclick="handleNotification(${n.notificationId}, ${n.action ? "'" + nfEsc(n.action) + "'" : 'null'})"
+      style="display:flex;gap:10px;padding:10px 12px;border-bottom:1px solid #f5f5f5;cursor:pointer;${unread ? 'background:#fff7f7;' : ''}">
+      <div style="width:32px;height:32px;border-radius:9px;background:${l[1]};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;">${l[0]}</div>
+      <div style="min-width:0;flex:1;">
+        <div style="font-weight:${unread ? 800 : 600};font-size:12.5px;color:#222;">${nfEsc(n.title)}${unread ? ' <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#cc0000;"></span>' : ''}</div>
+        <div style="font-size:12px;color:#555;margin:2px 0;line-height:1.35;">${nfEsc(n.message)}</div>
+        <div style="font-size:10.5px;color:#999;">${when}</div>
+      </div></div>`;
+  });
+  return html;
+}
+
+function markAllNotifsRead() {
+  fetch('/Task/GetNotifications').then(r => r.json()).then(data => {
+    const unread = (data.notifications || []).filter(n => n.status === 'Unread');
+    return Promise.all(unread.map(n => fetch(`/Task/MarkNotificationAsRead?notificationId=${n.notificationId}`, { method: 'POST' })));
+  }).then(() => { loadNotifications(); document.getElementById('notifPanel').style.display = 'none'; });
 }
 
 function completeTaskFromNotif(taskId) {
@@ -749,6 +791,9 @@ if (!RK_IS_CR) fetch('/Task/GetNotifications')
   .catch(err => {
     document.getElementById('notifBadge').style.display = 'none';
   });
+
+// A teacher's new lecture etc. arrives while the page is open: refresh the badge every minute.
+if (!RK_IS_CR) setInterval(loadNotifications, 60000);
 
 // Close notification panel when clicking outside
 document.addEventListener('click', (e) => {

@@ -12,6 +12,7 @@ using SchoolMS.Web.Hubs;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<SchoolMS.Web.Auth.UserAccessCache>();
 builder.Services.AddSingleton<SchoolMS.Web.Auth.ProfilePhotoStore>();
+builder.Services.AddSingleton<SchoolMS.Web.Auth.NoteFileStore>();
 builder.Services.AddSingleton<AppSettingsRepo>();
 builder.Services.AddSingleton<MaintenanceService>();
 builder.Services.AddControllersWithViews(o => {
@@ -115,6 +116,9 @@ builder.Services.AddScoped<UserMgmtRepo>();
 builder.Services.AddScoped<ParentRepo>();
 builder.Services.AddScoped<TaskRepo>();
 builder.Services.AddScoped<NotificationRepo>();
+builder.Services.AddScoped<ActivityRepo>();
+builder.Services.AddScoped<ClassNotesRepo>();
+builder.Services.AddScoped<ClassNotesService>();
 builder.Services.AddScoped<AttendanceBatchRepo>();
 builder.Services.AddScoped<TeacherPaymentRepo>();
 builder.Services.AddScoped<TeacherAttendanceRepo>();
@@ -138,6 +142,7 @@ builder.Services.AddScoped<UserMgmtService>();
 builder.Services.AddScoped<ParentService>();
 builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<ActivityNotifier>();
 builder.Services.AddScoped<AttendanceBatchService>();
 builder.Services.AddScoped<TeacherPaymentService>();
 builder.Services.AddScoped<TeacherAttendanceService>();
@@ -245,4 +250,13 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllerRoute("default", "{controller=Account}/{action=Login}/{id?}");
 app.MapHub<NotificationHub>("/hubs/notifications");
+// Tables / module rows of the newer features (idempotent; a failure here must never stop the site).
+try
+{
+    using var scope = app.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<ClassNotesRepo>().EnsureSchema();
+    scope.ServiceProvider.GetRequiredService<ActivityRepo>().EnsureSchema();
+}
+catch (Exception ex) { Console.Error.WriteLine("Start-up schema check failed: " + ex.Message); }
+
 app.Run();

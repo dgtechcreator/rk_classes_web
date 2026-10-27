@@ -3,12 +3,16 @@ using SchoolMS.Repository;
 
 namespace SchoolMS.Services;
 
-public class FeesService(FeesRepo repo)
+public class FeesService(FeesRepo repo, ActivityNotifier? notify = null)
 {
     public (List<FeePayment> data, int total) GetAll(int pg, int ps, string? s, string? month, int? ft)
         => repo.GetAll(pg, ps, s, month, ft);
     public int Collect(int sid, int? ftId, decimal amt, decimal disc, decimal fine, DateTime date, string mode, string? txRef, int? yrId, string? month, string? remarks, int by, DateTime? dueDate=null)
-        => repo.Save(sid, ftId, amt, disc, fine, date, mode, txRef, yrId, month, remarks, by, dueDate);
+    {
+        var paymentId = repo.Save(sid, ftId, amt, disc, fine, date, mode, txRef, yrId, month, remarks, by, dueDate);
+        notify?.FeeReceived(sid, amt, date, paymentId);
+        return paymentId;
+    }
     public FeePayment? GetPaymentById(int id) => repo.GetById(id);
     public List<FeePayment> GetStudentHistory(int sid) => repo.GetStudentHistory(sid);
     /// Discount agreed at admission; every fee total = fee + charges - (payment discounts + this) - paid.

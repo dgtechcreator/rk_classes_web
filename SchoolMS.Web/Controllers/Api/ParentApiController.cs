@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SchoolMS.Domain;
 using SchoolMS.Services;
 using SchoolMS.Web.Auth;
 using SchoolMS.Web.Utils;
@@ -17,9 +18,57 @@ public class ParentApiController(
     FeeStructureService feeStructureSvc,
     FeePositionService feePos,
     LookupService lookup,
-    LectureService lectureSvc) : ControllerBase
+    LectureService lectureSvc,
+    ActivityNotifier activity,
+    ClassNotesService notesSvc) : ControllerBase
 {
     string Phone => User.Phone() ?? "";
+
+    /// <summary>What happened to my children (absent, marks, fees, lectures), newest first. Opening the list clears the unread badge via POST notifications/read.</summary>
+    [HttpGet("notifications")]
+    public IActionResult Notifications(int? studentId, int take = 100)
+    {
+        try
+        {
+            var items = activity.ForParent(Phone, studentId, take);
+            return Ok(new { items, unreadCount = activity.UnreadForParent(Phone) });
+        }
+        catch (Exception ex)
+        {
+            return Ok(new { items = Array.Empty<object>(), unreadCount = 0, error = ex.Message });
+        }
+    }
+
+    [HttpGet("notifications/unread-count")]
+    public IActionResult NotificationCount()
+    {
+        try { return Ok(new { unreadCount = activity.UnreadForParent(Phone) }); }
+        catch { return Ok(new { unreadCount = 0 }); }
+    }
+
+    [HttpPost("notifications/read")]
+    public IActionResult MarkNotificationsRead()
+    {
+        try { activity.MarkParentSeen(Phone); return Ok(new { success = true }); }
+        catch (Exception ex) { return Ok(new { success = false, message = ex.Message }); }
+    }
+
+    /// <summary>Notes and practice papers of my child's class (download through GET api/notes/{id}/file).</summary>
+    [HttpGet("notes")]
+    public IActionResult Notes(int studentId, string? kind)
+    {
+        var child = parentSvc.GetChildren(Phone).FirstOrDefault(c => c.StudentId == studentId);
+        if (child == null) return NotFound(new { error = "Student not found for this parent." });
+        try
+        {
+            var list = notesSvc.Search(new ClassNoteFilter {
+                ForStudentClassId = child.ClassId ?? 0, ForStudentSectionId = child.SectionId, ForStudentBatchId = child.BatchId, Kind = kind });
+            return Ok(list.Select(n => new {
+                noteId = n.NoteId, kind = n.Kind, title = n.Title, description = n.Description, subjectName = n.SubjectName,
+                fileName = n.FileName, fileSize = n.FileSize, paperDate = n.PaperDate, createdByName = n.CreatedByName, createdAt = n.CreatedAt }));
+        }
+        catch (Exception) { return Ok(Array.Empty<object>()); }
+    }
 
     [HttpGet("children")]
     public IActionResult Children() => Ok(parentSvc.GetChildren(Phone));

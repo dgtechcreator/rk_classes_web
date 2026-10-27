@@ -46,8 +46,25 @@ public class ParentRepo(CommonConnectivity db)
 
     // sp_GetChildrenByParentPhone only excludes Status = 'Deleted', so Inactive students came through.
     // A parent must only ever see current (Active) students.
+    // The portal is for the parents AND for the student: the phone may be the father's, the mother's or the student's own
+    // number (the stored procedure only knew the first two, so a student could never register).
     public List<Student> GetChildren(string phone)
-        => db.Read("sp_GetChildrenByParentPhone", new() { { "@Phone", phone } }, MapStudent)
+        => db.SqlP(@"
+            SELECT s.StudentId, s.AdmissionNo, s.FullName, s.DateOfBirth, s.Gender,
+                   s.FatherName, s.MotherName, s.Phone, s.FatherPhone, s.MotherPhone,
+                   s.ProfilePicPath, s.RollNo, s.BloodGroup, s.Status, s.AdmissionDate,
+                   s.AcademicYearId, ay.YearName,
+                   s.ClassId,   c.ClassName,
+                   s.SectionId, sec.SectionName,
+                   s.BatchId,   b.BatchName
+            FROM   Students s
+            LEFT JOIN AcademicYears ay  ON ay.YearId     = s.AcademicYearId
+            LEFT JOIN Classes       c   ON c.ClassId     = s.ClassId
+            LEFT JOIN Sections      sec ON sec.SectionId = s.SectionId
+            LEFT JOIN Batches       b   ON b.BatchId     = s.BatchId
+            WHERE  (s.FatherPhone = @Phone OR s.MotherPhone = @Phone OR s.Phone = @Phone)
+              AND  ISNULL(s.Status, 'Active') <> 'Deleted'
+            ORDER BY s.FullName", new() { { "@Phone", phone } }, MapStudent)
              .Where(s => string.Equals(s.Status, "Active", StringComparison.OrdinalIgnoreCase)).ToList();
 
     static Student MapStudent(SqlDataReader r) => new() {

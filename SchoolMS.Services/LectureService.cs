@@ -8,7 +8,7 @@ namespace SchoolMS.Services;
 /// class/medium/batch at the same time) and the counts shown in the summaries. A lecture only counts as
 /// "held" once it is marked Completed — Scheduled and Cancelled are reported separately so nothing is hidden.
 /// </summary>
-public class LectureService(LectureRepo repo)
+public class LectureService(LectureRepo repo, ActivityNotifier? notify = null)
 {
     public const int MaxOccurrences = 400;
 
@@ -143,9 +143,11 @@ public class LectureService(LectureRepo repo)
         {
             if (repo.GetById(r.LectureId) == null) return ("Lecture not found.", 0);
             repo.Update(candidates[0], userId);
+            notify?.LecturesSaved(candidates, isEdit: true);
             return (null, 1);
         }
         repo.InsertMany(candidates, userId);
+        notify?.LecturesSaved(candidates, isEdit: false);
         return (null, candidates.Count);
     }
 
@@ -165,17 +167,25 @@ public class LectureService(LectureRepo repo)
             if (clash != null) return clash;
         }
         repo.SetStatus(id, status, status == LectureStatus.Cancelled ? note : null, userId);
+        notify?.LectureStatusChanged(l, status, note);
         return null;
     }
 
-    public bool Delete(int id, int userId) => repo.SoftDelete(id, userId) > 0;
+    public bool Delete(int id, int userId)
+    {
+        var l = notify == null ? null : repo.GetById(id);
+        var deleted = repo.SoftDelete(id, userId) > 0;
+        if (deleted && l != null) notify!.LectureDeleted(l);
+        return deleted;
+    }
 
     /// <summary>Deletes this lecture and every later, not-yet-completed lecture of the same repeating schedule.</summary>
     public int DeleteSeriesFrom(int lectureId, int userId)
     {
         var l = repo.GetById(lectureId);
         if (l == null) return 0;
-        if (l.SeriesId == null) return repo.SoftDelete(lectureId, userId);
-        return repo.SoftDeleteSeries(l.SeriesId.Value, l.LectureDate, userId);
+        var n = l.SeriesId == null ? repo.SoftDelete(lectureId, userId) : repo.SoftDeleteSeries(l.SeriesId.Value, l.LectureDate, userId);
+        if (n > 0) notify?.LectureDeleted(l, n);   // one notice for the whole series
+        return n;
     }
 }

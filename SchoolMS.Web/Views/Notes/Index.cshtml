@@ -1,0 +1,105 @@
+@model List<SchoolMS.Domain.ClassNote>
+@{
+    ViewData["Title"] = "Notes & Practice Papers";
+    var classes = (List<SchoolMS.Domain.Class>)ViewBag.Classes;
+    var sections = (List<SchoolMS.Domain.Section>)ViewBag.Sections;
+    var batches = (List<SchoolMS.Domain.Batch>)ViewBag.Batches;
+    var subjects = (List<string>)ViewBag.Subjects;
+    bool canEdit = (bool)(ViewBag.CanEdit ?? false);
+    int? fClass = ViewBag.ClassId, fSection = ViewBag.SectionId, fBatch = ViewBag.BatchId;
+    string? fKind = ViewBag.Kind;
+    string Size(long b) => b >= 1048576 ? (b / 1048576.0).ToString("0.0") + " MB" : Math.Max(1, b / 1024) + " KB";
+}
+
+<style>
+  .nt2-box { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px; margin-bottom:16px; }
+  .nt2-box h3 { font-size:14px; font-weight:800; margin:0 0 10px; }
+  .nt2-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; align-items:end; }
+  .nt2-grid label { font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:4px; }
+  .nt2-grid input, .nt2-grid select, .nt2-grid textarea { width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; }
+  .nt2-btn { background:#2352d8; color:#fff; border:none; border-radius:8px; padding:9px 18px; font-weight:800; cursor:pointer; }
+  .nt2-row { display:flex; gap:12px; align-items:center; padding:10px 4px; border-top:1px solid #f1f1f4; flex-wrap:wrap; }
+  .nt2-ic { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .nt2-title { font-weight:800; font-size:14px; }
+  .nt2-sub { font-size:12px; color:#6b7280; }
+  .nt2-pill { display:inline-block; padding:2px 9px; border-radius:12px; font-size:11px; font-weight:800; margin-right:4px; }
+  .ok { background:#f0fdf4; border:1px solid #86efac; color:#15803d; padding:10px 14px; border-radius:8px; margin-bottom:12px; font-weight:700; font-size:13px; }
+  .er { background:#fef2f2; border:1px solid #fca5a5; color:#b91c1c; padding:10px 14px; border-radius:8px; margin-bottom:12px; font-weight:700; font-size:13px; }
+</style>
+
+@if (TempData["NoteOk"] is string okMsg) { <div class="ok">@okMsg</div> }
+@if (TempData["NoteError"] is string erMsg) { <div class="er">@erMsg</div> }
+
+@if (canEdit)
+{
+  <div class="nt2-box">
+    <h3><i class="fas fa-cloud-arrow-up"></i> Upload notes or a practice paper</h3>
+    <form method="post" action="/Notes/Upload" enctype="multipart/form-data">
+      <div class="nt2-grid">
+        <div><label>Type</label>
+          <select name="kind"><option value="Notes">Notes</option><option value="Practice">Daily practice paper</option></select></div>
+        <div><label>Class *</label>
+          <select name="classId" required><option value="">Select</option>
+            @foreach (var c in classes) { <option value="@c.ClassId">@c.ClassName</option> }</select></div>
+        <div><label>Medium (optional)</label>
+          <select name="sectionId"><option value="">All</option>
+            @foreach (var s in sections) { <option value="@s.SectionId">@s.SectionName</option> }</select></div>
+        <div><label>Batch (optional)</label>
+          <select name="batchId"><option value="">All</option>
+            @foreach (var b in batches) { <option value="@b.BatchId">@b.BatchName</option> }</select></div>
+        <div><label>Subject</label>
+          <select name="subjectName"><option value="">-</option>
+            @foreach (var s in subjects) { <option>@s</option> }</select></div>
+        <div><label>For date</label><input type="date" name="paperDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" /></div>
+        <div style="grid-column:span 2;"><label>Title *</label><input name="title" maxlength="200" required placeholder="e.g. Algebra - Chapter 3 notes" /></div>
+        <div style="grid-column:span 2;"><label>Note (optional)</label><input name="description" maxlength="1000" /></div>
+        <div style="grid-column:span 2;"><label>File * (PDF, Word, PowerPoint, Excel, JPG, PNG - max 15 MB)</label>
+          <input type="file" name="file" required accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.txt" /></div>
+        <div><button class="nt2-btn" type="submit"><i class="fas fa-upload"></i> Upload</button></div>
+      </div>
+    </form>
+  </div>
+}
+
+<div class="nt2-box">
+  <form method="get" class="nt2-grid">
+    <div><label>Class</label><select name="classId" onchange="this.form.submit()"><option value="">All</option>
+      @foreach (var c in classes) { <option value="@c.ClassId" selected="@(fClass == c.ClassId)">@c.ClassName</option> }</select></div>
+    <div><label>Medium</label><select name="sectionId" onchange="this.form.submit()"><option value="">All</option>
+      @foreach (var s in sections) { <option value="@s.SectionId" selected="@(fSection == s.SectionId)">@s.SectionName</option> }</select></div>
+    <div><label>Batch</label><select name="batchId" onchange="this.form.submit()"><option value="">All</option>
+      @foreach (var b in batches) { <option value="@b.BatchId" selected="@(fBatch == b.BatchId)">@b.BatchName</option> }</select></div>
+    <div><label>Type</label><select name="kind" onchange="this.form.submit()"><option value="">All</option>
+      <option value="Notes" selected="@(fKind == "Notes")">Notes</option>
+      <option value="Practice" selected="@(fKind == "Practice")">Practice papers</option></select></div>
+  </form>
+
+  @if (Model.Count == 0)
+  {
+    <div style="text-align:center;color:#9ca3af;padding:30px;">Nothing uploaded yet.</div>
+  }
+  @foreach (var n in Model)
+  {
+    var practice = n.Kind == "Practice";
+    <div class="nt2-row">
+      <div class="nt2-ic" style="background:@(practice ? "#fef3c7" : "#dbeafe");color:@(practice ? "#b45309" : "#1d4ed8");"><i class="fas @(practice ? "fa-pen-ruler" : "fa-file-lines")"></i></div>
+      <div style="flex:1;min-width:180px;">
+        <div class="nt2-title">@n.Title</div>
+        <div class="nt2-sub">
+          <span class="nt2-pill" style="background:@(practice ? "#fef3c7" : "#dbeafe");color:@(practice ? "#92400e" : "#1e40af");">@(practice ? "Practice paper" : "Notes")</span>
+          @n.GroupLabel @(string.IsNullOrWhiteSpace(n.SubjectName) ? "" : "· " + n.SubjectName) · @n.PaperDate.ToString("d MMM yyyy") · @n.FileName (@Size(n.FileSize))
+          @if (!string.IsNullOrWhiteSpace(n.CreatedByName)) { <text>· by @n.CreatedByName</text> }
+        </div>
+        @if (!string.IsNullOrWhiteSpace(n.Description)) { <div class="nt2-sub">@n.Description</div> }
+      </div>
+      <a class="nt2-btn" style="text-decoration:none;" href="/Notes/Download/@n.NoteId"><i class="fas fa-download"></i> Download</a>
+      @if (canEdit)
+      {
+        <form method="post" action="/Notes/Delete" onsubmit="return confirm('Delete this file?');" style="margin:0;">
+          <input type="hidden" name="id" value="@n.NoteId" />
+          <button class="nt2-btn" style="background:#dc2626;" type="submit"><i class="fas fa-trash"></i></button>
+        </form>
+      }
+    </div>
+  }
+</div>

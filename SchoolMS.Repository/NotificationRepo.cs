@@ -9,8 +9,7 @@ public class NotificationRepo(CommonConnectivity db)
     public List<Notification> GetUserNotifications(int userId, string status = "")
     {
         string where = $"WHERE n.UserId={userId}";
-        if (!string.IsNullOrEmpty(status))
-            where += $" AND n.Status='{status}'";
+        where += string.IsNullOrEmpty(status) ? " AND n.Status<>'Dismissed'" : $" AND n.Status='{status}'";
 
         return db.Sql($@"
             SELECT TOP 50 * FROM Notifications n

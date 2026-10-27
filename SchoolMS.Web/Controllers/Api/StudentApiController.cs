@@ -8,7 +8,8 @@ namespace SchoolMS.Web.Controllers.Api;
 [ApiController]
 [Route("api/students")]
 [ApiRequireStaff]
-public class StudentApiController(StudentService svc, LookupService lookup, FeeStructureService feeSvc, ProfilePhotoStore photos) : ControllerBase
+public class StudentApiController(StudentService svc, LookupService lookup, FeeStructureService feeSvc, ProfilePhotoStore photos,
+    AttendanceService attSvc, MarksService marksSvc, FeePositionService feePos) : ControllerBase
 {
     [HttpGet]
     [ApiRequirePermission("student_view")]
@@ -98,6 +99,35 @@ public class StudentApiController(StudentService svc, LookupService lookup, FeeS
     [HttpGet("by-class-batch")]
     public IActionResult GetByClassAndBatch(string className, string batchName)
         => Ok(svc.GetByClassAndBatch(className, batchName));
+
+    /// <summary>
+    /// One student's report (attendance, marks, fees) for staff - same JSON as the parent dashboard so the app draws both with one
+    /// screen. Rights: the "Student 360 View" module (student_profile), so the admin decides who sees it (principal, head master...).
+    /// </summary>
+    [HttpGet("{id:int}/report")]
+    [ApiRequirePermission("student_profile")]
+    public IActionResult Report(int id)
+    {
+        var student = svc.GetById(id);
+        if (student == null) return NotFound(new { error = "Student not found." });
+        var fee = feePos.Calculate(student);
+        return Ok(new {
+            student,
+            attendance = attSvc.GetStudentAttendanceSummary(id),
+            attendanceDetail = attSvc.GetStudentAttendanceDetail(id),
+            marks = marksSvc.GetStudentAllMarks(id),
+            feeHistory = fee.History,
+            totalPaid = fee.Paid,
+            actualFee = fee.BaseFee,
+            additionalCharges = fee.AdditionalCharges,
+            discount = fee.Discount,
+            netTotal = fee.NetTotal,
+            balance = fee.Balance,
+            dueDate = fee.InstallmentDate,
+            installmentDate = fee.InstallmentDate,
+            feeStructures = fee.Structures,
+        });
+    }
 
     [HttpGet("quick-search")]
     public IActionResult QuickSearch(string q)

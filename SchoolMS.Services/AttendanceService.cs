@@ -3,13 +3,17 @@ using SchoolMS.Repository;
 
 namespace SchoolMS.Services;
 
-public class AttendanceService(AttendanceRepo repo)
+public class AttendanceService(AttendanceRepo repo, ActivityNotifier? notify = null)
 {
     public List<AttendanceRecord> GetForDate(DateTime d, int? cls, int? sec, int? bat)
         => repo.GetForDate(d, cls, sec, bat);
     public void Save(int sid, DateTime d, string status, int? cls, int? sec, int? bat,
         string? remarks, int by, string? subject, string? sirName, TimeSpan? startTime, TimeSpan? endTime)
-        => repo.Save(sid, d, status, cls, sec, bat, remarks, by, subject, sirName, startTime, endTime);
+    {
+        repo.Save(sid, d, status, cls, sec, bat, remarks, by, subject, sirName, startTime, endTime);
+        // back-filling an old day must not flood parents with "absent on 12 Oct"
+        if (d.Date >= DateTime.Today.AddDays(-3)) notify?.AttendanceMarked(sid, d, status, subject);
+    }
     public AttendanceReport GetStudentAttendanceSummary(int studentId)
         => repo.GetStudentAttendanceSummary(studentId);
     public List<StudentAttendanceDetail> GetStudentAttendanceDetail(int studentId)

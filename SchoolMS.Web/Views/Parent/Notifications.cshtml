@@ -1,0 +1,108 @@
+@model List<SchoolMS.Domain.StudentActivity>
+@{
+  Layout = "_ParentLayout";
+  ViewData["Title"] = "Notifications";
+
+  var children = ViewBag.Children as List<SchoolMS.Domain.Student> ?? new();
+  int? filterId = ViewBag.FilterStudentId as int?;
+
+  // kind -> (font-awesome icon, colour, soft background)
+  (string icon, string color, string bg) Look(string kind) => kind switch
+  {
+    "absent"          => ("fa-user-xmark", "#dc2626", "#fee2e2"),
+    "late"            => ("fa-clock", "#d97706", "#fef3c7"),
+    "present"         => ("fa-circle-check", "#16a34a", "#dcfce7"),
+    "marks"           => ("fa-star", "#7c3aed", "#ede9fe"),
+    "fee"             => ("fa-indian-rupee-sign", "#059669", "#d1fae5"),
+    "notes"           => ("fa-file-lines", "#2563eb", "#dbeafe"),
+    "practice"        => ("fa-pen-ruler", "#b45309", "#fef3c7"),
+    "lecture"         => ("fa-chalkboard-user", "#2563eb", "#dbeafe"),
+    "lecture_update"  => ("fa-pen-to-square", "#0891b2", "#cffafe"),
+    "lecture_cancel"  => ("fa-ban", "#dc2626", "#fee2e2"),
+    "lecture_done"    => ("fa-flag-checkered", "#16a34a", "#dcfce7"),
+    _                 => ("fa-bell", "#64748b", "#f1f5f9"),
+  };
+
+  string DayLabel(DateTime d)
+  {
+    if (d.Date == DateTime.Today) return "Today";
+    if (d.Date == DateTime.Today.AddDays(-1)) return "Yesterday";
+    return d.ToString("dddd, d MMM yyyy");
+  }
+
+  string Ago(DateTime d)
+  {
+    var span = DateTime.Now - d;
+    if (span.TotalMinutes < 1) return "just now";
+    if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes} min ago";
+    return d.ToString("h:mm tt");
+  }
+
+  string Short(string name) => string.Join(' ', name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2));
+}
+
+<style>
+.nt-wrap { max-width: 760px; margin: 0 auto; }
+.nt-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.nt-head h2 { font-size:18px; font-weight:800; color:#111; }
+.nt-chips { display:flex; gap:6px; flex-wrap:wrap; }
+.nt-chip { padding:5px 12px; border-radius:999px; font-size:12px; font-weight:700; text-decoration:none; color:#555; background:#fff; border:1px solid #e5e7eb; }
+.nt-chip.on { background:#cc0000; color:#fff; border-color:#cc0000; }
+.nt-day { font-size:11px; font-weight:800; color:#9ca3af; text-transform:uppercase; letter-spacing:.8px; margin:16px 2px 6px; }
+.nt-card { display:flex; gap:10px; align-items:flex-start; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:10px 12px; margin-bottom:6px; }
+.nt-card.new { border-color:#fecaca; background:#fffafa; }
+.nt-ic { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+.nt-body { flex:1; min-width:0; }
+.nt-top { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.nt-title { font-size:13.5px; font-weight:800; color:#111; }
+.nt-new { width:7px; height:7px; border-radius:50%; background:#cc0000; }
+.nt-who { font-size:11px; font-weight:700; color:#2563eb; background:#eff6ff; border-radius:999px; padding:1px 8px; }
+.nt-time { margin-left:auto; font-size:11px; color:#9ca3af; white-space:nowrap; }
+.nt-msg { font-size:12.5px; color:#444; line-height:1.4; margin-top:2px; word-wrap:break-word; }
+.nt-empty { text-align:center; color:#9ca3af; padding:50px 10px; background:#fff; border:1px dashed #e5e7eb; border-radius:12px; }
+.nt-empty i { font-size:30px; display:block; margin-bottom:8px; }
+</style>
+
+<div class="nt-wrap">
+  <div class="nt-head">
+    <h2><i class="fas fa-bell" style="color:#cc0000;"></i> Notifications</h2>
+    @if (children.Count > 1)
+    {
+      <div class="nt-chips">
+        <a class="nt-chip @(filterId == null ? "on" : "")" href="/Parent/Notifications">All</a>
+        @foreach (var c in children)
+        {
+          <a class="nt-chip @(filterId == c.StudentId ? "on" : "")" href="/Parent/Notifications?studentId=@c.StudentId">@Short(c.DisplayName)</a>
+        }
+      </div>
+    }
+  </div>
+
+  @if (Model.Count == 0)
+  {
+    <div class="nt-empty"><i class="far fa-bell-slash"></i>No notifications yet. Attendance, marks, fees and lecture updates of your child will show up here.</div>
+  }
+  else
+  {
+    foreach (var day in Model.GroupBy(i => i.CreatedAt.Date))
+    {
+      <div class="nt-day">@DayLabel(day.Key)</div>
+      foreach (var n in day)
+      {
+        var look = Look(n.Kind);
+        <div class="nt-card @(n.IsUnread ? "new" : "")">
+          <div class="nt-ic" style="background:@look.bg;color:@look.color;"><i class="fas @look.icon"></i></div>
+          <div class="nt-body">
+            <div class="nt-top">
+              <span class="nt-title">@n.Title</span>
+              @if (n.IsUnread) { <span class="nt-new" title="New"></span> }
+              @if (children.Count > 1) { <span class="nt-who">@n.StudentName</span> }
+              <span class="nt-time">@Ago(n.CreatedAt)</span>
+            </div>
+            <div class="nt-msg">@n.Message</div>
+          </div>
+        </div>
+      }
+    }
+  }
+</div>
