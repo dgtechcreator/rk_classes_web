@@ -414,6 +414,21 @@ COMMIT;",
                 TotalFees = G.G<decimal>(r, "TotalFees"), PreviousFees = G.G<decimal>(r, "PreviousFees"), Collected = G.G<decimal>(r, "Collected"),
                 Discount = G.G<decimal>(r, "Discount"),
             });
+        r.Close();
+
+        // Additional charges typed on payments belong to the fee (same rule as the profile / Pay page and SQL/74's Finance
+        // procedures). A student with no fee row stays "fee not set", so nothing is added for them.
+        using var chCmd = new SqlCommand(@"SELECT fp.StudentId, fp.Remarks FROM FeePayments fp
+            WHERE fp.IsDeleted = 0 AND fp.Remarks LIKE '%Additional Charges:%'", conn) { CommandTimeout = 60 };
+        var charges = new Dictionary<int, decimal>();
+        using (var cr = chCmd.ExecuteReader())
+            while (cr.Read())
+            {
+                var id = G.G<int>(cr, "StudentId");
+                charges[id] = charges.GetValueOrDefault(id) + AdditionalCharges.Parse(G.G<string>(cr, "Remarks"));
+            }
+        foreach (var row in list)
+            if (row.TotalFees > 0 && charges.TryGetValue(row.StudentId, out var extra)) row.TotalFees += extra;
         return list;
     }
 
