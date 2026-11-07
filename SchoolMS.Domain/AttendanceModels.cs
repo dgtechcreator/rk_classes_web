@@ -23,6 +23,8 @@ public class AttendanceRecord
     public string?  Phone{get;set;}
     public string?  FatherPhone{get;set;}
     public string?  MotherPhone{get;set;}
+    /// <summary>Which lecture of the day (1 = first). Only one set of records is ever loaded per session.</summary>
+    public int      SessionNo{get;set;}=1;
 }
 
 public class AttendanceReport
@@ -47,6 +49,7 @@ public class StudentAttendanceDetail
     public string?  Subject        { get; set; }
     public string?  SirName        { get; set; }
     public string?  Remarks        { get; set; }
+    public int      SessionNo      { get; set; } = 1;
 }
 
 public class DateAttendanceEntry
@@ -54,6 +57,7 @@ public class DateAttendanceEntry
     public int      StudentId{get;set;}
     public DateTime AttendanceDate{get;set;}
     public string   Status{get;set;}="Present";
+    public int      SessionNo{get;set;}=1;
 }
 
 public class AttendanceBatch

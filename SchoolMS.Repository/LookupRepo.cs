@@ -37,13 +37,16 @@ public class LookupRepo(CommonConnectivity db)
         });
         var stats = l.FirstOrDefault() ?? new DashboardStats();
 
-        // Present / Absent today count ACTIVE students only, so the cards always equal the lists they open
+        // Present / Absent today count ACTIVE students only, so the cards always equal the lists they open.
+        // A student with two lectures today is counted once: present if they came to any, absent only if they came to none.
         // (sp_GetDashboardStats counted every attendance row, including those of inactive students).
         var att = db.Sql($@"
-            SELECT SUM(CASE WHEN a.Status='Present' THEN 1 ELSE 0 END) AS P,
-                   SUM(CASE WHEN a.Status='Absent'  THEN 1 ELSE 0 END) AS A
+            SELECT COUNT(DISTINCT CASE WHEN a.Status='Present' THEN a.StudentId END) AS P,
+                   COUNT(DISTINCT CASE WHEN a.Status='Absent' AND p.StudentId IS NULL THEN a.StudentId END) AS A
             FROM Attendance a
             JOIN Students s ON s.StudentId = a.StudentId
+            LEFT JOIN (SELECT DISTINCT StudentId, AttendanceDate FROM Attendance WHERE Status = 'Present') p
+                   ON p.StudentId = a.StudentId AND p.AttendanceDate = a.AttendanceDate
             WHERE a.AttendanceDate = CAST(GETDATE() AS DATE) AND s.Status = 'Active' AND s.AcademicYearId = {CurrentYear.Id}",
             r => (P: G.G<int>(r, "P"), A: G.G<int>(r, "A"))).FirstOrDefault();
         stats.PresentToday = att.P;

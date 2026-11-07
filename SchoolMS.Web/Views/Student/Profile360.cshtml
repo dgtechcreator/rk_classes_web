@@ -402,7 +402,7 @@ body { font-family:'Segoe UI',Arial,sans-serif; background:#ffffff; }
                 string pill = d.Status=="Present"?"s-p":d.Status=="Absent"?"s-a":"s-l";
                 string rowSubj = d.Subject ?? "";
                 <tr data-subject="@rowSubj" data-status="@d.Status">
-                  <td>@d.AttendanceDate.ToString("dd MMM yyyy")</td>
+                  <td>@d.AttendanceDate.ToString("dd MMM yyyy")@(d.SessionNo > 1 ? " · Lecture " + d.SessionNo : "")</td>
                   <td style="color:#888;font-size:12px;">@d.AttendanceDate.ToString("ddd")</td>
                   <td><span class="@pill">@d.Status</span></td>
                   <td>@(string.IsNullOrEmpty(d.Subject)?"—":d.Subject)</td>

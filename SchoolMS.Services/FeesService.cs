@@ -42,6 +42,29 @@ public class FeesService(FeesRepo repo, ActivityNotifier? notify = null)
         foreach (var (id, remarks) in changes) repo.UpdateRemarks(id, remarks);
         return null;
     }
+    /// Edits a receipt in place. The "Additional Charges" part of its remarks is kept as it is (charges are corrected with
+    /// SetAdditionalCharges), and the discount stays once-per-student: when another receipt already carries it, this one's
+    /// discount cannot change. Returns an error text, or null on success.
+    public string? UpdatePayment(int paymentId, decimal paid, decimal discount, DateTime? date, DateTime? dueDate,
+        string? mode, string? txRef, string? remarks)
+    {
+        var p = repo.GetById(paymentId);
+        if (p == null || p.IsDeleted) return "This receipt was not found (it may have been deleted).";
+        if (paid <= 0) return "Amount received must be more than 0.";
+        if (paid > 10000000) return "That amount looks wrong.";
+        if (discount < 0) return "Discount cannot be negative.";
+        var day = (date ?? p.PaymentDate).Date;
+        if (day > DateTime.Today) return "Payment date cannot be in the future.";
+        if (string.IsNullOrWhiteSpace(mode)) return "Choose a payment mode.";
+
+        var othersDiscount = repo.GetStudentHistory(p.StudentId).Where(x => x.PaymentId != paymentId).Sum(x => x.Discount);
+        if (othersDiscount > 0 && discount != p.Discount)
+            return "Discount was already given on another receipt of this student, so it cannot be changed here.";
+
+        var final = AdditionalCharges.WithAmount(remarks, AdditionalCharges.Parse(p.Remarks));
+        repo.UpdatePayment(paymentId, paid, discount, day, dueDate ?? p.DueDate, mode.Trim(), txRef, final);
+        return null;
+    }
     public void DeletePayment(int paymentId, int deletedBy) => repo.DeletePayment(paymentId, deletedBy);
     public void RestorePayment(int paymentId) => repo.RestorePayment(paymentId);
     public List<FeePayment> GetDeletedPayments() => repo.GetDeletedPayments();

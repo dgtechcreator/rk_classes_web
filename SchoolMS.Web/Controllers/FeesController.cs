@@ -134,6 +134,7 @@ public class FeesController(FeesService svc, LookupService lookup,
                 vm.TransactionRef = existingPayment.TransactionRef;
                 vm.Remarks = existingPayment.Remarks;
                 vm.EditPaymentId = paymentId.Value;
+                vm.DueDate = existingPayment.DueDate;
             }
         }
 
@@ -227,6 +228,27 @@ public class FeesController(FeesService svc, LookupService lookup,
             TempData["Error"] = "Error saving payment: " + ex.Message;
             return RedirectToAction("Pay", new { id = studentId });
         }
+    }
+
+    // ── Edit a saved receipt in place (same receipt no.; the old "Edit" link only pre-filled a form that saved a NEW receipt) ──
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequireLogin]
+    public IActionResult UpdatePayment(int paymentId, int studentId, decimal payingNow, decimal additionalDiscount,
+        DateTime? paymentDate, DateTime? dueDate, string paymentMode = "Cash", string? transactionRef = null, string? remarks = null)
+    {
+        try
+        {
+            var err = svc.UpdatePayment(paymentId, payingNow, additionalDiscount, paymentDate, dueDate, paymentMode, transactionRef, remarks);
+            if (err != null) { TempData["Error"] = err; return RedirectToAction("Pay", new { id = studentId, paymentId }); }
+            TempData["Success"] = "Receipt updated.";
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[UpdatePayment Error] PaymentId={paymentId}, Error: {ex.Message}");
+            TempData["Error"] = "Error updating receipt: " + ex.Message;
+        }
+        return RedirectToAction("Pay", new { id = studentId });
     }
 
     // ── Correct a student's additional charges without taking a payment ──

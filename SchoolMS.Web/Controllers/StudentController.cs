@@ -312,7 +312,7 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
                 sb.AppendLine("Date,Status,Subject,Teacher,Remarks");
                 foreach (var d in attDet)
                     sb.AppendLine(string.Join(",",
-                        d.AttendanceDate.ToString("dd MMM yyyy"),
+                        d.AttendanceDate.ToString("dd MMM yyyy") + (d.SessionNo > 1 ? $" (lecture {d.SessionNo})" : ""),
                         Csv(d.Status),
                         Csv(d.Subject),
                         Csv(d.SirName),

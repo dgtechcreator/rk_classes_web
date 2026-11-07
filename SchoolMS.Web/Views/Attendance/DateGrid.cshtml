@@ -12,10 +12,11 @@
     DateTime fromDate = ViewBag.FromDate ?? DateTime.Today.AddDays(-6);
     DateTime toDate   = ViewBag.ToDate   ?? DateTime.Today;
 
-    // Build lookup: [studentId][date] = status
+    // Build lookup: [studentId][date] = statuses of that day's lectures in lecture order (a Sunday / holiday can have 2+)
     var attLookup = attData
         .GroupBy(a => a.StudentId)
-        .ToDictionary(g => g.Key, g => g.ToDictionary(a => a.AttendanceDate.Date, a => a.Status));
+        .ToDictionary(g => g.Key, g => g.GroupBy(a => a.AttendanceDate.Date)
+            .ToDictionary(x => x.Key, x => x.OrderBy(a => a.SessionNo).Select(a => a.Status).ToList()));
 }
 
 <div class="pg-hdr">
@@ -102,6 +103,7 @@ else
     <span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#991b1b;"><span style="width:22px;height:22px;background:#fef2f2;border:1px solid #fca5a5;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;">A</span> Absent</span>
     <span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#92400e;"><span style="width:22px;height:22px;background:#fffbeb;border:1px solid #fcd34d;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;">L</span> Late</span>
     <span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--mu2);"><span style="width:22px;height:22px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;">—</span> Not Marked</span>
+    <span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#92400e;"><span style="min-width:34px;height:22px;background:#fffbeb;border:1px solid #fcd34d;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;">P A</span> Two lectures that day: 1st, 2nd (here came to the 1st, missed the 2nd)</span>
   </div>
 
   <div class="card" style="padding:0;overflow-x:auto;">
@@ -131,9 +133,11 @@ else
       {
         rn++;
         var sAtt    = attLookup.TryGetValue(student.StudentId, out var d2) ? d2 : new();
-        int present = dates.Count(d => sAtt.TryGetValue(d.Date, out var st) && st == "Present");
-        int absent  = dates.Count(d => sAtt.TryGetValue(d.Date, out var st) && st == "Absent");
-        int marked  = dates.Count(d => sAtt.ContainsKey(d.Date));
+        // counted per lecture, so a day with two lectures counts twice (came to one of them = 1 of 2)
+        var allSt   = dates.SelectMany(d => sAtt.TryGetValue(d.Date, out var sl) ? sl : new List<string>()).ToList();
+        int present = allSt.Count(st => st == "Present");
+        int absent  = allSt.Count(st => st == "Absent");
+        int marked  = allSt.Count;
         decimal pct = marked > 0 ? (decimal)present * 100 / marked : 0;
         var pctClr  = pct >= 75 ? "var(--ok)" : pct >= 50 ? "var(--warn)" : "var(--err)";
 
@@ -146,15 +150,20 @@ else
           @foreach (var d in dates)
           {
             var isWeekend = d.DayOfWeek == DayOfWeek.Sunday || d.DayOfWeek == DayOfWeek.Saturday;
-            sAtt.TryGetValue(d.Date, out var status);
-            var (cell, bg, clr) = status switch {
-              "Present" => ("P", "#ecfdf5", "#065f46"),
-              "Absent"  => ("A", "#fef2f2", "#991b1b"),
-              "Late"    => ("L", "#fffbeb", "#92400e"),
-              _         => ("—", isWeekend ? "#faf9ff" : "#fff", "#c4b5fd")
+            sAtt.TryGetValue(d.Date, out var daySt);
+            daySt ??= new List<string>();
+            // one lecture: its letter; several: the letters side by side (P A = came to the 1st, missed the 2nd); colour = all agree or mixed
+            var combined = daySt.Count == 0 ? "" : daySt.Distinct().Count() == 1 ? daySt[0] : "Mixed";
+            var (bg, clr) = combined switch {
+              "Present" => ("#ecfdf5", "#065f46"),
+              "Absent"  => ("#fef2f2", "#991b1b"),
+              "Late"    => ("#fffbeb", "#92400e"),
+              "Mixed"   => ("#fffbeb", "#92400e"),
+              _         => (isWeekend ? "#faf9ff" : "#fff", "#c4b5fd")
             };
-            <td style="text-align:center;padding:6px 4px;background:@bg;">
-              <span style="display:inline-flex;width:24px;height:24px;align-items:center;justify-content:center;border-radius:5px;font-size:11px;font-weight:800;color:@clr;">@cell</span>
+            var cell = daySt.Count == 0 ? "—" : string.Join(" ", daySt.Select(s => s == "Present" ? "P" : s == "Absent" ? "A" : s == "Late" ? "L" : "?"));
+            <td style="text-align:center;padding:6px 4px;background:@bg;" title="@(daySt.Count > 1 ? string.Join(", ", daySt.Select((s, i) => $"Lecture {i + 1}: {s}")) : "")">
+              <span style="display:inline-flex;min-width:24px;height:24px;padding:0 3px;align-items:center;justify-content:center;border-radius:5px;font-size:11px;font-weight:800;color:@clr;white-space:nowrap;">@cell</span>
             </td>
           }
           <td style="text-align:center;font-weight:800;color:var(--ok);">@present</td>

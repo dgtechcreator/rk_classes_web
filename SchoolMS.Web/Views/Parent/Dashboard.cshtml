@@ -74,7 +74,7 @@
 .kpi-card.amber .kv { color: #b45309; }
 
 /* ── Fee KPIs ── */
-.fee-kpi-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 20px; }
+.fee-kpi-row { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; margin-bottom: 20px; }
 .fee-kpi { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:18px 14px; text-align:center; }
 .fee-kpi .kv { font-size:24px; font-weight:800; }
 .fee-kpi .kl { font-size:11px; color:#888; margin-top:5px; }
@@ -127,7 +127,7 @@
 
 @@media (max-width:700px) {
   .kpi-row { grid-template-columns: repeat(2,1fr); }
-  .fee-kpi-row { grid-template-columns: repeat(3,1fr); }
+  .fee-kpi-row { grid-template-columns: repeat(2,1fr); }
   .stu-meta-row { grid-template-columns: 1fr 1fr; }
 }
 @@media (max-width:480px) {
@@ -271,7 +271,7 @@ else
             @foreach (var d in Model.AttDetail.OrderByDescending(x => x.AttendanceDate))
             {
               <tr>
-                <td>@d.AttendanceDate.ToString("dd MMM yyyy")</td>
+                <td>@d.AttendanceDate.ToString("dd MMM yyyy")@(d.SessionNo > 1 ? " · Lecture " + d.SessionNo : "")</td>
                 <td>
                   @if(d.Status=="Present"){<span class="badge badge-present">Present</span>}
                   else if(d.Status=="Absent"){<span class="badge badge-absent">Absent</span>}
@@ -472,10 +472,6 @@ else
     <div class="sec-title"><i class="fas fa-rupee-sign"></i> Fee Details</div>
     <div class="fee-kpi-row">
       <div class="fee-kpi">
-        <div class="kv" style="color:#1e3a5f;">₹@Model.ActualFee.ToString("N0")</div>
-        <div class="kl">Total Fee</div>
-      </div>
-      <div class="fee-kpi">
         <div class="kv" style="color:#15803d;">₹@Model.TotalPaid.ToString("N0")</div>
         <div class="kl">Paid</div>
       </div>
@@ -500,45 +496,6 @@ else
       <div class="alert-ok"><i class="fas fa-check-circle"></i> All fees paid. No balance due.</div>
     }
 
-    @if (classFeesSummary.Any())
-    {
-        <div style="margin-top:24px;">
-            <div class="sec-title"><i class="fas fa-users"></i> Class Fees Summary (All Students)</div>
-            <div class="pp-table-wrap">
-                <table class="pp-table">
-                    <thead><tr>
-                        <th>Student Name</th>
-                        <th>Admission No</th>
-                        <th style="text-align:right;">Total Fees Owed</th>
-                        <th style="text-align:right;">Collected</th>
-                        <th style="text-align:right;">Discount</th>
-                        <th style="text-align:right;">Balance</th>
-                    </tr></thead>
-                    <tbody>
-                        @foreach (var student in classFeesSummary)
-                        {
-                            <tr>
-                                <td style="font-weight:600;">@student.StudentName</td>
-                                <td style="color:#666;font-size:12px;">@student.AdmissionNo</td>
-                                <td style="text-align:right;font-weight:600;color:#1e3a5f;">₹@student.TotalFeesOwed.ToString("N0")</td>
-                                <td style="text-align:right;font-weight:600;color:#15803d;">₹@student.TotalCollected.ToString("N0")</td>
-                                <td style="text-align:right;font-weight:600;color:#f59e0b;">₹@student.TotalDiscount.ToString("N0")</td>
-                                <td style="text-align:right;font-weight:600;color:@(student.Balance > 0 ? "#dc2626" : "#15803d");">₹@student.Balance.ToString("N0")</td>
-                            </tr>
-                        }
-                    </tbody>
-                    <tfoot><tr style="background:#f3f4f6;font-weight:700;border-top:2px solid #e5e7eb;">
-                        <td colspan="2">Total</td>
-                        <td style="text-align:right;">₹@classFeesSummary.Sum(s => (decimal)s.TotalFeesOwed).ToString("N0")</td>
-                        <td style="text-align:right;">₹@classFeesSummary.Sum(s => (decimal)s.TotalCollected).ToString("N0")</td>
-                        <td style="text-align:right;">₹@classFeesSummary.Sum(s => (decimal)s.TotalDiscount).ToString("N0")</td>
-                        <td style="text-align:right;">₹@classFeesSummary.Sum(s => (decimal)s.Balance).ToString("N0")</td>
-                    </tr></tfoot>
-                </table>
-            </div>
-        </div>
-    }
-
     @if (Model.FeeHistory.Any())
     {
       <div class="pp-table-wrap">
@@ -554,7 +511,7 @@ else
                 <td>@f.PaymentDate.ToString("dd/MM/yyyy")</td>
                 <td style="text-align:right;font-weight:700;color:#15803d;">₹@f.NetAmount.ToString("N0")</td>
                 <td>@f.PaymentMode</td>
-                <td style="color:#666;font-size:12px;">@(f.Remarks ?? "—")</td>
+                <td style="color:#666;font-size:12px;">@(string.IsNullOrWhiteSpace(AdditionalCharges.Strip(f.Remarks)) ? "—" : AdditionalCharges.Strip(f.Remarks))</td>
                 <td style="text-align:center;">
                   <a href="/Fees/Receipt/@f.PaymentId" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#f3f0ff;color:#2563eb;border:none;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;"><i class="fas fa-print"></i> Receipt</a>
                 </td>

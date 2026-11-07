@@ -24,18 +24,21 @@ public class ActivityNotifier(ActivityRepo repo, NotificationService staffNotifs
 
     // ── attendance ──────────────────────────────────────────────────────────────────────────
 
-    public void AttendanceMarked(int studentId, DateTime date, string status, string? subject)
+    public void AttendanceMarked(int studentId, DateTime date, string status, string? subject, int session = 1)
         => Safe(nameof(AttendanceMarked), () =>
         {
             var name = Name(studentId);
-            var inSubject = string.IsNullOrWhiteSpace(subject) ? "" : $" ({subject.Trim()})";
+            // A second lecture on the same day is its own notification (not an overwrite of the first one).
+            var lecture = session > 1 ? $"lecture {session}" : "";
+            var inSubject = string.IsNullOrWhiteSpace(subject) ? (lecture == "" ? "" : $" ({lecture})")
+                          : $" ({subject.Trim()}{(lecture == "" ? "" : ", " + lecture)})";
             var (kind, title, msg) = status switch
             {
                 "Absent" => (ActivityType.Absent, "Absent", $"{name} was marked ABSENT on {Day(date)}{inSubject}."),
                 "Late"   => (ActivityType.Late, "Late", $"{name} came LATE on {Day(date)}{inSubject}."),
                 _        => (ActivityType.Present, "Present", $"{name} was marked present on {Day(date)}{inSubject}."),
             };
-            repo.Upsert(studentId, kind, title, msg, $"att:{date:yyyyMMdd}", null);
+            repo.Upsert(studentId, kind, title, msg, session > 1 ? $"att:{date:yyyyMMdd}:s{session}" : $"att:{date:yyyyMMdd}", null);
         });
 
     // ── marks ───────────────────────────────────────────────────────────────────────────────
@@ -63,6 +66,16 @@ public class ActivityNotifier(ActivityRepo repo, NotificationService staffNotifs
             if (amount <= 0) return;
             repo.Upsert(studentId, ActivityType.Fee, "Fee received",
                 $"Fee payment of ₹{amount:N0} received for {Name(studentId)} on {Day(date)}.", $"fee:{paymentId}", paymentId);
+        });
+
+    /// "Fee is pending" reminder from the Finance screen. One per student per day (pressing the button twice the same day
+    /// updates the same notification instead of piling up).
+    public void FeeDue(int studentId, decimal balance, DateTime date)
+        => Safe(nameof(FeeDue), () =>
+        {
+            if (balance <= 0) return;
+            repo.Upsert(studentId, ActivityType.Fee, "Fee reminder",
+                $"Fee balance of ₹{balance:N0} is pending for {Name(studentId)}. Please pay at the earliest.", $"feedue:{date:yyyyMMdd}", null);
         });
 
     // ── notes / practice papers ───────────────────────────────────────────────────────────

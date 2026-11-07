@@ -5,14 +5,15 @@ namespace SchoolMS.Services;
 
 public class AttendanceService(AttendanceRepo repo, ActivityNotifier? notify = null)
 {
-    public List<AttendanceRecord> GetForDate(DateTime d, int? cls, int? sec, int? bat)
-        => repo.GetForDate(d, cls, sec, bat);
+    public List<AttendanceRecord> GetForDate(DateTime d, int? cls, int? sec, int? bat, int session = 1)
+        => repo.GetForDate(d, cls, sec, bat, session);
+    public List<(int Session, int Marked)> GetSessionsForDate(DateTime d) => repo.GetSessionsForDate(d);
     public void Save(int sid, DateTime d, string status, int? cls, int? sec, int? bat,
-        string? remarks, int by, string? subject, string? sirName, TimeSpan? startTime, TimeSpan? endTime)
+        string? remarks, int by, string? subject, string? sirName, TimeSpan? startTime, TimeSpan? endTime, int session = 1)
     {
-        repo.Save(sid, d, status, cls, sec, bat, remarks, by, subject, sirName, startTime, endTime);
+        repo.Save(sid, d, status, cls, sec, bat, remarks, by, subject, sirName, startTime, endTime, session);
         // back-filling an old day must not flood parents with "absent on 12 Oct"
-        if (d.Date >= DateTime.Today.AddDays(-3)) notify?.AttendanceMarked(sid, d, status, subject);
+        if (d.Date >= DateTime.Today.AddDays(-3)) notify?.AttendanceMarked(sid, d, status, subject, session);
     }
     public AttendanceReport GetStudentAttendanceSummary(int studentId)
         => repo.GetStudentAttendanceSummary(studentId);

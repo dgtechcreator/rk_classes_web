@@ -187,7 +187,10 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection(); // only redirect HTTP→HTTPS in production, after proxy headers are read
 }
 
-app.UseStaticFiles();
+// .apk is not a known type to the static-file middleware, so the app's update download (wwwroot/app/RKClasses.apk) needs it.
+var staticTypes = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+staticTypes.Mappings[".apk"] = "application/vnd.android.package-archive";
+app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = staticTypes });
 
 // Clear old cookies from browser
 app.Use(async (context, next) => {

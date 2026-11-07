@@ -397,9 +397,9 @@ function loadDateWise() {
               filteredData.forEach((item, idx) => {
                 var statusBadge = 'b-present';
                 if (item.status === 'Absent') statusBadge = 'b-absent';
-                else if (item.status === 'Late') statusBadge = 'b-late';
+                else if (item.status === 'Late' || item.status === 'Partial') statusBadge = 'b-late';
 
-                var row = '<tr><td>' + (idx + 1) + '</td><td><strong>' + item.studentName + '</strong><br/><span style="font-size:11px;color:#888;">' + item.admissionNo + '</span></td><td>' + item.className + '</td><td><span class="badge b-purple">' + (item.sectionName || '—') + '</span></td><td>' + item.batchName + '</td><td style="text-align:center;"><span class="badge ' + statusBadge + '">' + item.status + '</span></td><td>' + (item.subject || '—') + '</td><td>' + (item.teacher || '—') + '</td></tr>';
+                var row = '<tr><td>' + (idx + 1) + '</td><td><strong>' + item.studentName + '</strong><br/><span style="font-size:11px;color:#888;">' + item.admissionNo + '</span></td><td>' + item.className + '</td><td><span class="badge b-purple">' + (item.sectionName || '—') + '</span></td><td>' + item.batchName + '</td><td style="text-align:center;"><span class="badge ' + statusBadge + '">' + (item.statusText || item.status) + '</span></td><td>' + (item.subject || '—') + '</td><td>' + (item.teacher || '—') + '</td></tr>';
                 tbody.insertAdjacentHTML('beforeend', row);
               });
             };
@@ -416,7 +416,7 @@ function loadDateWise() {
       data.forEach((item, idx) => {
         var statusBadge = 'b-present';
         if (item.status === 'Absent') statusBadge = 'b-absent';
-        else if (item.status === 'Late') statusBadge = 'b-late';
+        else if (item.status === 'Late' || item.status === 'Partial') statusBadge = 'b-late';
 
         var row = `<tr>
           <td>${idx + 1}</td>
@@ -424,7 +424,7 @@ function loadDateWise() {
           <td>${item.className}</td>
           <td><span class="badge b-purple">${item.sectionName || '—'}</span></td>
           <td>${item.batchName}</td>
-          <td style="text-align:center;"><span class="badge ${statusBadge}">${item.status}</span></td>
+          <td style="text-align:center;"><span class="badge ${statusBadge}">${item.statusText || item.status}</span></td>
           <td>${item.subject || '—'}</td>
           <td>${item.teacher || '—'}</td>
           <td style="white-space:nowrap;position:relative;">

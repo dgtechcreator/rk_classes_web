@@ -14,8 +14,9 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
 {
     [RequirePermission("attendance_entry")]
     public IActionResult Index(DateTime? date, int? classId, int? sectionId, int? batchId, int? attBatchId,
-        string? subject, string? sirName, string? startTime, string? endTime)
+        string? subject, string? sirName, string? startTime, string? endTime, int session = 1)
     {
+        session = Math.Clamp(session, 1, AttendanceSaveHelper.MaxSessions);
         var cr = HttpContext.CurrentCr();   // Class Representative: sees and saves only his own class
         var d = (date ?? DateTime.Today).Date;
         if (d > DateTime.Today) d = DateTime.Today;   // attendance can be reviewed/edited for past days, never future ones
@@ -23,7 +24,7 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
 
         // Every active student with this day's status (AttendanceId is set once marked) — the batch cards
         // and the entry table both read from this one list so their numbers always agree.
-        var dayRecords = svc.GetForDate(d, null, null, null);
+        var dayRecords = svc.GetForDate(d, null, null, null, session);
         if (cr != null) { var crIds = cr.StudentIds(studentSvc); dayRecords = dayRecords.Where(r => crIds.Contains(r.StudentId)).ToList(); }
         var attendanceBatches = batchSvc.GetAll();
         if (cr != null)
@@ -44,7 +45,7 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
         else if (cr != null)
             records = dayRecords;   // a CR goes straight to his whole class
         else if (classId.HasValue || sectionId.HasValue || batchId.HasValue)
-            records = svc.GetForDate(d, classId, sectionId, batchId);
+            records = svc.GetForDate(d, classId, sectionId, batchId, session);
         else
             records = new();
 
@@ -55,6 +56,8 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
         var totalAbsent = records.Count(r => r.AttendanceStatus == "Absent");
 
         ViewBag.AttendanceBatches = summaries;
+        ViewBag.Session = session;
+        ViewBag.Sessions = svc.GetSessionsForDate(d);   // lectures that already have attendance on this date
         ViewBag.SelectedAttBatch = selectedBatch;
         ViewBag.Cr = cr;
         ViewBag.CrEarliest = CrScope.EarliestDate;
@@ -137,26 +140,7 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
 
             var cr = HttpContext.CurrentCr();
             var crIds = cr?.StudentIds(studentSvc);
-            var records = svc.GetForDate(selectedDate, classId, sectionId, batchId)
-                .Where(r => r.AttendanceId.HasValue && (crIds == null || crIds.Contains(r.StudentId)))
-                .ToList();
-
-            var result = records
-      .GroupBy(r => r.StudentId)
-      .Select(g => new {
-          studentId = g.First().StudentId,
-          studentName = g.First().FullName ?? "",
-          admissionNo = g.First().AdmissionNo ?? "",
-          className = g.First().ClassName ?? "",
-          sectionName = g.First().SectionName ?? "",
-          batchName = g.First().BatchName ?? "",
-          status = g.First().AttendanceStatus ?? "Present",
-          subject = g.First().Subject ?? "",
-          teacher = g.First().SirName ?? ""
-      })
-      .ToList();
-
-            return Json(result);
+            return Json(AttendanceDateWiseHelper.Build(svc, selectedDate, classId, sectionId, batchId, crIds));
         }
         catch (Exception ex)
         {
@@ -208,6 +192,8 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
 public class AttSaveReq {
     public DateTime Date{get;set;} public int? ClassId{get;set;} public int? SectionId{get;set;} public int? BatchId{get;set;}
     public int? AttBatchId{get;set;}
+    /// <summary>Lecture of the day: 1 = first (default), 2 = second ...</summary>
+    public int Session{get;set;}=1;
     public string? Subject{get;set;} public string? SirName{get;set;}
     public string? StartTime{get;set;} public string? EndTime{get;set;}
     public List<AttEntry> Entries{get;set;}=new();

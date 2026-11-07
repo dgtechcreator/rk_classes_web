@@ -183,6 +183,11 @@
     var yestStr   = DateTime.Today.AddDays(-1).ToString("yyyy-MM-dd");
     var isYest    = Model.Date.Date == DateTime.Today.AddDays(-1).Date;
     var cr = ViewBag.Cr as SchoolMS.Domain.CrScope;
+    // Lectures of the day: a Sunday / holiday class can meet twice. One chip per lecture that has attendance, plus "next lecture".
+    int sess = ViewBag.Session is int sv ? sv : 1;
+    var sessList = ViewBag.Sessions as List<(int Session, int Marked)> ?? new();
+    int lastLecture = Math.Max(sess, sessList.Any() ? sessList.Max(x => x.Session) : 1);
+    string sessQ = sess > 1 ? "&session=" + sess : "";
     var minStr = cr != null ? ((DateTime)ViewBag.CrEarliest).ToString("yyyy-MM-dd") : "";
     string Pill(bool active) => $"display:inline-flex;align-items:center;gap:6px;background:{(active ? "#1e40af" : "#e5e7eb")};border-radius:20px;padding:8px 14px;font-size:12px;font-weight:700;color:{(active ? "#fff" : "#374151")};text-decoration:none;";
 }
@@ -197,6 +202,27 @@
         <span style="font-size:13px;font-weight:700;color:var(--mu);margin-left:4px;">@Model.Date.ToString("dddd, dd MMM yyyy")</span>
     </div>
 
+    <div class="ab-date" style="margin-bottom:14px;">
+        <span style="font-size:12px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.8px;"><i class="fas fa-clock"></i> Lecture of the day</span>
+        @for (int n = 1; n <= lastLecture; n++)
+        {
+            var done = sessList.Any(x => x.Session == n && x.Marked > 0);
+            <a href="?date=@dStr@(selBatch != null ? "&attBatchId=" + selBatch.BatchId : "")@(n > 1 ? "&session=" + n : "")" style="@Pill(n == sess)" title="@(done ? "Attendance taken" : "Not taken yet")">
+                @(n == 1 ? "1st" : n == 2 ? "2nd" : n == 3 ? "3rd" : n + "th") lecture @if (done) { <i class="fas fa-check"></i> }
+            </a>
+        }
+        @if (lastLecture < SchoolMS.Web.Utils.AttendanceSaveHelper.MaxSessions)
+        {
+            <a href="?date=@dStr@(selBatch != null ? "&attBatchId=" + selBatch.BatchId : "")&session=@(lastLecture + 1)" style="display:inline-flex;align-items:center;gap:6px;border:1.5px dashed #94a3b8;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;color:#475569;text-decoration:none;" title="Same class has another lecture today (Sunday / holiday)">
+                <i class="fas fa-plus"></i> Add @(lastLecture + 1 == 2 ? "2nd" : lastLecture + 1 == 3 ? "3rd" : (lastLecture + 1) + "th") lecture
+            </a>
+        }
+        @if (sess > 1)
+        {
+            <span style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:8px;padding:5px 10px;font-weight:700;">You are marking the @(sess == 2 ? "2nd" : sess == 3 ? "3rd" : sess + "th") lecture of this day</span>
+        }
+    </div>
+
     @if (summaries.Any())
     {
         <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;flex-wrap:wrap;">
@@ -207,7 +233,7 @@
         <div class="ab-grid">
             @foreach (var b in summaries)
             {
-                <a href="/Attendance/Index?date=@dStr&attBatchId=@b.BatchId" class="ab-card @(b.IsMarked ? "done" : "pending") @(selBatch?.BatchId == b.BatchId ? "sel" : "")">
+                <a href="/Attendance/Index?date=@dStr&attBatchId=@b.BatchId@sessQ" class="ab-card @(b.IsMarked ? "done" : "pending") @(selBatch?.BatchId == b.BatchId ? "sel" : "")">
                     <div>
                         <div class="ab-name">@b.BatchName</div>
                         <div class="ab-sub">
@@ -234,6 +260,7 @@
             @* Class Representative: locked to his own class - no class / medium / batch choice *@
             <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px;">
                 <input type="hidden" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="session" value="@sess" />
                 <span style="background:#eef2ff;color:#3730a3;border-radius:20px;padding:7px 14px;font-size:13px;font-weight:800;">
                     <i class="fas fa-user-shield"></i> Class Representative
                 </span>
@@ -245,7 +272,7 @@
         }
         @* Row 1: Date + dropdowns + search *@
         <div class="filter-flex-row" style="display:@(cr != null ? "none" : "flex");flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:14px;">
-            @if (cr == null) { <input type="hidden" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" /> }
+            @if (cr == null) { <input type="hidden" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" /> <input type="hidden" name="session" value="@sess" /> }
             <div style="display:flex;flex-direction:column;gap:4px;">
                 <label style="font-size:11px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Medium / Stream</label>
                 <select name="sectionId" class="fs" style="min-width:155px;">
@@ -349,7 +376,7 @@
             <span class="card-ttl">
                 <i class="fas fa-users" style="color:var(--p);margin-right:6px;"></i>
                 @if (selBatch != null) { <strong style="margin-right:6px;">@selBatch.BatchName</strong><text>—</text> }
-                @Model.Records.Count Students — @Model.Date.ToString("dddd, dd MMMM yyyy")
+                @Model.Records.Count Students — @Model.Date.ToString("dddd, dd MMMM yyyy")@(sess > 1 ? " · " + (sess == 2 ? "2nd" : sess == 3 ? "3rd" : sess + "th") + " lecture" : "")
                 @if (!string.IsNullOrEmpty(Model.Subject))
                 {
                     <span style="font-size:12px;font-weight:400;color:var(--mu);margin-left:8px;">| @Model.Subject</span>
@@ -491,6 +518,7 @@ else
           if (!v) return;
           const u = new URL(window.location.href);
           u.searchParams.set('date', v);
+          u.searchParams.delete('session');   // a new day starts at its first lecture
           window.location.href = u.toString();
         }
 
@@ -534,6 +562,7 @@ else
               sectionId: @(Model.SectionId?.ToString() ?? "null"),
               batchId:   @(Model.BatchId?.ToString() ?? "null"),
               attBatchId: @(selBatch?.BatchId.ToString() ?? "null"),
+              session:   @sess,
               subject, sirName, startTime, endTime, entries
             })
           });

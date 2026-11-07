@@ -161,6 +161,14 @@
         <div class="kpi-val">₹@Model.FeesThisMonth.ToString("N0")</div>
         <div class="kpi-lbl">Fees This Month <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
     </div>
+    @if (Context.Session.HasPerm("expenses_view"))
+    {
+        <div class="kpi red" onclick="location.href='/Expenses/Index'" style="cursor:pointer;">
+            <div class="kpi-ico red"><i class="fas fa-receipt"></i></div>
+            <div class="kpi-val">₹@Model.ExpensesThisMonth.ToString("N0")</div>
+            <div class="kpi-lbl">Expenses This Month <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
+        </div>
+    }
     <div class="kpi pink" onclick="location.href='/Finance/Dashboard'" style="cursor:pointer;">
         <div class="kpi-ico pink"><i class="fas fa-exclamation-circle"></i></div>
         <div class="kpi-val">₹@overallFees.Balance.ToString("N0")</div>

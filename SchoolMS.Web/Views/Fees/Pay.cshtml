@@ -327,6 +327,49 @@
         </div>
     }
 
+    @if (Model.EditPaymentId.HasValue)
+    {
+        @* Editing a saved receipt: its own small form that UPDATES that receipt (no new receipt is created). *@
+        var editing = Model.PaymentHistory.FirstOrDefault(x => x.PaymentId == Model.EditPaymentId.Value);
+        var discLocked = Model.PaymentDiscount - Model.AdditionalDiscount > 0;   // another receipt already carries the discount
+        <div class="fp-panel" style="border:2px solid #93c5fd;">
+            <div style="font-weight:800;color:#1d4ed8;margin-bottom:10px;">
+                <i class="fas fa-edit"></i> Editing receipt @(editing?.ReceiptNo) — saving changes this receipt, no new receipt is made.
+            </div>
+            <form method="post" action="/Fees/UpdatePayment">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="paymentId" value="@Model.EditPaymentId.Value" />
+                <input type="hidden" name="studentId" value="@Model.Student.StudentId" />
+                <div class="fp-grid">
+                    <div class="fp-field"><label>Amount Received</label>
+                        <input class="fp-input highlight" type="number" name="payingNow" min="1" step="0.01" value="@Model.PayingNow.ToString("0.##")" required /></div>
+                    <div class="fp-field"><label>Discount on this receipt@(discLocked ? " (given on another receipt — locked)" : "")</label>
+                        <input class="fp-input" type="number" name="additionalDiscount" min="0" step="0.01" value="@Model.AdditionalDiscount.ToString("0.##")" @(discLocked ? "readonly" : "") /></div>
+                    <div class="fp-field"><label>Payment Date</label>
+                        <input class="fp-input" type="date" name="paymentDate" value="@Model.PaymentDate.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" required /></div>
+                    <div class="fp-field"><label>Due Date</label>
+                        <input class="fp-input" type="date" name="dueDate" value="@(Model.DueDate.HasValue ? Model.DueDate.Value.ToString("yyyy-MM-dd") : "")" /></div>
+                    <div class="fp-field"><label>Payment Mode</label>
+                        <select name="paymentMode" class="fp-select">
+                            @foreach (var m in new[] { "Cash", "Online Transfer", "Cheque", "Demand Draft" })
+                            {
+                                <option value="@m" selected="@(Model.PaymentMode == m)">@m</option>
+                            }
+                        </select></div>
+                    <div class="fp-field"><label>Transaction Ref</label>
+                        <input class="fp-input" type="text" name="transactionRef" value="@Model.TransactionRef" placeholder="UTR / Cheque No. (optional)" /></div>
+                    <div class="fp-field" style="grid-column: span 2;"><label>Remarks</label>
+                        <input class="fp-input" type="text" name="remarks" value="@AdditionalCharges.Strip(Model.Remarks)" placeholder="Optional remarks" /></div>
+                </div>
+                <div class="fp-btn-row">
+                    <button type="submit" class="btn-submit">Update Receipt</button>
+                    <a href="/Fees/Pay/@Model.Student.StudentId" class="btn-back">Cancel</a>
+                </div>
+            </form>
+        </div>
+    }
+    else
+    {
     <!-- Payment Form -->
     <div class="fp-panel">
         <form method="post" action="/Fees/SavePay">
@@ -454,6 +497,7 @@
             </div>
         </form>
     </div>
+    }
 
 </div>
 

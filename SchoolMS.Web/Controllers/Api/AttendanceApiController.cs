@@ -28,12 +28,20 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
         return cr != null ? CrScope.Clamp(d) : d;
     }
 
+    private static int ClampSession(int session) => Math.Clamp(session, 1, AttendanceSaveHelper.MaxSessions);
+
+    // Lectures of the day that already have attendance (the app shows one chip per lecture + "add lecture").
+    private object SessionList(DateTime d)
+        => svc.GetSessionsForDate(d).Select(s => new { session = s.Session, marked = s.Marked });
+
     // Flat payload shared by the class-filter and batch endpoints (the mobile app parses these keys at the top level).
-    private static Dictionary<string, object?> DayPayload(DateTime d, List<AttendanceRecord> records)
+    private Dictionary<string, object?> DayPayload(DateTime d, List<AttendanceRecord> records, int session)
     {
         var first = records.FirstOrDefault(r => r.Subject != null || r.SirName != null);
         return new Dictionary<string, object?> {
             ["date"] = d,
+            ["session"] = session,
+            ["sessions"] = SessionList(d),
             ["records"] = records,
             ["subject"] = first?.Subject,
             ["sirName"] = first?.SirName,
@@ -49,25 +57,27 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
 
     [HttpGet]
     [ApiRequirePermission("attendance_entry")]
-    public IActionResult Index(DateTime? date, int? classId, int? sectionId, int? batchId)
+    public IActionResult Index(DateTime? date, int? classId, int? sectionId, int? batchId, int session = 1)
     {
         var d = ClampDate(date);
+        session = ClampSession(session);
         var cr = HttpContext.CurrentCr();
         var records = cr != null
-            ? svc.GetForDate(d, null, null, null).Where(InScope(cr)).ToList()   // a CR gets his whole class, whatever filter was sent
+            ? svc.GetForDate(d, null, null, null, session).Where(InScope(cr)).ToList()   // a CR gets his whole class, whatever filter was sent
             : classId.HasValue || sectionId.HasValue || batchId.HasValue
-                ? svc.GetForDate(d, classId, sectionId, batchId)
-                : svc.GetForDate(d, null, null, null).Where(r => r.AttendanceId.HasValue).ToList();
-        return Ok(DayPayload(d, records));
+                ? svc.GetForDate(d, classId, sectionId, batchId, session)
+                : svc.GetForDate(d, null, null, null, session).Where(r => r.AttendanceId.HasValue).ToList();
+        return Ok(DayPayload(d, records, session));
     }
 
     /// <summary>Attendance batch cards for one date: present/total per batch and whether it was marked yet.</summary>
     [HttpGet("batches")]
     [ApiRequirePermission("attendance_entry")]
-    public IActionResult Batches(DateTime? date)
+    public IActionResult Batches(DateTime? date, int session = 1)
     {
         var d = ClampDate(date);
-        var dayRecords = svc.GetForDate(d, null, null, null);
+        session = ClampSession(session);
+        var dayRecords = svc.GetForDate(d, null, null, null, session);
         var allBatches = batchSvc.GetAll();
         var cr = HttpContext.CurrentCr();
         if (cr != null)
@@ -79,6 +89,8 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
         var batches = batchSvc.BuildSummaries(allBatches, dayRecords);
         return Ok(new {
             date = d,
+            session,
+            sessions = SessionList(d),
             batches = batches.Select(b => new {
                 b.BatchId, b.BatchName, b.Total, b.Present, b.Absent, b.Late, b.Marked, b.Pending, b.IsMarked,
             }),
@@ -88,17 +100,18 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
     /// <summary>One attendance batch's students for a date — already-marked days come back filled in.</summary>
     [HttpGet("batch/{attBatchId:int}")]
     [ApiRequirePermission("attendance_entry")]
-    public IActionResult BatchDetail(int attBatchId, DateTime? date)
+    public IActionResult BatchDetail(int attBatchId, DateTime? date, int session = 1)
     {
         var d = ClampDate(date);
+        session = ClampSession(session);
         var batch = batchSvc.GetById(attBatchId);
         if (batch == null) return NotFound(new { error = "Attendance batch not found." });
         var cr = HttpContext.CurrentCr();
-        var dayRecords = svc.GetForDate(d, null, null, null);
+        var dayRecords = svc.GetForDate(d, null, null, null, session);
         if (cr != null) dayRecords = dayRecords.Where(InScope(cr)).ToList();
         var records = batchSvc.RecordsFor(batch, dayRecords);
         if (cr != null && records.Count == 0) return NotFound(new { error = "Attendance batch not found." });
-        var payload = DayPayload(d, records);
+        var payload = DayPayload(d, records, session);
         payload["batchId"] = batch.BatchId;
         payload["batchName"] = batch.BatchName;
         return Ok(payload);
@@ -162,26 +175,7 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
 
             var cr = HttpContext.CurrentCr();
             var crIds = cr?.StudentIds(studentSvc);
-            var records = svc.GetForDate(selectedDate, classId, sectionId, batchId)
-                .Where(r => r.AttendanceId.HasValue && (crIds == null || crIds.Contains(r.StudentId)))
-                .ToList();
-
-            var result = records
-                .GroupBy(r => r.StudentId)
-                .Select(g => new {
-                    studentId = g.First().StudentId,
-                    studentName = g.First().FullName ?? "",
-                    admissionNo = g.First().AdmissionNo ?? "",
-                    className = g.First().ClassName ?? "",
-                    sectionName = g.First().SectionName ?? "",
-                    batchName = g.First().BatchName ?? "",
-                    status = g.First().AttendanceStatus ?? "Present",
-                    subject = g.First().Subject ?? "",
-                    teacher = g.First().SirName ?? ""
-                })
-                .ToList();
-
-            return Ok(result);
+            return Ok(AttendanceDateWiseHelper.Build(svc, selectedDate, classId, sectionId, batchId, crIds));
         }
         catch (Exception ex)
         {

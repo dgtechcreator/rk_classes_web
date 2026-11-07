@@ -20,9 +20,36 @@ public class ParentApiController(
     LookupService lookup,
     LectureService lectureSvc,
     ActivityNotifier activity,
-    ClassNotesService notesSvc) : ControllerBase
+    ClassNotesService notesSvc,
+    StudentService studentSvc,
+    ProfilePhotoStore photos) : ControllerBase
 {
     string Phone => User.Phone() ?? "";
+
+    /// <summary>A parent sets / replaces their own child's profile photo (multipart field "photo"). Same file + DB column the staff side uses.</summary>
+    [HttpPost("students/{id:int}/photo")]
+    public IActionResult UploadChildPhoto(int id, IFormFile? photo)
+    {
+        if (!parentSvc.GetChildren(Phone).Any(c => c.StudentId == id)) return NotFound(new { error = "Student not found." });
+        var s = studentSvc.GetById(id);
+        if (s == null) return NotFound(new { error = "Student not found." });
+        var (path, err) = photos.Save(photo, "students");
+        if (err != null) return BadRequest(new { error = err });
+        studentSvc.SetPhoto(id, path);
+        photos.Delete(s.ProfilePicPath);
+        return Ok(new { profilePicPath = path });
+    }
+
+    [HttpDelete("students/{id:int}/photo")]
+    public IActionResult DeleteChildPhoto(int id)
+    {
+        if (!parentSvc.GetChildren(Phone).Any(c => c.StudentId == id)) return NotFound(new { error = "Student not found." });
+        var s = studentSvc.GetById(id);
+        if (s == null) return NotFound(new { error = "Student not found." });
+        studentSvc.SetPhoto(id, null);
+        photos.Delete(s.ProfilePicPath);
+        return Ok(new { profilePicPath = (string?)null });
+    }
 
     /// <summary>What happened to my children (absent, marks, fees, lectures), newest first. Opening the list clears the unread badge via POST notifications/read.</summary>
     [HttpGet("notifications")]

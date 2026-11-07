@@ -8,8 +8,28 @@ namespace SchoolMS.Web.Controllers.Api;
 [Route("api/finance")]
 [ApiRequirePermission("finance_view")]
 public class FinanceApiController(FeesService feesSvc, StudentService studentSvc,
-    LookupService lookupSvc, FeeStructureService feeStructureSvc) : ControllerBase
+    LookupService lookupSvc, FeeStructureService feeStructureSvc, ActivityNotifier notify) : ControllerBase
 {
+    public record RemindDueReq(List<int> StudentIds);
+
+    /// One tap for the whole list: every given student who still owes fees gets a "Fee reminder" notification in the parent
+    /// app (same rule as the Finance list: balance after charges and discount). The balance is read here, never trusted from the app.
+    [HttpPost("remind-due")]
+    public IActionResult RemindDue([FromBody] RemindDueReq req)
+    {
+        var ids = (req.StudentIds ?? new()).Distinct().Take(2000).ToHashSet();
+        if (ids.Count == 0) return BadRequest(new { error = "No students selected." });
+        var rows = feesSvc.GetFinanceStudents(null, null, null, true).Where(r => ids.Contains(r.StudentId)).ToList();
+        int sent = 0;
+        foreach (var r in rows)
+        {
+            if (r.TotalFees <= 0 || r.Balance < 1) continue;   // fee not set / nothing due
+            notify.FeeDue(r.StudentId, r.Balance, DateTime.Today);
+            sent++;
+        }
+        return Ok(new { sent, skipped = ids.Count - sent });
+    }
+
     [HttpGet("dashboard")]
     public IActionResult Dashboard()
     {

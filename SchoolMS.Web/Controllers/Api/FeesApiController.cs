@@ -17,6 +17,9 @@ public class FeesApiController(FeesService svc, LookupService lookup,
 
     public record PreviousDuesReq(int StudentId, decimal Amount, string? Note);
 
+    public record UpdatePaymentReq(decimal PaidAmount, decimal Discount, DateTime? PaymentDate, DateTime? DueDate,
+        string PaymentMode, string? TransactionRef, string? Remarks);
+
     public record SavePaymentReq(int StudentId, int FeeTypeId, decimal Amount, decimal Discount,
         decimal LateFine, string PaymentMode, string? TransactionRef, string? Month, string? Remarks, int? AcademicYearId);
 
@@ -235,8 +238,26 @@ public class FeesApiController(FeesService svc, LookupService lookup,
         // TODO: PDF receipt generation — Phase 2
         => StatusCode(501, new { error = "Receipt PDF generation not yet available via API." });
 
+    /// Edits a saved receipt in place (same receipt no.) - the web's Pay page "Edit" button only pre-filled a form and
+    /// then saved a NEW receipt. Needs edit rights on Fee Collection, like deleting.
+    [HttpPost("{id:int}/update")]
+    [ApiRequirePermission("fee_collection", requireEdit: true)]
+    public IActionResult UpdatePayment(int id, [FromBody] UpdatePaymentReq req)
+    {
+        try
+        {
+            var err = svc.UpdatePayment(id, req.PaidAmount, req.Discount, req.PaymentDate, req.DueDate,
+                req.PaymentMode, req.TransactionRef, req.Remarks);
+            return err == null ? Ok(new { success = true }) : BadRequest(new { error = err });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { error = "Error updating receipt: " + ex.Message });
+        }
+    }
+
     [HttpPost("{id:int}/delete")]
-    [ApiRequirePermission("fee_collection")]
+    [ApiRequirePermission("fee_collection", requireEdit: true)]
     public IActionResult DeletePayment(int id)
     {
         try

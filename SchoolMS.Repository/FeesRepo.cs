@@ -128,6 +128,17 @@ COMMIT;",
         => db.ExecSql("UPDATE FeePayments SET Remarks=@Remarks WHERE PaymentId=@PaymentId AND IsDeleted=0",
             new() { {"@PaymentId",paymentId}, {"@Remarks",string.IsNullOrWhiteSpace(remarks) ? null : remarks} });
 
+    /// Corrects a saved receipt in place (same receipt no.). NetAmount = Amount, like sp_SaveFeePayment's callers: the
+    /// discount is only recorded next to the money received, it is not taken off it again.
+    public void UpdatePayment(int paymentId, decimal paid, decimal discount, DateTime date, DateTime? dueDate,
+        string mode, string? txRef, string? remarks)
+        => db.ExecSql(@"UPDATE FeePayments SET Amount=@Amt, NetAmount=@Amt, Discount=@Disc, PaymentDate=@Date, DueDate=@Due,
+                PaymentMode=@Mode, TransactionRef=@Ref, Remarks=@Rem
+            WHERE PaymentId=@Id AND IsDeleted=0",
+            new() { {"@Id",paymentId}, {"@Amt",paid}, {"@Disc",discount}, {"@Date",date.Date}, {"@Due",dueDate?.Date},
+                    {"@Mode",mode}, {"@Ref",string.IsNullOrWhiteSpace(txRef) ? null : txRef.Trim()},
+                    {"@Rem",string.IsNullOrWhiteSpace(remarks) ? null : remarks} });
+
     public void DeletePayment(int paymentId, int deletedBy)
         => db.Exec("sp_DeleteFeePayment", new() { {"@PaymentId",paymentId}, {"@DeletedBy",deletedBy} });
 

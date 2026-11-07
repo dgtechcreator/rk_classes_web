@@ -96,12 +96,7 @@ public class ParentController(
             vm.PreviousYearsDue = pos.PreviousYearsDue;
             vm.InstallmentDate = pos.InstallmentDate;
 
-            // Get class fees summary for all students
-            if (selected.ClassId.HasValue)
-            {
-                var classFeesSummary = feesSvc.GetClassFeesSummary(selected.ClassId.Value, selected.SectionId);
-                ViewBag.ClassFeesSummary = classFeesSummary;
-            }
+            // (The old "class fees summary of all students" is gone: a parent sees only their own child's paid + balance.)
         }
 
         return View(vm);
