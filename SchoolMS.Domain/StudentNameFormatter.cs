@@ -48,8 +48,27 @@ public static class StudentNameFormatter
         return string.Join(" ", parts);
     }
 
+    // Every word comes out in "running letters" (Title Case): whatever case it was typed in (YADAV / yadav / yADAV)
+    // the list, the report and the receipt all read "Yadav".
     static List<string> Words(string? s) =>
-        (s ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Select(w => w.Trim(' ', '.', ',')).Where(w => w.Length > 0).ToList();
+        (s ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Select(w => Cap(w.Trim(' ', '.', ','))).Where(w => w.Length > 0).ToList();
+
+    /// <summary>Title Case for a person's name: "yadav ANSH dinesh" -> "Yadav Ansh Dinesh". Extra spaces are collapsed;
+    /// the letter after a hyphen or apostrophe is capitalised too (Abdul-Rahman, D'Souza).</summary>
+    public static string ToTitle(string? s) => string.Join(" ", (s ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Select(Cap));
+
+    static string Cap(string w)
+    {
+        if (w.Length == 0) return w;
+        var sb = new System.Text.StringBuilder(w.Length);
+        bool up = true;
+        foreach (var ch in w)
+        {
+            sb.Append(up ? char.ToUpperInvariant(ch) : char.ToLowerInvariant(ch));
+            up = ch is '-' or '\'' or '.' or '/';
+        }
+        return sb.ToString();
+    }
 
     // "Kamlesh dubey" with surname "Dubey" -> ["Kamlesh"]; a lone word is already a given name and is kept.
     static List<string> WithoutSurname(List<string> words, string? surname)

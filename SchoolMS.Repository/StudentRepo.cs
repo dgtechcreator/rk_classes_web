@@ -120,8 +120,8 @@ public class StudentRepo(CommonConnectivity db)
 
     int SaveRaw(Student s, string? pic, int by) => db.ExecOut("sp_SaveStudent", new() {
         { "@StudentId",s.StudentId }, { "@AdmissionNo",s.AdmissionNo==""?null:s.AdmissionNo },
-        { "@FullName",s.FullName }, { "@DateOfBirth",s.DateOfBirth }, { "@Gender",s.Gender },
-        { "@FatherName",s.FatherName }, { "@MotherName",s.MotherName }, { "@Phone",s.Phone },
+        { "@FullName",StudentNameFormatter.ToTitle(s.FullName) }, { "@DateOfBirth",s.DateOfBirth }, { "@Gender",s.Gender },
+        { "@FatherName",(s.FatherName is null ? null : StudentNameFormatter.ToTitle(s.FatherName)) }, { "@MotherName",(s.MotherName is null ? null : StudentNameFormatter.ToTitle(s.MotherName)) }, { "@Phone",s.Phone },
         { "@FatherPhone",s.FatherPhone }, { "@MotherPhone",s.MotherPhone },
         { "@Email",s.Email }, { "@Address",s.Address }, { "@ProfilePicPath",pic },
         { "@AcademicYearId",s.AcademicYearId }, { "@ClassId",s.ClassId }, { "@SectionId",s.SectionId },
