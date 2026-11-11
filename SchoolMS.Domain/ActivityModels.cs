@@ -8,6 +8,8 @@ public static class ActivityType
     public const string Late = "late";
     public const string Marks = "marks";
     public const string Fee = "fee";
+    public const string Birthday = "birthday";
+    public const string Holiday = "holiday";
     public const string Notes = "notes";
     public const string Practice = "practice";
     public const string Lecture = "lecture";

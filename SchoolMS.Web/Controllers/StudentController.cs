@@ -94,12 +94,35 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
         return RedirectToAction("Details", new { id });
     }
 
+    /// <summary>Back to the list exactly as it was (same Active / Inactive filter, search, class...), never to the default Active list.</summary>
+    IActionResult BackToList(string? returnUrl)
+        => !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl) : RedirectToAction("Index");
+
     [HttpPost]
-    public IActionResult Delete(int id)
+    public IActionResult Delete(int id, string? returnUrl = null)
     {
-        svc.Delete(id, HttpContext.Session.GetUserId() ?? 0);
-        TempData["Success"] = "Student marked as Inactive.";
-        return RedirectToAction("Index");
+        var result = svc.Delete(id, HttpContext.Session.GetUserId() ?? 0);
+        TempData["Success"] = result == "Deleted" ? "Student deleted - find them on Deleted Records." : "Student marked as Inactive.";
+        return BackToList(returnUrl);
+    }
+
+    /// <summary>Delete several students at once from the list. Active ones become Inactive, Inactive ones move to Deleted Records.</summary>
+    [HttpPost]
+    public IActionResult BulkDelete(List<int> ids, string? returnUrl = null)
+    {
+        ids = (ids ?? new()).Distinct().Take(1000).ToList();
+        int toInactive = 0, toDeleted = 0;
+        var by = HttpContext.Session.GetUserId() ?? 0;
+        foreach (var id in ids)
+        {
+            var r = svc.Delete(id, by);
+            if (r == "Deleted") toDeleted++; else toInactive++;
+        }
+        TempData["Success"] = ids.Count == 0 ? "Nothing was selected."
+            : toDeleted > 0 && toInactive == 0 ? $"{toDeleted} student(s) deleted - find them on Deleted Records."
+            : toInactive > 0 && toDeleted == 0 ? $"{toInactive} student(s) marked as Inactive."
+            : $"{toInactive} marked Inactive, {toDeleted} deleted (see Deleted Records).";
+        return BackToList(returnUrl);
     }
 
     public IActionResult Details(int id)

@@ -2,7 +2,7 @@
 @{
     ViewData["Title"] = "Finance — " + (string)ViewBag.Title2;
     string view = (string)ViewBag.View;
-    decimal tFees = Model.Sum(r => r.TotalFees), tPaid = Model.Sum(r => r.Collected), tDisc = Model.Sum(r => r.Discount), tBal = Model.Sum(r => r.Balance);
+    decimal tFees = Model.Sum(r => r.TotalFees - r.Discount), tPaid = Model.Sum(r => r.Collected), tDisc = Model.Sum(r => r.Discount), tBal = Model.Sum(r => r.Balance);
     bool canReceipt = Context.Session.HasPerm("fee_collection");
     string Intl(string? raw)
     {
@@ -17,7 +17,7 @@
   <div class="pg-row" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
     <div>
       <h1>💰 @ViewBag.Title2</h1>
-      <p>@Model.Count students · Fees <b>₹@tFees.ToString("N0")</b> · Collected <b style="color:#059669;">₹@tPaid.ToString("N0")</b> · Discount <b>₹@tDisc.ToString("N0")</b> · Balance <b style="color:#dc2626;">₹@tBal.ToString("N0")</b></p>
+      <p>@Model.Count students · Total <b>₹@tFees.ToString("N0")</b> · Collected <b style="color:#059669;">₹@tPaid.ToString("N0")</b> · Discount <b>₹@tDisc.ToString("N0")</b> · Balance <b style="color:#dc2626;">₹@tBal.ToString("N0")</b></p>
     </div>
     <a href="/Finance/Dashboard" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Finance Dashboard</a>
   </div>
@@ -29,11 +29,12 @@
     <button type="button" class="btn btn-sm fsChip btn-primary" data-f="all" onclick="fsSetFilter('all')">All</button>
     <button type="button" class="btn btn-sm fsChip btn-outline" data-f="due" onclick="fsSetFilter('due')">Due</button>
     <button type="button" class="btn btn-sm fsChip btn-outline" data-f="paid" onclick="fsSetFilter('paid')">Paid up</button>
+    <button type="button" class="btn btn-sm" style="background:#dc2626;color:#fff;border:none;" onclick="fsRemindAll()"><i class="fas fa-bell"></i> Fee reminder to all due</button>
     <span id="fsCount" class="text-mu" style="margin-left:auto;font-size:12px;"></span>
   </div>
   <div class="tbl-wrap">
     <table>
-      <thead><tr><th>Student</th><th>Class</th><th style="text-align:right;">Fees</th><th style="text-align:right;">Paid</th><th style="text-align:right;">Discount</th><th style="text-align:right;">Balance</th><th>Contact</th><th></th></tr></thead>
+      <thead><tr><th>Student</th><th>Class</th><th style="text-align:right;">Total</th><th style="text-align:right;">Paid</th><th style="text-align:right;">Discount (info)</th><th style="text-align:right;">Balance</th><th>Contact</th><th></th></tr></thead>
       <tbody id="fsBody">
       @foreach (var r in Model)
       {
@@ -44,10 +45,10 @@
           if (n != "" && !contacts.Any(c => c.N == n)) contacts.Add((l, n));
         }
         var due = r.Balance > 0.5m;
-        <tr class="fsRow" data-name="@((r.FullName + " " + r.AdmissionNo).ToLower())" data-due="@(due ? "1" : "0")">
+        <tr class="fsRow" data-id="@r.StudentId" data-name="@((r.FullName + " " + r.AdmissionNo).ToLower())" data-due="@(due ? "1" : "0")">
           <td class="fw7"><a href="/Student/Details/@r.StudentId" style="color:inherit;text-decoration:none;">@r.FullName</a><div style="font-size:11px;color:var(--mu);font-weight:400;">@r.AdmissionNo</div></td>
           <td style="font-size:12px;">@r.ClassName @r.SectionName<div style="color:var(--mu);">@r.BatchName</div></td>
-          <td style="text-align:right;">₹@r.TotalFees.ToString("N0")</td>
+          <td style="text-align:right;">₹@((r.TotalFees - r.Discount).ToString("N0"))</td>
           <td style="text-align:right;color:#059669;">₹@r.Collected.ToString("N0")</td>
           <td style="text-align:right;">₹@r.Discount.ToString("N0")</td>
           @if (r.TotalFees == 0) {
@@ -62,7 +63,7 @@
               <a href="tel:+@c.N" class="btn btn-outline btn-sm" title="Call @c.L" style="color:#2563eb;padding:3px 7px;"><i class="fas fa-phone"></i> @c.L</a>
               <button type="button" class="btn btn-sm" title="@(due ? "Fee reminder" : "WhatsApp") @c.L" style="background:#25d366;color:#fff;border:none;padding:3px 7px;"
                 data-name="@r.FullName" data-class="@r.ClassName.Trim()" data-medium="@r.SectionName.Trim()" data-num="@c.N" data-due="@(due ? "1" : "0")"
-                data-total="@r.TotalFees.ToString("N0")" data-paid="@r.Collected.ToString("N0")" data-bal="@((r.Balance < 0 ? 0 : r.Balance).ToString("N0"))"
+                data-total="@((r.TotalFees - r.Discount).ToString("N0"))" data-paid="@r.Collected.ToString("N0")" data-bal="@((r.Balance < 0 ? 0 : r.Balance).ToString("N0"))"
                 onclick="fsWhatsapp(this)"><i class="fab fa-whatsapp"></i> @c.L</button>
             }
           </td>
@@ -105,6 +106,17 @@
     document.getElementById('fsCount').textContent = shown + ' students';
   }
   fsSetFilter('@(view == "due" ? "due" : "all")');
+
+  async function fsRemindAll() {
+    // every due student that is currently shown (search / filter respected)
+    const ids = [...document.querySelectorAll('.fsRow')].filter(tr => tr.style.display !== 'none' && tr.dataset.due === '1').map(tr => +tr.dataset.id);
+    if (!ids.length) { alert('No student with a pending balance in this list.'); return; }
+    if (!confirm('Send a fee reminder notification to the parents of ' + ids.length + ' student(s) with a pending balance?')) return;
+    let d;
+    try { d = await (await fetch('/Finance/RemindDue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ids) })).json(); }
+    catch (e) { d = { success: false, message: 'Could not reach the server or your session expired.' }; }
+    alert(d.message);
+  }
 
   // WhatsApp text from Masters -> Templates
   let rkTemplates = [];

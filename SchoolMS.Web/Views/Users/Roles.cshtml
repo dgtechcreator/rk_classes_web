@@ -1,0 +1,154 @@
+@model List<SchoolMS.Domain.Role>
+@{
+  ViewData["Title"] = "Roles & Access";
+  var sections = ViewBag.Sections as SchoolMS.Services.PortalSection[] ?? Array.Empty<SchoolMS.Services.PortalSection>();
+  var hidden = ViewBag.Hidden as HashSet<string> ?? new();
+  var counts = ViewBag.UserCounts as Dictionary<int, int> ?? new();
+}
+
+<style>
+  .ra-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; padding:16px; }
+  .ra-tile { display:flex; align-items:center; gap:12px; border:1.5px solid #e5e7eb; border-radius:12px; padding:12px 14px; cursor:pointer; transition:.15s; background:#fff; }
+  .ra-tile.on  { border-color:#16a34a; background:#f0fdf4; }
+  .ra-tile.off { border-color:#e5e7eb; background:#f9fafb; opacity:.75; }
+  .ra-ic { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:#eef2ff; color:#4338ca; font-size:16px; flex-shrink:0; }
+  .ra-tile.on .ra-ic { background:#dcfce7; color:#15803d; }
+  .ra-name { font-weight:800; font-size:14px; }
+  .ra-desc { font-size:11.5px; color:#777; margin-top:2px; }
+  .ra-sw { margin-left:auto; flex-shrink:0; width:42px; height:24px; border-radius:20px; background:#d1d5db; position:relative; transition:.15s; }
+  .ra-sw::after { content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:.15s; box-shadow:0 1px 3px rgba(0,0,0,.3); }
+  .ra-tile.on .ra-sw { background:#16a34a; }
+  .ra-tile.on .ra-sw::after { left:21px; }
+  .ra-note { padding:0 16px 14px; font-size:12px; color:#777; }
+  .rt-roles { display:flex; flex-wrap:wrap; gap:8px; padding:16px 16px 4px; }
+  .rt-role { border:1.5px solid #e5e7eb; background:#fff; border-radius:20px; padding:7px 14px; cursor:pointer; font-weight:700; font-size:13px; }
+  .rt-role.active { background:#4338ca; color:#fff; border-color:#4338ca; }
+  .rt-role small { font-weight:600; opacity:.75; margin-left:4px; }
+  .rt-grp { margin:14px 16px 0; font-weight:800; font-size:12px; color:#4338ca; text-transform:uppercase; letter-spacing:.5px; }
+  .rt-row { display:flex; align-items:center; gap:10px; padding:8px 16px; border-bottom:1px solid #f1f5f9; }
+  .rt-row .nm { flex:1; font-weight:600; font-size:13px; }
+  .rt-row label { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; cursor:pointer; }
+</style>
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <div class="breadcrumb"><a href="/Users/Index">Users</a> / <span>Roles &amp; Access</span></div>
+      <h1>🛡️ Roles &amp; Access</h1>
+      <p>Decide once what each kind of login can see — students / parents, and every staff role.</p>
+    </div>
+    <div class="df g8"><a href="/Users/Index" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back to Users</a></div>
+  </div>
+</div>
+
+<div id="msg" style="font-size:13px;margin-bottom:12px;"></div>
+
+@* ───────── Student / Parent portal ───────── *@
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-hdr">
+    <span class="card-ttl"><i class="fas fa-user-graduate" style="color:var(--p);margin-right:7px;"></i>Student / Parent login</span>
+    <button class="btn btn-primary btn-sm" onclick="savePortal(this)"><i class="fas fa-save"></i> Save</button>
+  </div>
+  <div class="ra-note" style="padding-top:12px;">
+    Tap a section to switch it <b>on</b> (green) or <b>off</b>. A section that is off disappears from the parent website and the mobile app,
+    and its data is no longer sent to them. Students and parents use the same login, so this applies to both.
+  </div>
+  <div class="ra-grid">
+    @foreach (var s in sections)
+    {
+      var on = !hidden.Contains(s.Key);
+      <div class="ra-tile @(on ? "on" : "off")" data-key="@s.Key" onclick="this.classList.toggle('on');this.classList.toggle('off')">
+        <div class="ra-ic"><i class="@s.Icon"></i></div>
+        <div><div class="ra-name">@s.Label</div><div class="ra-desc">@s.Description</div></div>
+        <div class="ra-sw"></div>
+      </div>
+    }
+  </div>
+  <div class="ra-note">Home and the child switcher are always shown. “Test Marks” also controls the class toppers.</div>
+</div>
+
+@* ───────── Staff roles ───────── *@
+<div class="card">
+  <div class="card-hdr">
+    <span class="card-ttl"><i class="fas fa-user-tag" style="color:var(--p);margin-right:7px;"></i>Staff roles — default rights</span>
+  </div>
+  <div class="ra-note" style="padding-top:12px;">
+    Pick a role, tick what it may use, then save. <b>New users</b> of that role start with these rights. To change the users who already have the role,
+    tick “Also apply to existing users”. You can still change one person on <i>Users → Permissions</i>. The Super Admin and Class Representatives are never changed here.
+  </div>
+  <div class="rt-roles">
+    @foreach (var r in Model)
+    {
+      <button type="button" class="rt-role" data-role="@r.RoleId" onclick="loadRole(@r.RoleId, this)">@r.RoleName<small>@(counts.TryGetValue(r.RoleId, out var c) ? c : 0) users</small></button>
+    }
+  </div>
+  <div id="roleBody" style="padding:10px 0 16px;"><div class="ra-note" style="padding:16px;">Select a role above.</div></div>
+</div>
+
+@section Scripts {
+<script>
+const safe = t => String(t == null ? '' : t).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+function showMsg(d) {
+  const m = document.getElementById('msg');
+  m.innerHTML = d.success ? '<div class="alert alert-success"><i class="fas fa-check-circle"></i> ' + safe(d.message) + '</div>'
+                          : '<div class="alert alert-danger">' + safe(d.message) + '</div>';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => m.innerHTML = '', 7000);
+}
+async function post(url, body) {
+  try {
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return await res.json();
+  } catch (e) { return { success: false, message: 'Could not reach the server or your session expired. Please log in again.' }; }
+}
+
+async function savePortal(btn) {
+  const visible = [...document.querySelectorAll('.ra-tile.on')].map(t => t.dataset.key);
+  btn.disabled = true;
+  showMsg(await post('/Users/SavePortal', visible));
+  btn.disabled = false;
+}
+
+let curRole = 0;
+async function loadRole(id, btn) {
+  document.querySelectorAll('.rt-role').forEach(b => b.classList.toggle('active', b === btn));
+  curRole = id;
+  const box = document.getElementById('roleBody');
+  box.innerHTML = '<div class="ra-note" style="padding:16px;">Loading…</div>';
+  let d;
+  try { d = await (await fetch('/Users/GetRoleTemplate?roleId=' + id)).json(); }
+  catch (e) { box.innerHTML = '<div class="ra-note" style="padding:16px;color:#b91c1c;">Could not load this role.</div>'; return; }
+
+  const groups = {};
+  d.modules.forEach(m => (groups[m.groupName] = groups[m.groupName] || []).push(m));
+  let h = '';
+  const src = d.source === 'saved' ? 'Showing the rights saved for this role.'
+            : d.source.startsWith('user:') ? 'No template saved yet — starting from the current rights of ' + safe(d.source.slice(5)) + '. Adjust and save.'
+            : 'No template saved yet — nothing is ticked.';
+  h += '<div class="ra-note" style="padding-top:6px;"><b>' + safe(d.roleName) + '</b> · ' + d.userCount + ' existing user(s) · ' + src + '</div>';
+  Object.keys(groups).forEach(g => {
+    h += '<div class="rt-grp">' + safe(g) + '</div>';
+    groups[g].sort((a, b) => a.orderNo - b.orderNo).forEach(m => {
+      h += '<div class="rt-row"><i class="' + safe(m.icon || 'fas fa-circle') + '" style="width:20px;color:#6d28d9;text-align:center;"></i><span class="nm">' + safe(m.moduleName) + '</span>' +
+           '<label style="color:#16a34a;"><input type="checkbox" class="t-view" data-mid="' + m.moduleId + '" ' + (m.canView ? 'checked' : '') + ' onchange="if(!this.checked)document.querySelector(\'.t-edit[data-mid=\\\'' + m.moduleId + '\\\']\').checked=false"> View</label>' +
+           '<label style="color:#4338ca;"><input type="checkbox" class="t-edit" data-mid="' + m.moduleId + '" ' + (m.canEdit ? 'checked' : '') + ' onchange="if(this.checked)document.querySelector(\'.t-view[data-mid=\\\'' + m.moduleId + '\\\']\').checked=true"> Edit</label></div>';
+    });
+  });
+  h += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:flex-end;padding:16px;">' +
+       '<label style="font-size:13px;font-weight:600;display:inline-flex;gap:6px;align-items:center;"><input type="checkbox" id="applyExisting"> Also apply to existing users (' + d.userCount + ')</label>' +
+       '<button class="btn btn-primary" onclick="saveRole(this)"><i class="fas fa-save"></i> Save role rights</button></div>';
+  box.innerHTML = h;
+}
+
+async function saveRole(btn) {
+  const apply = document.getElementById('applyExisting').checked;
+  if (apply && !confirm('This replaces the individual rights of every existing user with this role. Continue?')) return;
+  const entries = [...document.querySelectorAll('.t-view')].map(v => ({
+    moduleId: +v.dataset.mid, canView: v.checked,
+    canEdit: document.querySelector('.t-edit[data-mid="' + v.dataset.mid + '"]').checked }));
+  btn.disabled = true;
+  showMsg(await post('/Users/SaveRoleTemplate', { roleId: curRole, applyToExisting: apply, entries }));
+  btn.disabled = false;
+}
+</script>
+}

@@ -11,7 +11,7 @@ public class MarksRepo(CommonConnectivity db)
     // Load students by Class/Section/Batch only — NO academic year filter
     public List<StudentMarkRow> GetStudentsForEntry(int? cls, int? sec, int? bat, int? yearId = null)
         => db.Read("sp_GetStudentsForMarks",
-            new() { {"@ClassId",cls}, {"@SectionId",sec}, {"@BatchId",bat}, {"@AcademicYearId",DBNull.Value} },
+            new() { {"@ClassId",cls}, {"@SectionId",sec}, {"@BatchId",bat}, {"@AcademicYearId",(object?)yearId ?? DBNull.Value} },   // only the students of the chosen academic year
             r => new StudentMarkRow {
                 StudentId   = G.G<int>(r,"StudentId"),
                 FullName    = r.StudentName(db) ?? "",
@@ -24,7 +24,7 @@ public class MarksRepo(CommonConnectivity db)
 
     public List<StudentMarkRow> GetStudentsWithMarks(int? cls, int? sec, int? bat, int subjectId, string examName, DateTime? testDate, int? yearId)
     {
-        var students = GetStudentsForEntry(cls, sec, bat, null);
+        var students = GetStudentsForEntry(cls, sec, bat, yearId);
         // Fetch marks with no date/year filter so existing marks always show
         var marks = db.Read("sp_GetMarksBySubject",
             new() { {"@SubjectId",subjectId}, {"@ClassId",cls}, {"@SectionId",sec},

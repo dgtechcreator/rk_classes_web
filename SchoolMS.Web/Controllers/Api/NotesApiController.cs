@@ -11,7 +11,7 @@ namespace SchoolMS.Web.Controllers.Api;
 /// </summary>
 [ApiController]
 [Route("api/notes")]
-public class NotesApiController(ClassNotesService svc, NoteFileStore files, ParentService parents) : ControllerBase
+public class NotesApiController(ClassNotesService svc, NoteFileStore files, ParentService parents, PortalAccessService portal) : ControllerBase
 {
     static object Dto(ClassNote n) => new {
         noteId = n.NoteId, kind = n.Kind, title = n.Title, description = n.Description, classId = n.ClassId, className = n.ClassName,
@@ -61,7 +61,7 @@ public class NotesApiController(ClassNotesService svc, NoteFileStore files, Pare
 
         bool allowed = u.UserType() == "staff"
             ? u.HasPerm("class_notes")
-            : u.UserType() == "parent" && parents.GetChildren(u.Phone() ?? "").Any(c => ClassNotesService.AppliesTo(note, c.ClassId, c.SectionId, c.BatchId));
+            : u.UserType() == "parent" && portal.IsVisible("notes") && parents.GetChildren(u.Phone() ?? "").Any(c => ClassNotesService.AppliesTo(note, c.ClassId, c.SectionId, c.BatchId));
         if (!allowed) return StatusCode(403, new { error = "Access denied." });
 
         var fs = files.Open(note.StoredName);

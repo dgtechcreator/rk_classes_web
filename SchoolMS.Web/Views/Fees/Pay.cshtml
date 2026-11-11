@@ -351,7 +351,7 @@
                         <input class="fp-input" type="date" name="dueDate" value="@(Model.DueDate.HasValue ? Model.DueDate.Value.ToString("yyyy-MM-dd") : "")" /></div>
                     <div class="fp-field"><label>Payment Mode</label>
                         <select name="paymentMode" class="fp-select">
-                            @foreach (var m in new[] { "Cash", "Online Transfer", "Cheque", "Demand Draft" })
+                            @foreach (var m in Context.RequestServices.GetRequiredService<SchoolMS.Services.PaymentModeService>().ActiveNames(Model.PaymentMode))
                             {
                                 <option value="@m" selected="@(Model.PaymentMode == m)">@m</option>
                             }
@@ -473,10 +473,7 @@
                 <div class="fp-field">
                     <label>Payment Mode</label>
                     <select name="paymentMode" class="fp-select">
-                        <option value="Cash">Cash</option>
-                        <option value="Online Transfer">Online Transfer</option>
-                        <option value="Cheque">Cheque</option>
-                        <option value="Demand Draft">Demand Draft</option>
+                        @foreach (var m in Context.RequestServices.GetRequiredService<SchoolMS.Services.PaymentModeService>().ActiveNames(null)) { <option value="@m">@m</option> }
                     </select>
                 </div>
 

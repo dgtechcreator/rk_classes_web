@@ -123,6 +123,24 @@ public class TeacherPaymentRepo(CommonConnectivity db)
         db.Sql(query, r => true);
     }
 
+    /// <summary>Edits an entry in place (unpaid or paid). Parameterised; a paid entry keeps its receipt no. and can have its mode / reference / date corrected.</summary>
+    public bool Update(int paymentId, string paymentType, decimal rate, decimal? quantity, decimal totalAmount, int paymentMonth, int paymentYear,
+        string? remarks, string? paymentMode, string? transactionRef, DateTime? paymentDate, int by)
+        => db.ExecSql(@"
+            UPDATE TeacherPayments
+            SET PaymentType=@Type, Rate=@Rate, Quantity=@Qty, TotalAmount=@Total, PaymentMonth=@M, PaymentYear=@Y, Remarks=@Rem,
+                PaymentMode = CASE WHEN IsPaid = 1 THEN @Mode ELSE PaymentMode END,
+                TransactionRef = CASE WHEN IsPaid = 1 THEN @Ref ELSE TransactionRef END,
+                PaymentDate = CASE WHEN IsPaid = 1 AND @PDate IS NOT NULL THEN @PDate ELSE PaymentDate END,
+                UpdatedBy=@By, UpdatedAt=GETDATE()
+            WHERE TeacherPaymentId=@Id AND ISNULL(IsDeleted,0)=0",
+            new() {
+                { "@Id", paymentId }, { "@Type", paymentType }, { "@Rate", rate }, { "@Qty", quantity }, { "@Total", totalAmount },
+                { "@M", paymentMonth }, { "@Y", paymentYear }, { "@Rem", string.IsNullOrWhiteSpace(remarks) ? null : remarks.Trim() },
+                { "@Mode", string.IsNullOrWhiteSpace(paymentMode) ? null : paymentMode.Trim() }, { "@Ref", string.IsNullOrWhiteSpace(transactionRef) ? null : transactionRef.Trim() },
+                { "@PDate", paymentDate }, { "@By", by > 0 ? by : null },
+            }) > 0;
+
     public void Delete(int paymentId, int deletedBy)
     {
         var query = $@"

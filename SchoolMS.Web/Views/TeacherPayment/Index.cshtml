@@ -25,13 +25,13 @@
         <!-- Teacher Name -->
         <div>
             <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Teacher Name</label>
-            <select id="facultyId" name="facultyId" required style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+            <select id="facultyId" name="facultyId" required onchange="prefillFromTeacher()" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                 <option value="">-- Select Teacher --</option>
                 @if (ViewBag.AllFaculty != null)
                 {
                     @foreach (var faculty in ViewBag.AllFaculty)
                     {
-                        <option value="@faculty.FacultyId">@faculty.FullName</option>
+                        <option value="@faculty.FacultyId" data-type="@faculty.SalaryTypeOrFixed" data-rate="@(faculty.Salary?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))">@faculty.FullName</option>
                     }
                 }
             </select>
@@ -138,6 +138,7 @@
                             <td style="text-align: center;">@payment.PaymentMonth/@payment.PaymentYear</td>
                             <td style="text-align: center;">
                                 <button onclick="openPaymentModal(@payment.TeacherPaymentId, '@payment.FacultyName', @payment.TotalAmount)" style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; margin-right: 4px;">Pay</button>
+                                <a href="/TeacherPayment/Edit/@payment.TeacherPaymentId?returnUrl=/TeacherPayment/Index" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; margin-right: 4px; text-decoration: none; display: inline-block;">Edit</a>
                                 <button onclick="deletePayment(@payment.TeacherPaymentId)" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">Delete</button>
                             </td>
                         </tr>
@@ -171,9 +172,7 @@
             <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">Payment Mode</label>
             <select id="modalPaymentMode" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
                 <option value="">-- Select Mode --</option>
-                <option value="Cash">Cash</option>
-                <option value="Online Transfer">Online Transfer</option>
-                <option value="Cheque">Cheque</option>
+                @foreach (var m in Context.RequestServices.GetRequiredService<SchoolMS.Services.PaymentModeService>().ActiveNames(null)) { <option value="@m">@m</option> }
             </select>
         </div>
 
@@ -227,6 +226,15 @@
         }
 
         document.getElementById('totalAmount').textContent = total.toFixed(2);
+    }
+
+    // The teacher's own salary type and rate (Faculty form) fill the entry; they can still be changed here.
+    function prefillFromTeacher() {
+        const opt = document.getElementById('facultyId').selectedOptions[0];
+        if (!opt || !opt.value) return;
+        const type = opt.dataset.type, rate = opt.dataset.rate;
+        if (type) { document.getElementById('paymentType').value = type; updatePaymentFields(); }
+        if (rate) { document.getElementById('rate').value = rate; calculateTotal(); }
     }
 
     function savePayment() {

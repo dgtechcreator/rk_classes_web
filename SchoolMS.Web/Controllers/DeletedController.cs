@@ -12,7 +12,7 @@ public class DeletedController(StudentService studentSvc, FacultyService faculty
     {
         if (HttpContext.Session.GetInt32("RoleId") != 1)
             return RedirectToAction("AccessDenied", "Home");
-        var (students, _) = studentSvc.GetAll(1, 10000, null, null, null, null, null, "Inactive");
+        var (students, _) = studentSvc.GetAll(1, 10000, null, null, null, null, null, "Deleted");
         var (faculty, _)  = facultySvc.GetAll(null, "Inactive", null, 1, 10000);
         var receipts      = feesSvc.GetDeletedPayments();
         othersSvc.Enrich(students, faculty, studentSvc, facultySvc);
@@ -28,7 +28,7 @@ public class DeletedController(StudentService studentSvc, FacultyService faculty
     public IActionResult RestoreStudent(int id)
     {
         studentSvc.Restore(id);
-        TempData["Success"] = "Student restored to Active.";
+        TempData["Success"] = "Student moved back to the Inactive list (Students → Inactive). Activate them from there.";
         return RedirectToAction("Index");
     }
 

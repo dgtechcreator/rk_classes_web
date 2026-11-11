@@ -10,7 +10,7 @@ namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
 public class AttendanceController(AttendanceService svc, LookupService lookup,
-    MastersService mastersSvc, FacultyService facultySvc, StudentService studentSvc, AttendanceBatchService batchSvc) : Controller
+    MastersService mastersSvc, FacultyService facultySvc, StudentService studentSvc, AttendanceBatchService batchSvc, BatchHolidayService holidays) : Controller
 {
     [RequirePermission("attendance_entry")]
     public IActionResult Index(DateTime? date, int? classId, int? sectionId, int? batchId, int? attBatchId,
@@ -33,7 +33,8 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
             attendanceBatches = attendanceBatches.Where(b => b.StudentIds.Any(mine.Contains)).ToList();
             classId = cr.ClassId; sectionId = cr.SectionId; batchId = cr.EffectiveBatchId;
         }
-        var summaries = batchSvc.BuildSummaries(attendanceBatches, dayRecords);
+        var dayHolidays = holidays.ForDate(d);
+        var summaries = batchSvc.BuildSummaries(attendanceBatches, dayRecords, dayHolidays);
 
         AttendanceBatch? selectedBatch = null;
         List<AttendanceRecord> records;
@@ -49,6 +50,7 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
         else
             records = new();
 
+        if (selectedBatch != null && dayHolidays.ContainsKey(selectedBatch.BatchId)) records = new();   // holiday: no entry table, the page shows the holiday banner
         var first = records.FirstOrDefault(r => r.Subject != null || r.SirName != null);
         var (teachers, _) = facultySvc.GetAll(null, "Active", null, 1, 1000);
 
@@ -56,6 +58,7 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
         var totalAbsent = records.Count(r => r.AttendanceStatus == "Absent");
 
         ViewBag.AttendanceBatches = summaries;
+        ViewBag.Holidays = dayHolidays;
         ViewBag.Session = session;
         ViewBag.Sessions = svc.GetSessionsForDate(d);   // lectures that already have attendance on this date
         ViewBag.SelectedAttBatch = selectedBatch;
@@ -82,8 +85,28 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
     public IActionResult Save([FromBody] AttSaveReq req)
     {
         int uid = HttpContext.Session.GetUserId() ?? 1;
-        var (ok, message) = AttendanceSaveHelper.Save(req, uid, svc, studentSvc, batchSvc, HttpContext.CurrentCr());
+        var (ok, message) = AttendanceSaveHelper.Save(req, uid, svc, studentSvc, batchSvc, HttpContext.CurrentCr(), holidays);
         return Json(new { success = ok, message });
+    }
+
+    public record HolidayReq(int AttBatchId, DateTime Date, string? Reason);
+
+    /// <summary>"No class today" for one attendance batch: parents of its students are notified.</summary>
+    [HttpPost]
+    [RequirePermission("attendance_entry")]
+    public IActionResult MarkHoliday([FromBody] HolidayReq req)
+    {
+        var name = HttpContext.Session.GetString("DisplayName") ?? HttpContext.Session.GetString("FullName") ?? "";
+        var (ok, error, n) = holidays.Mark(req.AttBatchId, req.Date, req.Reason, HttpContext.Session.GetUserId() ?? 0, name);
+        return Json(new { success = ok, message = ok ? (n > 0 ? $"Holiday marked. {n} parent login(s) were told there is no class." : "Holiday marked.") : error });
+    }
+
+    [HttpPost]
+    [RequirePermission("attendance_entry")]
+    public IActionResult CancelHoliday([FromBody] HolidayReq req)
+    {
+        var (ok, error, n) = holidays.Cancel(req.AttBatchId, req.Date);
+        return Json(new { success = ok, message = ok ? (n > 0 ? $"Holiday cancelled. {n} parent login(s) were told the class is on." : "Holiday cancelled.") : error });
     }
 
     [RequirePermission("attendance_report")]

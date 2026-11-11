@@ -12,7 +12,7 @@ namespace SchoolMS.Web.Controllers.Api;
 [Route("api/users")]
 [ApiRequireStaff]
 public class UsersApiController(UserMgmtService svc, ClassRepService crSvc, UserAccessCache access, ProfilePhotoStore photos,
-    FacultyService facultySvc, TeacherAccountLinker linker) : ControllerBase
+    FacultyService facultySvc, TeacherAccountLinker linker, RoleTemplateService roleTemplates) : ControllerBase
 {
     ClassRep? CrOf(int userId)
     {
@@ -136,6 +136,11 @@ public class UsersApiController(UserMgmtService svc, ClassRepService crSvc, User
 
         var id = svc.Save(model, uid);
         if (id == -1) return BadRequest(new { error = $"Username '{req.Username}' already exists." });
+        if (isAdmin && req.UserId <= 0)
+        {
+            // A new login starts with the rights saved for its role (Roles & Access), when the admin has set any.
+            try { roleTemplates.ApplyTo(id, model.RoleId); } catch { /* a convenience - never fail the save */ }
+        }
         if (isAdmin && req.Gender != null) svc.SetGender(id, req.Gender);   // "" clears it
         if (isAdmin && req.FacultyId >= 0)
         {

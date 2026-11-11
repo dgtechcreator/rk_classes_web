@@ -7,7 +7,7 @@ namespace SchoolMS.Web.Controllers.Api;
 [ApiController]
 [Route("api/dashboard")]
 [ApiRequireStaff]
-public class DashboardApiController(LookupService lookup, AttendanceService attSvc, FeesService feesSvc) : ControllerBase
+public class DashboardApiController(LookupService lookup, AttendanceService attSvc, FeesService feesSvc, SchoolMS.Repository.ActivityRepo activityRepo, BirthdayService birthdays) : ControllerBase
 {
     [HttpGet]
     public IActionResult Index()
@@ -23,6 +23,16 @@ public class DashboardApiController(LookupService lookup, AttendanceService attS
             currentYearName = currentYear?.YearName ?? "N/A",
             overallFeesSummary,
         });
+    }
+
+    /// <summary>Students and faculty whose birthday is today (admin dashboard). The message is the "Birthday" template from Masters.</summary>
+    [HttpGet("birthdays-today")]
+    public IActionResult BirthdaysToday()
+    {
+        if (User.RoleId() != 1) return StatusCode(403, new { error = "Admin only." });
+        return Ok(birthdays.TodayForStaff().Select(b => new {
+            kind = b.Kind, id = b.Id, name = b.Name, line = b.Line, age = b.Age,
+            fatherPhone = b.FatherPhone, motherPhone = b.MotherPhone, phone = b.Phone, message = b.Message }));
     }
 
     [HttpGet("present-today")]
@@ -58,7 +68,13 @@ public class DashboardApiController(LookupService lookup, AttendanceService attS
         // Named ValueTuple element names are compile-time-only and don't survive into JSON via
         // System.Text.Json reflection, so project explicitly (mirrors DashboardController.GetAbsentStudents).
         var absent = attSvc.GetAbsentStudentsToday();
+        // Which of them already have the "Absent" notification in the parent's login (sent when attendance was saved).
+        Dictionary<int, DateTime> notified;
+        try { notified = activityRepo.GetAttendanceNotified(SchoolMS.Domain.ActivityType.Absent, DateTime.Today); }
+        catch { notified = new(); }
         return Ok(absent.Select(a => new {
+            notified = notified.ContainsKey(a.StudentId),
+            notifiedAt = notified.TryGetValue(a.StudentId, out var at) ? at.ToString("h:mm tt") : "",
             studentId = a.StudentId,
             fullName = a.FullName,
             admissionNo = a.AdmissionNo,

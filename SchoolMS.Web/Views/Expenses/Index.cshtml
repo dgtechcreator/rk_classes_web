@@ -3,11 +3,37 @@
     ViewData["Title"] = "Expenses";
 }
 
+@{
+    var cul = System.Globalization.CultureInfo.InvariantCulture;
+    var today = DateTime.Today;
+    var cur = new DateTime(today.Year, today.Month, 1);
+    var monthStart = Model.Mode == "month" && Model.From.HasValue ? Model.From.Value : cur;
+    string Ym(DateTime d) => d.ToString("yyyy-MM", cul);
+    string Q(string? ym = null, bool all = false) =>
+        "/Expenses/Index?" + (all ? "all=true" : "ym=" + (ym ?? Ym(monthStart))) + "&search=" + Uri.EscapeDataString(Model.Search ?? "") + "&category=" + Model.CategoryFilter;
+    string label = Model.Mode == "all" ? "All time"
+        : Model.Mode == "month" ? monthStart.ToString("MMMM yyyy")
+        : (Model.From?.ToString("dd MMM yyyy") ?? "…") + " – " + (Model.To?.ToString("dd MMM yyyy") ?? "…");
+    string Pill(bool on) => $"display:inline-flex;align-items:center;gap:6px;background:{(on ? "#1e40af" : "#e5e7eb")};border-radius:20px;padding:8px 14px;font-size:12px;font-weight:700;color:{(on ? "#fff" : "#374151")};text-decoration:none;";
+    string Nav(bool off) => "display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#e5e7eb;color:#374151;text-decoration:none;font-weight:800;" + (off ? "opacity:.35;pointer-events:none;" : "");
+}
+
 <div class="pg-hdr">
     <div class="pg-row">
-        <div><h1>🧾 Expenses</h1><p>@Model.Total expense records</p></div>
+        <div><h1>🧾 Expenses</h1><p>Expenses and teacher salary paid — @label · @Model.Total records</p></div>
         <a href="/Expenses/Create" class="btn btn-primary"><i class="fas fa-plus"></i> Record Expense</a>
     </div>
+</div>
+
+@* Month navigation: this month by default, previous / next month, quick ranges *@
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+    <a href="@Q(Ym(monthStart.AddMonths(-1)))" title="Previous month" style="@Nav(false)">&#8249;</a>
+    <span style="font-weight:800;font-size:15px;min-width:150px;text-align:center;">@label</span>
+    <a href="@Q(Ym(monthStart.AddMonths(1)))" title="Next month" style="@Nav(Model.Mode == "month" && monthStart >= cur)">&#8250;</a>
+    <a href="@Q(Ym(cur))" style="@Pill(Model.Mode == "month" && monthStart == cur)">This month</a>
+    <a href="@Q(Ym(cur.AddMonths(-1)))" style="@Pill(Model.Mode == "month" && monthStart == cur.AddMonths(-1))">Last month</a>
+    <a href="/Expenses/Index?from=@(new DateTime(today.Year, 1, 1).ToString("yyyy-MM-dd"))&to=@today.ToString("yyyy-MM-dd")&search=@Uri.EscapeDataString(Model.Search ?? "")&category=@Model.CategoryFilter" style="@Pill(Model.Mode == "range" && Model.From == new DateTime(today.Year, 1, 1))">This year</a>
+    <a href="@Q(null, true)" style="@Pill(Model.Mode == "all")">All time</a>
 </div>
 
 <form method="get" action="/Expenses/Index">
@@ -21,56 +47,37 @@
                 <option value="@c.CategoryId" selected="@(Model.CategoryFilter == c.CategoryId)">@c.CategoryName</option>
             }
         </select>
-        <select name="month" class="fs">
-            <option value="">All Months</option>
-            @for (int m = 1; m <= 12; m++)
-            {
-                var mn = System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(m);
-                <option value="@m" selected="@(Model.MonthFilter == m)">@mn</option>
-            }
-        </select>
-        <select name="year" class="fs">
-            <option value="">All Years</option>
-            @foreach (var y in Model.Years)
-            {
-                var startYr = y.YearName?.Length >= 4 ? y.YearName[..4] : "";
-                <option value="@startYr" selected="@(Model.YearFilter != null && Model.YearFilter.ToString() == startYr)">@y.YearName @(y.IsCurrent ? "(Current)" : "")</option>
-            }
-        </select>
+        <span style="font-size:12px;color:var(--mu);">From</span>
+        <input type="date" name="from" value="@(Model.From?.ToString("yyyy-MM-dd"))" class="fc" style="max-width:150px;" />
+        <span style="font-size:12px;color:var(--mu);">To</span>
+        <input type="date" name="to" value="@(Model.To?.ToString("yyyy-MM-dd"))" class="fc" style="max-width:150px;" />
         <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> Filter</button>
-        <a href="/Expenses/Index" class="btn btn-outline btn-sm"><i class="fas fa-times"></i></a>
+        <a href="/Expenses/Index" class="btn btn-outline btn-sm" title="Back to this month"><i class="fas fa-times"></i></a>
     </div>
 </form>
 
-@if (Model.Expenses.Any())
-{
-    var totalAmt = Model.Expenses.Sum(e => e.Amount);
-    <div style="display:flex;gap:12px;margin-bottom:16px;">
-        <div class="card" style="flex:1;padding:14px 18px;">
-            <div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Showing Total</div>
-            <div style="font-size:22px;font-weight:800;color:var(--err);">₹@totalAmt.ToString("N0")</div>
-        </div>
-        <div class="card" style="flex:1;padding:14px 18px;">
-            <div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Records</div>
-            <div style="font-size:22px;font-weight:800;color:var(--p);">@Model.Expenses.Count</div>
-        </div>
-        @{
-            var byCat = Model.Expenses.GroupBy(e => e.CategoryName).OrderByDescending(g => g.Sum(e => e.Amount)).Take(3).ToList();
-        }
-        @if (byCat.Any())
-        {
-            <div class="card" style="flex:2;padding:14px 18px;">
-                <div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Top Categories</div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    @foreach (var g in byCat)
-                    {
-                        <span class="badge b-purple">@g.Key: ₹@g.Sum(e => e.Amount).ToString("N0")</span>
-                    }
-                </div>
-            </div>
-        }
+<div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+    <div class="card" style="flex:1;min-width:170px;padding:14px 18px;">
+        <div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Total (@label)</div>
+        <div style="font-size:22px;font-weight:800;color:var(--err);">₹@Model.TotalAmount.ToString("N0")</div>
     </div>
-}
+    <div class="card" style="flex:1;min-width:120px;padding:14px 18px;">
+        <div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;">Records</div>
+        <div style="font-size:22px;font-weight:800;color:var(--p);">@Model.Total</div>
+    </div>
+    @if (Model.ByCategory.Any())
+    {
+        <div class="card" style="flex:3;min-width:260px;padding:14px 18px;">
+            <div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">By category</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                @foreach (var g in Model.ByCategory)
+                {
+                    <span class="badge @(g.Category == "Teacher Salary" ? "b-blue" : "b-purple")">@g.Category: ₹@g.Amount.ToString("N0") <span style="opacity:.7;">(@g.Count)</span></span>
+                }
+            </div>
+        </div>
+    }
+</div>
 
 <div class="card">
     <div class="tbl-wrap">
@@ -100,7 +107,7 @@
                                     <div style="font-size:11px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">@e.Description</div>
                                 }
                             </td>
-                            <td style="vertical-align:middle;"><span class="badge b-purple">@(e.CategoryName ?? "—")</span></td>
+                            <td style="vertical-align:middle;"><span class="badge @(e.IsSalary ? "b-blue" : "b-purple")">@(e.CategoryName ?? "—")</span></td>
                             <td style="font-size:12.5px;vertical-align:middle;">@(e.VendorName ?? "—")</td>
                             <td style="vertical-align:middle;"><div style="font-weight:800;color:var(--err);">₹@e.Amount.ToString("N0")</div></td>
                             <td style="vertical-align:middle;"><span class="badge b-cash">@e.PaymentMode</span></td>
@@ -108,6 +115,17 @@
                             <td style="font-size:12px;color:var(--mu);white-space:nowrap;vertical-align:middle;">@e.ExpenseDate.ToString("dd MMM yyyy")</td>
                             <td style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;vertical-align:middle;" title="@(e.EnteredByName ?? "—")">@(e.EnteredByName ?? "—")</td>
                             <td style="vertical-align:middle;white-space:nowrap;">
+                                @if (e.IsSalary)
+                                {
+                                    @if (Context.Session.HasPerm("teacher_payment") || Context.Session.GetInt32("RoleId") == 1)
+                                    {
+                                        <div style="display:flex;gap:8px;align-items:center;">
+                                            <a href="/TeacherPayment/Edit/@e.ExpenseId?returnUrl=@Uri.EscapeDataString(Context.Request.Path + Context.Request.QueryString)" class="btn btn-outline btn-sm btn-icon" title="Edit salary payment"><i class="fas fa-edit"></i></a>
+                                            <button type="button" class="btn btn-danger btn-sm btn-icon" title="Delete salary payment" onclick="deleteSalary(@e.ExpenseId)"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    }
+                                }
+                                else {
                                 <div style="display:flex;gap:8px;align-items:center;">
                                     <a href="/Expenses/Edit/@e.ExpenseId" class="btn btn-outline btn-sm btn-icon">
                                         <i class="fas fa-edit"></i>
@@ -118,6 +136,7 @@
                                         </button>
                                     </form>
                                 </div>
+                                }
                             </td>
                         </tr>
                     }
@@ -130,9 +149,18 @@
         <div class="pagi">
             @for (int i = 1; i <= Model.TotalPages; i++)
             {
-                <a href="/Expenses/Index?page=@i&search=@Model.Search&category=@Model.CategoryFilter&month=@Model.MonthFilter&year=@Model.YearFilter"
+                <a href="/Expenses/Index?page=@i&search=@Uri.EscapeDataString(Model.Search ?? "")&category=@Model.CategoryFilter&from=@(Model.From?.ToString("yyyy-MM-dd"))&to=@(Model.To?.ToString("yyyy-MM-dd"))@(Model.Mode == "all" ? "&all=true" : "")"
                    class="pg-btn @(i == Model.Page ? "active" : "")">@i</a>
             }
         </div>
     }
 </div>
+<script>
+async function deleteSalary(id) {
+  if (!confirm('Delete this salary payment? It is removed from Teacher Payment too (restore from Deleted Records).')) return;
+  let d;
+  try { d = await (await fetch('/TeacherPayment/DeletePayment', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'paymentId=' + id })).json(); }
+  catch (e) { d = { success: false, message: 'Could not reach the server or your session expired.' }; }
+  if (d.success) location.reload(); else alert('Error: ' + d.message);
+}
+</script>

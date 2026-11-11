@@ -130,6 +130,40 @@
     var overallFees = (SchoolMS.Domain.OverallFeesSummary?)ViewBag.OverallFeesSummary ??
         new SchoolMS.Domain.OverallFeesSummary { TotalFeesOwed = 0, TotalCollected = 0, TotalDiscount = 0, Balance = 0 };
 }
+@{
+    var bdays = ViewBag.Birthdays as List<SchoolMS.Services.StaffBirthday> ?? new();
+    string BdIntl(string? raw)
+    {
+        var d = new string((raw ?? "").Where(char.IsDigit).ToArray());
+        if (d.Length < 10) return "";
+        if (d.StartsWith("0")) d = d.Substring(1);
+        return d.Length == 10 ? "91" + d : d;
+    }
+}
+@if (bdays.Any())
+{
+    <div class="card" style="margin-bottom:16px;border:1.5px solid #fbcfe8;background:linear-gradient(135deg,#fff7ed,#fdf2f8);">
+        <div class="card-hdr"><span class="card-ttl">🎂 Birthdays Today <span style="font-weight:600;color:#db2777;">(@bdays.Count)</span></span></div>
+        <div style="padding:6px 16px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;">
+            @foreach (var b in bdays)
+            {
+                var nums = new[] { ("Father", b.FatherPhone), ("Mother", b.MotherPhone), (b.Kind == "Faculty" ? "Phone" : "Student", b.Phone) }
+                    .Select(x => (x.Item1, Num: BdIntl(x.Item2))).Where(x => x.Num != "").GroupBy(x => x.Num).Select(g => g.First()).ToList();
+                <div style="background:#fff;border:1px solid #fce7f3;border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:800;font-size:14px;">@b.Name <span style="font-size:11px;font-weight:700;color:#db2777;">turns @b.Age</span></div>
+                        <div style="font-size:11.5px;color:#777;">@(b.Kind == "Faculty" ? "👩‍🏫 " : "")@b.Line</div>
+                    </div>
+                    @foreach (var n in nums)
+                    {
+                        <a href="https://wa.me/@n.Num?text=@Uri.EscapeDataString(b.Message)" target="_blank" title="WhatsApp wish to @n.Item1"
+                           style="background:#25d366;color:#fff;border-radius:8px;padding:6px 9px;font-size:11.5px;font-weight:700;text-decoration:none;white-space:nowrap;"><i class="fab fa-whatsapp"></i> @n.Item1[0]</a>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
 <div class="kpi-grid">
     <div class="kpi purple" onclick="location.href='/Student/Index'" style="cursor:pointer;">
         <div class="kpi-ico purple"><i class="fas fa-users"></i></div>
@@ -479,9 +513,19 @@
               document.getElementById('presentBody').innerHTML = '<div style="padding:40px;text-align:center;color:#999;">No attendance marked as present yet today.</div>';
               return;
             }
-            let h = '<table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f3f4f6;"><th style="padding:10px;text-align:left;font-size:13px;">Student</th><th style="padding:10px;text-align:left;font-size:13px;">Class</th><th style="padding:10px;text-align:left;font-size:13px;">Medium</th></tr></thead><tbody>';
+            const classNo = c => { const m = /\d+/.exec(c || ''); return m ? parseInt(m[0], 10) : 99; };
+            const batchNo = b => { const l = (b || '').toLowerCase(); return l.includes('morning') ? 0 : l.includes('evening') ? 1 : 2; };
+            const med = s => (s.medium || s.sectionName || '').trim();
+            data.sort((x, y) => classNo(x.className) - classNo(y.className) || (x.className || '').localeCompare(y.className || '') ||
+              batchNo(x.batchName) - batchNo(y.batchName) || (x.batchName || '').localeCompare(y.batchName || '') ||
+              med(x).localeCompare(med(y)) || (x.fullName || '').localeCompare(y.fullName || ''));
+            const grp = s => [(s.className || '').trim(), (s.batchName || '').trim(), med(s)].filter(Boolean).join(' · ') || 'No class';
+            let h = '<table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f3f4f6;"><th style="padding:10px;text-align:left;font-size:13px;">Student</th></tr></thead><tbody>';
+            let last = null;
             data.forEach(s => {
-              h += `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:10px;"><div style="font-weight:600;font-size:13px;">${rkEsc(s.fullName)}</div><div style="font-size:11px;color:#666;">${rkEsc(s.admissionNo)}</div></td><td style="padding:10px;font-size:13px;">${rkEsc(s.className)}${s.batchName ? ' - ' + rkEsc(s.batchName) : ''}</td><td style="padding:10px;font-size:13px;">${rkEsc(s.medium) || '—'}</td></tr>`;
+              const g = grp(s);
+              if (g !== last) { last = g; h += `<tr><td style="padding:9px 12px;background:#eef2ff;color:#3730a3;font-weight:800;font-size:13px;border-bottom:1px solid #c7d2fe;">${rkEsc(g)} <span style="font-weight:600;color:#6366f1;">· ${data.filter(x => grp(x) === g).length}</span></td></tr>`; }
+              h += `<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:10px;"><div style="font-weight:600;font-size:13px;">${rkEsc(s.fullName)}</div><div style="font-size:11px;color:#666;">${rkEsc(s.admissionNo)}</div></td></tr>`;
             });
             document.getElementById('presentBody').innerHTML = h + '</tbody></table>';
           }).catch(() => {
@@ -634,13 +678,30 @@
               // Clear old WhatsApp modals
               document.querySelectorAll('[id^="whatsappmsg_"]').forEach(m => m.remove());
 
-              let html = `<div style="overflow-x:auto;">
+              // Order: class (5th..12th), Morning before Evening, then medium, then name - one block per class+batch+medium.
+              const classNo = c => { const m = /\d+/.exec(c || ''); return m ? parseInt(m[0], 10) : 99; };
+              const batchNo = b => { const l = (b || '').toLowerCase(); return l.includes('morning') ? 0 : l.includes('evening') ? 1 : 2; };
+              const med = s => (s.medium || s.sectionName || '').trim();
+              data.sort((x, y) =>
+                classNo(x.className) - classNo(y.className) ||
+                (x.className || '').localeCompare(y.className || '') ||
+                batchNo(x.batchName) - batchNo(y.batchName) ||
+                (x.batchName || '').localeCompare(y.batchName || '') ||
+                med(x).localeCompare(med(y)) ||
+                (x.fullName || '').localeCompare(y.fullName || ''));
+              const sentCount = data.filter(s => s.notified).length;
+
+              let html = `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:12px;">
+                <span style="background:#fee2e2;color:#b91c1c;border-radius:20px;padding:4px 12px;font-weight:700;">${data.length} absent</span>
+                <span style="background:#dcfce7;color:#15803d;border-radius:20px;padding:4px 12px;font-weight:700;"><i class="fas fa-check-circle"></i> ${sentCount} parents notified</span>
+                <span style="background:#f3f4f6;color:#555;border-radius:20px;padding:4px 12px;font-weight:700;">${data.length - sentCount} not notified</span>
+                <span style="color:#888;">Green row = the Absent notification is already in the parent / student login.</span>
+              </div>
+              <div style="overflow-x:auto;">
                 <table style="width:100%;border-collapse:collapse;">
                   <thead>
                     <tr style="background:#f3f4f6;">
                       <th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Student</th>
-                      <th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Class</th>
-                      <th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Medium</th>
                       <th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Student Phone</th>
                       <th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Father Phone</th>
                       <th style="padding:12px;text-align:left;font-weight:700;font-size:13px;border-bottom:2px solid #e5e7eb;">Mother Phone</th>
@@ -649,16 +710,25 @@
                   </thead>
                   <tbody>`;
 
+              let lastGroup = null;
               data.forEach(s => {
+                const group = [(s.className || '').trim(), (s.batchName || '').trim(), med(s)].filter(Boolean).join(' · ') || 'No class';
+                if (group !== lastGroup) {
+                  lastGroup = group;
+                  const n = data.filter(x => [(x.className || '').trim(), (x.batchName || '').trim(), med(x)].filter(Boolean).join(' · ') === group).length;
+                  html += `<tr><td colspan="5" style="padding:9px 12px;background:#eef2ff;color:#3730a3;font-weight:800;font-size:13px;border-bottom:1px solid #c7d2fe;">${rkEsc(group)} <span style="font-weight:600;color:#6366f1;">· ${n} absent</span></td></tr>`;
+                }
                 const callMenuId = 'callmenu_' + Math.random().toString(36).substr(2, 9);
                 const whatsappModalId = 'whatsappmsg_' + Math.random().toString(36).substr(2, 9);
                 const absenceMessage = rkMessage('Absent', rkVars(s));
                 rkWaMessages[whatsappModalId] = absenceMessage;
+                const sent = !!s.notified;
+                const badge = sent
+                  ? `<div style="margin-top:4px;display:inline-block;background:#16a34a;color:#fff;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;"><i class="fas fa-check-circle"></i> Notified${s.notifiedAt ? ' · ' + rkEsc(s.notifiedAt) : ''}</div>`
+                  : `<div style="margin-top:4px;display:inline-block;background:#f3f4f6;color:#777;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600;">Not notified</div>`;
 
-                html += `<tr style="border-bottom:1px solid #e5e7eb;">
-                  <td style="padding:12px;"><div style="font-weight:600;font-size:13px;">${s.fullName}</div><div style="font-size:11px;color:#666;margin-top:2px;">${s.admissionNo}</div></td>
-                  <td style="padding:12px;font-size:13px;">${s.className} - ${s.batchName}</td>
-                  <td style="padding:12px;font-size:13px;">${s.medium || '—'}</td>
+                html += `<tr style="border-bottom:1px solid #e5e7eb;${sent ? 'background:#f0fdf4;box-shadow:inset 4px 0 0 #16a34a;' : ''}">
+                  <td style="padding:12px;"><div style="font-weight:600;font-size:13px;">${rkEsc(s.fullName)}</div><div style="font-size:11px;color:#666;margin-top:2px;">${rkEsc(s.admissionNo)}</div>${badge}</td>
                   <td style="padding:12px;font-size:13px;">${s.phone || '—'}</td>
                   <td style="padding:12px;font-size:13px;">${s.fatherPhone || '—'}</td>
                   <td style="padding:12px;font-size:13px;">${s.motherPhone || '—'}</td>

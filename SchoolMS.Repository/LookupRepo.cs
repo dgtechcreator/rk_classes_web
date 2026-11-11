@@ -64,6 +64,16 @@ public class LookupRepo(CommonConnectivity db)
         stats.FeesThisMonth = cur.Fees;
         stats.TotalStudents = cur.Studs;
 
+        // Paid teacher salary is an expense too: it counts in "Expenses This Month" (same rule as the Expenses list).
+        try
+        {
+            var first = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            stats.ExpensesThisMonth += db.SqlP(@"SELECT ISNULL(SUM(TotalAmount), 0) AS T FROM TeacherPayments
+                WHERE IsPaid = 1 AND ISNULL(IsDeleted, 0) = 0 AND CAST(COALESCE(PaymentDate, CreatedAt) AS DATE) BETWEEN @F AND @T",
+                new() { { "@F", first }, { "@T", first.AddMonths(1).AddDays(-1) } }, r => G.G<decimal>(r, "T")).FirstOrDefault();
+        }
+        catch { /* no teacher payments table: nothing to add */ }
+
         // Populate dynamic class strengths
         var colors = new[] { "#6d28d9", "#db2777", "#2563eb", "#059669", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899" };
         var classStrengths = db.Sql($@"

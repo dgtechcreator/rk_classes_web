@@ -81,6 +81,25 @@ public class FeesService(FeesRepo repo, ActivityNotifier? notify = null)
     public (int TotalStudents, decimal TotalFees, decimal TotalCollected, decimal TotalDiscount, decimal TotalBalance, decimal CollectionPercentage) GetFinanceDashboardSummary(int? yearId = null)
         => repo.GetFinanceDashboardSummary(yearId);
 
+    /// <summary>
+    /// The Finance class-wise rows split by class + batch + medium, built from the same student-wise list the rows open
+    /// (so a row always equals what its "Students" link shows). Ordered 5th..12th, Morning before Evening, then medium.
+    /// TotalFees here is the fee BEFORE discount; the caller subtracts EstimatedDiscount for "what will be received".
+    /// </summary>
+    public List<FinanceAcademicBreakdown> GetFinanceGroups()
+    {
+        var rows = repo.GetFinanceStudents(null, null, null, true);
+        static int ClassNo(string c) { var d = new string((c ?? "").Where(char.IsDigit).ToArray()); return int.TryParse(d, out var n) ? n : 99; }
+        static int BatchNo(string b) { var l = (b ?? "").ToLowerInvariant(); return l.Contains("morning") ? 0 : l.Contains("evening") ? 1 : 2; }
+        return rows.GroupBy(r => (C: r.ClassName.Trim(), B: r.BatchName.Trim(), S: r.SectionName.Trim()))
+            .Select(g => new FinanceAcademicBreakdown {
+                ClassName = g.Key.C, BatchName = g.Key.B, SectionName = g.Key.S, StudentCount = g.Count(),
+                TotalFees = g.Sum(r => r.TotalFees), EstimatedCollected = g.Sum(r => r.Collected), EstimatedDiscount = g.Sum(r => r.Discount),
+            })
+            .OrderBy(x => ClassNo(x.ClassName)).ThenBy(x => x.ClassName).ThenBy(x => BatchNo(x.BatchName)).ThenBy(x => x.BatchName).ThenBy(x => x.SectionName)
+            .ToList();
+    }
+
     public List<FinanceAcademicBreakdown> GetFinanceDashboardAcademic(int? yearId = null)
         => repo.GetFinanceDashboardAcademic(yearId);
 

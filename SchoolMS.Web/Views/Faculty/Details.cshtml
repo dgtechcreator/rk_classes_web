@@ -75,7 +75,7 @@
         ("Qualification",   Model.Qualification??"—"),
         ("Specialization",  Model.Specialization??"—"),
         ("Date of Joining", Model.DateOfJoining?.ToString("dd MMM yyyy")??"—"),
-        ("Monthly Salary",  Model.Salary.HasValue ? $"₹{Model.Salary.Value:N0}" : "—"),
+        ("Salary",          Model.Salary.HasValue ? Model.SalaryLabel + " (" + Model.SalaryTypeOrFixed + ")" : "—"),
         ("Remarks",         Model.Remarks??"—")
       })
       {<div class="info-row"><span class="info-lbl">@lbl</span><span class="info-val">@val</span></div>}

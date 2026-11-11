@@ -182,7 +182,7 @@
         <div class="fg">
           <label>Payment Mode *</label>
           <select name="paymentMode" class="fs" required>
-            @foreach(var m in new[]{"Cash","Online Transfer","Cheque","Demand Draft"})
+            @foreach(var m in Context.RequestServices.GetRequiredService<SchoolMS.Services.PaymentModeService>().ActiveNames(null))
             {<option value="@m">@m</option>}
           </select>
         </div>

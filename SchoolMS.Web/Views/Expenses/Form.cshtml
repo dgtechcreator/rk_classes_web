@@ -56,9 +56,14 @@
       <div class="fg">
         <label>Payment Mode</label>
         <select name="Expense.PaymentMode" class="fs">
-          @foreach(var m in new[]{"Cash","Online Transfer","Cheque","Demand Draft"})
+          @foreach(var m in Context.RequestServices.GetRequiredService<SchoolMS.Services.PaymentModeService>().ActiveNames(Model.Expense.PaymentMode))
           {<option value="@m" selected="@(Model.Expense.PaymentMode==m)">@m</option>}
         </select>
+      </div>
+
+      <div class="fg">
+        <label>Vendor / Paid to</label>
+        <input type="text" name="Expense.VendorName" value="@Model.Expense.VendorName" class="fc" placeholder="Shop, person or company"/>
       </div>
 
       <div class="fg">

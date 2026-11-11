@@ -211,6 +211,7 @@
   });
 })();
 </script>
+<partial name="_Loader" />
 </head>
 <body>
 
@@ -285,6 +286,10 @@
     @if(Context.Session.HasPerm("student_profile")){
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Student" && ViewContext.RouteData.Values["action"]?.ToString()=="Profile360"?"active":"")" href="/Student/Profile360">
       <span class="nav-ic"><i class="fas fa-id-card"></i></span> Student 360 View
+    </a>}
+    @if(Context.Session.HasPerm("discontinued_students")){
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Discontinued"?"active":"")" href="/Discontinued/Index">
+      <span class="nav-ic"><i class="fas fa-user-slash"></i></span> Discontinued Students
     </a>}
   </div>
 

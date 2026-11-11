@@ -1,0 +1,88 @@
+@* Loader for the whole website (staff layout, parent portal, login pages):
+   - a thin animated bar at the top while a page is opening or any fetch() call is running,
+   - a "please wait" overlay + spinner on the button while a form is being submitted (no double click),
+   Skipped for downloads / exports / prints / phone + WhatsApp links, and for the silent background polls. *@
+<style>
+  #rkTopBar { position:fixed; top:0; left:0; right:0; height:3px; z-index:100000; pointer-events:none; opacity:0; transition:opacity .2s; overflow:hidden; }
+  #rkTopBar.on { opacity:1; }
+  #rkTopBar i { display:block; height:100%; width:40%; background:linear-gradient(90deg,#2563eb,#7c3aed,#ec4899); border-radius:3px; animation:rkbar 1.1s ease-in-out infinite; }
+  @@keyframes rkbar { 0% { margin-left:-40%; } 100% { margin-left:100%; } }
+  #rkOverlay { position:fixed; inset:0; background:rgba(255,255,255,.55); z-index:99999; display:none; align-items:center; justify-content:center; }
+  #rkOverlay.on { display:flex; }
+  #rkOverlay div { background:#fff; border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.18); padding:16px 24px; display:flex; align-items:center; gap:12px; font-weight:700; font-size:14px; color:#1f2937; font-family:inherit; }
+  .rk-spin { display:inline-block; width:14px; height:14px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:rkspin .7s linear infinite; vertical-align:-2px; }
+  #rkOverlay .rk-spin { width:22px; height:22px; border-width:3px; color:#2563eb; }
+  @@keyframes rkspin { to { transform:rotate(360deg); } }
+</style>
+<script>
+(function () {
+  if (window.__rkLoader) return;
+  window.__rkLoader = true;
+  var bar = null, overlay = null, pending = 0, safety = null, busyButtons = [];
+  var SKIP_URL = /Export|Download|Print|Pdf|\.pdf|\.csv|\.xlsx|NoteFile|\/Receipt|Logout/i;
+
+  function ensure() {
+    if (!document.body) return false;
+    if (!bar) { bar = document.createElement('div'); bar.id = 'rkTopBar'; bar.innerHTML = '<i></i>'; document.body.appendChild(bar); }
+    if (!overlay) { overlay = document.createElement('div'); overlay.id = 'rkOverlay'; overlay.innerHTML = '<div><span class="rk-spin"></span> Please wait…</div>'; document.body.appendChild(overlay); }
+    return true;
+  }
+  function showBar() { if (ensure()) bar.classList.add('on'); }
+  function hideBar() { if (bar && !pending) bar.classList.remove('on'); }
+  function showOverlay() { if (ensure()) overlay.classList.add('on'); }
+  function reset() {
+    if (overlay) overlay.classList.remove('on');
+    pending = 0; if (bar) bar.classList.remove('on');
+    busyButtons.forEach(function (b) { b.disabled = false; if (b.dataset.rkTxt !== undefined) b.innerHTML = b.dataset.rkTxt; });
+    busyButtons = [];
+  }
+  function startNav(withOverlay) {
+    showBar(); if (withOverlay) showOverlay();
+    clearTimeout(safety);
+    safety = setTimeout(reset, 20000);   // a download keeps the page open: never leave the loader stuck
+  }
+
+  // every fetch() shows the bar until it is done (silent: notification polling / hubs)
+  var realFetch = window.fetch;
+  if (realFetch) window.fetch = function (input, init) {
+    var url = typeof input === 'string' ? input : ((input && input.url) || '');
+    var silent = /NotificationCount|unread|\/hubs\//i.test(url);
+    if (!silent) { pending++; showBar(); }
+    var p = realFetch.apply(this, arguments);
+    var done = function () { if (!silent) { pending = Math.max(0, pending - 1); hideBar(); } };
+    p.then(done, done);
+    return p;
+  };
+
+  // opening another page
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    var a = e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    var h = a.getAttribute('href') || '';
+    if (!h || h.charAt(0) === '#' || /^(javascript|tel|mailto|sms|whatsapp|blob|data):/i.test(h) || /wa\.me|whatsapp/i.test(h)) return;
+    if ((a.target && a.target !== '_self') || a.hasAttribute('download') || SKIP_URL.test(h)) return;
+    startNav(false);
+  }, false);
+
+  // saving a form
+  document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (e.defaultPrevented || !f || (f.target && f.target !== '_self')) return;
+    var act = f.getAttribute('action') || '';
+    if (SKIP_URL.test(act)) return;
+    startNav(f.method && f.method.toLowerCase() === 'post');
+    // after the browser has collected the form data (a disabled button would not be sent)
+    setTimeout(function () {
+      f.querySelectorAll('button[type=submit], button:not([type]), input[type=submit]').forEach(function (b) {
+        if (b.disabled) return;
+        b.dataset.rkTxt = b.innerHTML; b.disabled = true; busyButtons.push(b);
+        if (b.tagName === 'BUTTON') b.innerHTML = '<span class="rk-spin"></span> ' + (b.textContent || '').trim();
+      });
+    }, 0);
+  }, false);
+
+  // coming back with the browser's Back button must not show a frozen loader
+  window.addEventListener('pageshow', reset);
+})();
+</script>

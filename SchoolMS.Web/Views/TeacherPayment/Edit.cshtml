@@ -1,0 +1,116 @@
+@model SchoolMS.Domain.TeacherPayment
+@{
+  ViewData["Title"] = "Edit Teacher Payment";
+  var returnUrl = ViewBag.ReturnUrl as string ?? "/TeacherPayment/Summary";
+  var modes = Context.RequestServices.GetRequiredService<SchoolMS.Services.PaymentModeService>().ActiveNames(Model.PaymentMode);
+  var monthNames = System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.MonthNames;
+}
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <div class="breadcrumb"><a href="@returnUrl">Teacher Payment</a> / <span>Edit</span></div>
+      <h1>✏️ Edit Payment — @Model.FacultyName</h1>
+      <p>@(Model.IsPaid ? "Paid" + (Model.ReceiptNo != null ? " · receipt " + Model.ReceiptNo : "") : "Pending")</p>
+    </div>
+  </div>
+</div>
+
+<div id="msg" style="margin-bottom:12px;font-size:13px;"></div>
+
+<div class="card" style="max-width:720px;">
+  <div class="form-grid">
+    <div class="fg">
+      <label>Payment Type *</label>
+      <select id="ptype" class="fs" onchange="recalc()">
+        <option value="Hourly" selected="@(Model.PaymentType == "Hourly")">Hourly</option>
+        <option value="Topic" selected="@(Model.PaymentType == "Topic")">Topic</option>
+        <option value="Fixed" selected="@(Model.PaymentType == "Fixed")">Fixed Salary</option>
+      </select>
+    </div>
+    <div class="fg" id="qtyBox">
+      <label id="qtyLabel">Hours / Topics</label>
+      <input type="number" id="qty" class="fc" step="0.5" min="0" value="@(Model.Quantity?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" oninput="recalc()"/>
+    </div>
+    <div class="fg">
+      <label id="rateLabel">Amount *</label>
+      <input type="number" id="rate" class="fc" step="0.01" min="0" value="@Model.Rate.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)" oninput="recalc()"/>
+    </div>
+    <div class="fg">
+      <label>Total</label>
+      <input type="text" id="total" class="fc" readonly style="font-weight:800;"/>
+    </div>
+    <div class="fg">
+      <label>For month *</label>
+      <select id="pmonth" class="fs">
+        @for (int m = 1; m <= 12; m++) { <option value="@m" selected="@(Model.PaymentMonth == m)">@monthNames[m - 1]</option> }
+      </select>
+    </div>
+    <div class="fg">
+      <label>Year *</label>
+      <input type="number" id="pyear" class="fc" min="2000" max="2100" value="@Model.PaymentYear"/>
+    </div>
+    @if (Model.IsPaid)
+    {
+      <div class="fg">
+        <label>Payment Mode</label>
+        <select id="pmode" class="fs">
+          @foreach (var m in modes) { <option value="@m" selected="@(string.Equals(Model.PaymentMode, m, StringComparison.OrdinalIgnoreCase))">@m</option> }
+        </select>
+      </div>
+      <div class="fg">
+        <label>Transaction Reference</label>
+        <input type="text" id="pref" class="fc" maxlength="100" value="@Model.TransactionRef"/>
+      </div>
+      <div class="fg">
+        <label>Paid on</label>
+        <input type="date" id="pdate" class="fc" value="@(Model.PaymentDate?.ToString("yyyy-MM-dd"))"/>
+      </div>
+    }
+    <div class="fg" style="grid-column:1/-1;">
+      <label>Remarks</label>
+      <textarea id="remarks" class="fc" rows="2" maxlength="500">@Model.Remarks</textarea>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--bdr);">
+    <a href="@returnUrl" class="btn btn-outline"><i class="fas fa-times"></i> Cancel</a>
+    <button type="button" class="btn btn-primary" onclick="save(this)"><i class="fas fa-save"></i> Save Changes</button>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+const returnUrl = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(returnUrl));
+function recalc() {
+  const t = document.getElementById('ptype').value;
+  const rate = parseFloat(document.getElementById('rate').value) || 0;
+  const qty = parseFloat(document.getElementById('qty').value) || 0;
+  document.getElementById('qtyBox').style.display = t === 'Fixed' ? 'none' : '';
+  document.getElementById('qtyLabel').textContent = t === 'Hourly' ? 'Hours' : 'Topics';
+  document.getElementById('rateLabel').textContent = t === 'Hourly' ? 'Amount per hour *' : t === 'Topic' ? 'Amount per topic *' : 'Amount *';
+  document.getElementById('total').value = '₹' + (t === 'Fixed' ? rate : rate * qty).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+}
+async function save(btn) {
+  const t = document.getElementById('ptype').value;
+  const body = {
+    paymentId: @Model.TeacherPaymentId, paymentType: t,
+    rate: parseFloat(document.getElementById('rate').value) || 0,
+    quantity: t === 'Fixed' ? null : (parseFloat(document.getElementById('qty').value) || 0),
+    paymentMonth: +document.getElementById('pmonth').value, paymentYear: +document.getElementById('pyear').value,
+    remarks: document.getElementById('remarks').value.trim() || null,
+    paymentMode: document.getElementById('pmode') ? document.getElementById('pmode').value : null,
+    transactionRef: document.getElementById('pref') ? document.getElementById('pref').value.trim() : null,
+    paymentDate: document.getElementById('pdate') && document.getElementById('pdate').value ? document.getElementById('pdate').value : null,
+  };
+  btn.disabled = true;
+  let d;
+  try { d = await (await fetch('/TeacherPayment/UpdatePayment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json(); }
+  catch (e) { d = { success: false, message: 'Could not reach the server or your session expired.' }; }
+  if (d.success) { location.href = returnUrl; return; }
+  const m = document.getElementById('msg');
+  m.innerHTML = '<div class="alert alert-danger"></div>'; m.firstChild.textContent = d.message;
+  btn.disabled = false;
+}
+recalc();
+</script>
+}

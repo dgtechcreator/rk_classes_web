@@ -23,7 +23,10 @@
       <h1>📊 Teacher Payment Summary</h1>
       <p>@(selMonth > 0 ? Month(selMonth) + " " : "")@selYear · filter by month, teacher and status</p>
     </div>
-    <a href="/TeacherPayment/Index" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Teachers Payment</a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="/TeacherPayment/ExportSummary?year=@selYear&month=@selMonth&facultyId=@selFaculty&status=@selStatus" class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;"><i class="fas fa-file-excel"></i> Export to Excel</a>
+      <a href="/TeacherPayment/Index" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Teachers Payment</a>
+    </div>
   </div>
 </div>
 
@@ -81,7 +84,7 @@
   <div class="card-hdr" style="padding:16px 18px;"><span class="card-ttl">Payments (@payments.Count)</span></div>
   <div class="tbl-wrap">
     <table>
-      <thead><tr><th>Teacher</th><th>For month</th><th>Type</th><th style="text-align:right;">Amount</th><th>Status</th><th>Paid on</th><th>Mode</th><th>Receipt</th></tr></thead>
+      <thead><tr><th>Teacher</th><th>For month</th><th>Type</th><th style="text-align:right;">Amount</th><th>Status</th><th>Paid on</th><th>Mode</th><th>Receipt</th><th></th></tr></thead>
       <tbody>
       @foreach (var p in payments)
       {
@@ -93,11 +96,24 @@
           <td>@(p.IsPaid && p.PaymentDate.HasValue ? p.PaymentDate.Value.ToString("dd-MM-yyyy") : "—")</td>
           <td>@(p.PaymentMode ?? "—")</td>
           <td>@(p.ReceiptNo ?? "—")</td>
+          <td style="white-space:nowrap;">
+            <a href="/TeacherPayment/Edit/@p.TeacherPaymentId?returnUrl=@Uri.EscapeDataString(Context.Request.Path + Context.Request.QueryString)" class="btn btn-outline btn-sm btn-icon" title="Edit"><i class="fas fa-edit"></i></a>
+            <button type="button" class="btn btn-danger btn-sm btn-icon" title="Delete" onclick="tpDelete(@p.TeacherPaymentId, @(p.IsPaid ? "true" : "false"))"><i class="fas fa-trash"></i></button>
+          </td>
         </tr>
       }
       @if (!payments.Any())
-      {<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--mu);">No payments for this selection.</td></tr>}
+      {<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--mu);">No payments for this selection.</td></tr>}
       </tbody>
     </table>
   </div>
 </div>
+<script>
+async function tpDelete(id, paid) {
+  if (!confirm(paid ? 'Delete this PAID payment? It is also removed from the Expenses list. You can restore it from Deleted Records.' : 'Delete this payment entry?')) return;
+  let d;
+  try { d = await (await fetch('/TeacherPayment/DeletePayment', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'paymentId=' + id })).json(); }
+  catch (e) { d = { success: false, message: 'Could not reach the server or your session expired.' }; }
+  if (d.success) location.reload(); else alert('Error: ' + d.message);
+}
+</script>

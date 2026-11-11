@@ -1,0 +1,97 @@
+@model List<SchoolMS.Domain.DiscontinuedStudent>
+@using SchoolMS.Domain
+@{
+  ViewData["Title"] = "Discontinued Students";
+  var q = ViewBag.Q as string; var kind = ViewBag.Kind as string;
+  var counted = Model.Where(x => !x.Returned).ToList();   // taken back = not discontinued any more
+  decimal paid = counted.Sum(x => x.Paid), pending = counted.Sum(x => x.Pending);
+}
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div><h1>🚪 Discontinued Students</h1><p>Students who left the classes or were removed — with the reason, and what was paid / pending</p></div>
+    <div class="df g8">
+      @if (Context.Session.HasEditPerm("discontinued_students"))
+      {
+        <a href="/Discontinued/New" class="btn btn-primary"><i class="fas fa-user-slash"></i> Discontinue a Student</a>
+      }
+    </div>
+  </div>
+</div>
+
+<div class="kpi-grid" style="margin-bottom:14px;">
+  <div class="kpi red"><div class="kpi-ico red">🚪</div><div class="kpi-val">@counted.Count</div><div class="kpi-lbl">Discontinued</div></div>
+  <div class="kpi green"><div class="kpi-ico green">✅</div><div class="kpi-val">₹@paid.ToString("N0")</div><div class="kpi-lbl">Paid by them</div></div>
+  <div class="kpi amber"><div class="kpi-ico amber">⚠️</div><div class="kpi-val">₹@pending.ToString("N0")</div><div class="kpi-lbl">Pending (not received)</div></div>
+</div>
+
+<form method="get" class="card" style="padding:12px 16px;margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+  <input type="text" name="q" value="@q" placeholder="Search name, admission no, reason…" class="fs" style="flex:1;min-width:220px;"/>
+  <select name="kind" class="fs">
+    <option value="">All</option>
+    <option value="@DiscontinueKind.Left" selected="@(kind == DiscontinueKind.Left)">Left by student / parents</option>
+    <option value="@DiscontinueKind.Removed" selected="@(kind == DiscontinueKind.Removed)">Removed by institute</option>
+  </select>
+  <button class="btn btn-primary btn-sm" type="submit"><i class="fas fa-search"></i> Search</button>
+  <a href="/Discontinued/Index" class="btn btn-outline btn-sm"><i class="fas fa-times"></i></a>
+</form>
+
+<div class="card">
+  <div class="tbl-wrap">
+  @if (!Model.Any())
+  {
+    <div class="empty"><div class="empty-ico">🚪</div><h3>No discontinued students</h3><p>When a student leaves or is removed, record it here.</p></div>
+  }
+  else
+  {
+    <table>
+      <thead><tr>
+        <th>Student</th><th>Class</th><th>Type</th><th>Reason</th><th>Date</th>
+        <th style="text-align:right;">Total fee</th><th style="text-align:right;">Paid</th><th style="text-align:right;">Pending</th><th>Recorded by</th><th></th>
+      </tr></thead>
+      <tbody>
+      @foreach (var d in Model)
+      {
+        <tr>
+          <td class="fw7">@d.StudentName<div style="font-size:11px;color:var(--mu);font-weight:400;">@d.AdmissionNo</div>
+            @if (d.Returned) {<span class="badge b-active" style="font-size:10px;">Taken back@(d.RevertedAt != null ? " " + d.RevertedAt.Value.ToString("dd MMM yyyy") : "")</span>
+              @if (d.RevertedAt != null) {<div style="font-size:10.5px;color:var(--mu);font-weight:400;">by @d.RevertedByName@(string.IsNullOrWhiteSpace(d.RevertNote) ? "" : " — " + d.RevertNote)</div>}}</td>
+          <td style="font-size:12px;">@d.ClassName @d.SectionName<div style="color:var(--mu);">@d.BatchName</div></td>
+          <td><span class="badge @(d.Kind == DiscontinueKind.Removed ? "b-inactive" : "b-active")" style="@(d.Kind == DiscontinueKind.Left ? "background:#fef3c7;color:#92400e;" : "")">@(d.Kind == DiscontinueKind.Removed ? "Removed" : "Left")</span></td>
+          <td style="max-width:280px;white-space:normal;font-size:12.5px;">@d.Reason</td>
+          <td style="white-space:nowrap;">@d.LeftOn.ToString("dd MMM yyyy")</td>
+          <td style="text-align:right;">₹@d.TotalFees.ToString("N0")</td>
+          <td style="text-align:right;color:#059669;font-weight:700;">₹@d.Paid.ToString("N0")</td>
+          <td style="text-align:right;font-weight:800;color:@(d.Pending > 0.5m ? "#dc2626" : "#059669");">₹@d.Pending.ToString("N0")</td>
+          <td style="font-size:12px;">@d.RecordedByName<div style="color:var(--mu);">@d.RecordedAt.ToString("dd MMM yyyy, h:mm tt")</div></td>
+          <td style="white-space:nowrap;">
+            <a href="/Student/Details/@d.StudentId" class="btn btn-outline btn-sm" title="Student profile"><i class="fas fa-id-card"></i></a>
+            @if (d.CanRevert && Context.Session.HasEditPerm("discontinued_students"))
+            {
+              <button type="button" class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;" title="Take the student back" data-id="@d.Id" data-name="@d.StudentName" onclick="revertEntry(this)"><i class="fas fa-undo"></i> Revert</button>
+            }
+            @if (!string.IsNullOrWhiteSpace(d.FatherPhone))
+            {
+              <a href="tel:@d.FatherPhone" class="btn btn-outline btn-sm" style="color:#2563eb;" title="Call father"><i class="fas fa-phone"></i></a>
+            }
+          </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+  }
+  </div>
+</div>
+
+<script>
+async function revertEntry(btn) {
+  const id = btn.dataset.id, name = btn.dataset.name;
+  if (!confirm('Take ' + name + ' back? The student becomes Active again and is counted everywhere. This entry stays here as history.')) return;
+  const note = prompt('Optional note (why is the student coming back?)', '');
+  if (note === null) return;
+  let d;
+  try { d = await (await fetch('/Discontinued/Revert', { method: 'POST', body: new URLSearchParams({ id, note }) })).json(); }
+  catch (e) { d = { success: false, message: 'Could not reach the server or your session expired.' }; }
+  if (d.success) location.reload(); else alert(d.message);
+}
+</script>

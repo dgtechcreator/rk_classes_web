@@ -11,6 +11,7 @@
     .ab-card:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.12); }
     .ab-card.done    { background:#16a34a; color:#fff; border-color:#15803d; }
     .ab-card.pending { background:#fee2e2; color:#991b1b; border-color:#fca5a5; }
+    .ab-card.holiday { background:#fef3c7; color:#92400e; border-color:#fbbf24; }
     .ab-card.sel     { outline:3px solid #1e40af; outline-offset:2px; }
     .ab-name { font-size:13px; font-weight:800; line-height:1.25; }
     .ab-sub  { font-size:11px; font-weight:600; opacity:.9; margin-top:3px; }
@@ -227,17 +228,18 @@
     {
         <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;flex-wrap:wrap;">
             <i class="fas fa-layer-group"></i> ATTENDANCE BATCHES —
-            <span style="color:#16a34a;">GREEN: MARKED</span> | <span style="color:#dc2626;">RED: PENDING</span>
+            <span style="color:#16a34a;">GREEN: MARKED</span> | <span style="color:#dc2626;">RED: PENDING</span> | <span style="color:#b45309;">YELLOW: HOLIDAY</span>
             <span style="margin-left:auto;font-weight:700;text-transform:none;letter-spacing:0;">@summaries.Count(x => x.IsMarked) of @summaries.Count marked</span>
         </div>
         <div class="ab-grid">
             @foreach (var b in summaries)
             {
-                <a href="/Attendance/Index?date=@dStr&attBatchId=@b.BatchId@sessQ" class="ab-card @(b.IsMarked ? "done" : "pending") @(selBatch?.BatchId == b.BatchId ? "sel" : "")">
+                <a href="/Attendance/Index?date=@dStr&attBatchId=@b.BatchId@sessQ" class="ab-card @(b.IsHoliday ? "holiday" : b.IsMarked ? "done" : "pending") @(selBatch?.BatchId == b.BatchId ? "sel" : "")">
                     <div>
                         <div class="ab-name">@b.BatchName</div>
                         <div class="ab-sub">
-                            @if (!b.IsMarked) { <text>Not marked yet</text> }
+                            @if (b.IsHoliday) { <text>🏖 Holiday — no class@(string.IsNullOrWhiteSpace(b.HolidayReason) ? "" : " · " + b.HolidayReason)</text> }
+                            else if (!b.IsMarked) { <text>Not marked yet</text> }
                             else
                             {
                                 <text>Absent @b.Absent · Late @b.Late</text>
@@ -245,12 +247,35 @@
                             }
                         </div>
                     </div>
-                    <span class="ab-count">@b.Present/@b.Total</span>
+                    <span class="ab-count">@(b.IsHoliday ? "🏖" : b.Present + "/" + b.Total)</span>
                 </a>
             }
         </div>
     }
 </div>
+
+@if (selBatch != null && cr == null)
+{
+    var selSum = summaries.FirstOrDefault(x => x.BatchId == selBatch.BatchId);
+    if (selSum?.IsHoliday == true)
+    {
+        <div style="margin-bottom:16px;padding:14px 18px;border-radius:12px;background:#fef3c7;border:1.5px solid #fbbf24;color:#92400e;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <div style="font-size:30px;">🏖</div>
+            <div style="flex:1;min-width:220px;">
+                <div style="font-weight:800;">Holiday — no class for @selBatch.BatchName on @Model.Date.ToString("dd MMM yyyy")</div>
+                <div style="font-size:12.5px;">@(string.IsNullOrWhiteSpace(selSum.HolidayReason) ? "Parents were told there is no class." : selSum.HolidayReason + " — parents were told there is no class.")</div>
+            </div>
+            <button type="button" class="btn btn-outline" onclick="holidayAction('CancelHoliday', @selBatch.BatchId, '@dStr')"><i class="fas fa-undo"></i> Cancel holiday</button>
+        </div>
+    }
+    else if (!(Model.Date.Date > DateTime.Today.Date))
+    {
+        <div style="margin-bottom:16px;padding:10px 16px;border-radius:12px;background:#f8fafc;border:1px dashed #94a3b8;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span style="font-size:13px;color:#475569;flex:1;min-width:200px;">No class for <b>@selBatch.BatchName</b> on @Model.Date.ToString("dd MMM")? Mark a holiday and the parents are notified.</span>
+            <button type="button" class="btn btn-sm" style="background:#2563eb;color:#fff;border:none;" onclick="markHoliday(@selBatch.BatchId, '@dStr', '@selBatch.BatchName.Replace("'", "")')"><i class="fas fa-umbrella-beach"></i> Mark Holiday</button>
+        </div>
+    }
+}
 
 <form method="get" action="/Attendance/Index" id="flt">
     <div class="card" style="margin-bottom:16px;padding:16px 18px;">
@@ -492,7 +517,7 @@
         </div>
     </div>
 }
-else if (selBatch != null)
+else if (selBatch != null && summaries.FirstOrDefault(x => x.BatchId == selBatch.BatchId)?.IsHoliday != true)
 {
     <div class="card"><div class="empty"><div class="empty-ico">👥</div><h3>No active students in @selBatch.BatchName</h3><p>Add students to this batch from Masters &rarr; Attendance Batches.</p></div></div>
 }
@@ -736,3 +761,20 @@ This is to inform you that your ward was absent from today's classes. Kindly inf
         }
     </script>
 }
+
+<script>
+async function holidayAction(action, batchId, date, reason) {
+  let d;
+  try {
+    const res = await fetch('/Attendance/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ attBatchId: batchId, date: date, reason: reason || null }) });
+    d = await res.json();
+  } catch (e) { d = { success: false, message: 'Could not reach the server or your session expired.' }; }
+  if (d.success) { alert(d.message); location.reload(); } else alert(d.message);
+}
+function markHoliday(batchId, date, name) {
+  const reason = prompt('Holiday for ' + name + ' on ' + date + '.\nReason (shown to parents, optional):', '');
+  if (reason === null) return;
+  if (!confirm('Mark a holiday for ' + name + '? Parents of its students will be notified that there is no class.')) return;
+  holidayAction('MarkHoliday', batchId, date, reason.trim());
+}
+</script>

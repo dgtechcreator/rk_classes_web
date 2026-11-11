@@ -37,7 +37,7 @@ public class AttendanceBatchService(AttendanceBatchRepo repo)
     /// sp_GetAttendance result for that date (every active student, AttendanceId set once marked) so the
     /// totals only count active students and use the exact same rows the entry screen shows.
     /// </summary>
-    public List<AttendanceBatchSummary> BuildSummaries(List<AttendanceBatch> batches, List<AttendanceRecord> dayRecords)
+    public List<AttendanceBatchSummary> BuildSummaries(List<AttendanceBatch> batches, List<AttendanceRecord> dayRecords, Dictionary<int, BatchHoliday>? holidays = null)
     {
         var byStudent = dayRecords.GroupBy(r => r.StudentId).ToDictionary(g => g.Key, g => g.First());
         return batches.Select(b =>
@@ -53,6 +53,8 @@ public class AttendanceBatchService(AttendanceBatchRepo repo)
                 Present   = marked.Count(r => r.AttendanceStatus == "Present"),
                 Absent    = marked.Count(r => r.AttendanceStatus == "Absent"),
                 Late      = marked.Count(r => r.AttendanceStatus == "Late"),
+                IsHoliday = holidays != null && holidays.ContainsKey(b.BatchId),
+                HolidayReason = holidays != null && holidays.TryGetValue(b.BatchId, out var h) ? h.Reason : "",
             };
         }).ToList();
     }

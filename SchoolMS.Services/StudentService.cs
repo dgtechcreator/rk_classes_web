@@ -11,9 +11,25 @@ public class StudentService(StudentRepo repo)
     public int Save(Student s, string? pic, int by) => repo.Save(s, pic, by);
     public void SetPhoto(int id, string? path) => repo.SetPhoto(id, path);
     public void SetAgreedDiscount(int id, decimal amount, string? reason, int by) => repo.SetAgreedDiscount(id, amount, reason, by);
-    public void Delete(int id, int by = 0)  => repo.Delete(id, by);
+    /// <summary>Delete is two steps: an Active student becomes Inactive; deleting an Inactive student moves them to Deleted Records.</summary>
+    public string Delete(int id, int by = 0)
+    {
+        var st = repo.GetById(id)?.Status ?? "";
+        if (string.Equals(st, "Deleted", StringComparison.OrdinalIgnoreCase)) return "Deleted";
+        if (string.Equals(st, "Inactive", StringComparison.OrdinalIgnoreCase)) { repo.MarkDeleted(id, by); return "Deleted"; }
+        repo.Delete(id, by);
+        return "Inactive";
+    }
     public Dictionary<int, (DateTime? at, string? by)> GetDeletedInfo() => repo.GetDeletedInfo();
-    public void Restore(int id) => repo.Restore(id);
+    /// <summary>Straight back to Active, whatever the current step (used when a discontinued student is taken back).</summary>
+    public void Reactivate(int id) => repo.Restore(id);
+
+    /// <summary>Restore goes one step back: Deleted -> Inactive, Inactive -> Active.</summary>
+    public void Restore(int id)
+    {
+        if (string.Equals(repo.GetById(id)?.Status, "Deleted", StringComparison.OrdinalIgnoreCase)) repo.SetInactive(id);
+        else repo.Restore(id);
+    }
     public List<Student> GetByClassAndBatch(string className, string batchName)
         => repo.GetByClassAndBatch(className, batchName);
 }

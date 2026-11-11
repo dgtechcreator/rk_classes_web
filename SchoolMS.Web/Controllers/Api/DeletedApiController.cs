@@ -18,7 +18,7 @@ public class DeletedApiController(StudentService studentSvc, FacultyService facu
     [HttpGet]
     public IActionResult Index()
     {
-        var (students, _) = studentSvc.GetAll(1, 10000, null, null, null, null, null, "Inactive");
+        var (students, _) = studentSvc.GetAll(1, 10000, null, null, null, null, null, "Deleted");
         var (faculty, _) = facultySvc.GetAll(null, "Inactive", null, 1, 10000);
         var receipts = feesSvc.GetDeletedPayments();
         othersSvc.Enrich(students, faculty, studentSvc, facultySvc);

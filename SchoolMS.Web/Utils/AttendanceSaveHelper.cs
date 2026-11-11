@@ -48,7 +48,7 @@ public static class AttendanceSaveHelper
     }
 
     public static (bool ok, string message) Save(AttSaveReq req, int userId, AttendanceService svc,
-        StudentService studentSvc, AttendanceBatchService batchSvc, SchoolMS.Domain.CrScope? cr = null)
+        StudentService studentSvc, AttendanceBatchService batchSvc, SchoolMS.Domain.CrScope? cr = null, BatchHolidayService? holidays = null)
     {
         // Class Representative: only his own class, and only today / the last few days.
         if (cr != null && req.Date.Date < CrScopeEarliest())
@@ -59,6 +59,8 @@ public static class AttendanceSaveHelper
         {
             var batch = batchSvc.GetById(req.AttBatchId.Value);
             if (batch == null) return (false, "Attendance batch not found.");
+            if (holidays != null && holidays.ForDate(req.Date).ContainsKey(batch.BatchId))
+                return (false, "This batch is on holiday that day. Cancel the holiday first to take attendance.");
             allowed = batch.StudentIds.ToHashSet();
         }
 

@@ -1,0 +1,74 @@
+@model SchoolMS.Services.DiscontinueOverview
+@{
+  var s = Model.Student; var f = Model.Fee; var a = Model.Attendance;
+  string Money(decimal v) => "₹" + v.ToString("N0");
+  var recent = f.History.OrderByDescending(p => p.PaymentDate).Take(6).ToList();
+}
+<div class="card" style="padding:0;overflow:hidden;">
+  <div style="display:flex;align-items:center;gap:14px;padding:16px;background:linear-gradient(135deg,#1e3a5f,#2d5a8e);color:#fff;">
+    @if (!string.IsNullOrEmpty(s.ProfilePicPath)) { <img src="@s.ProfilePicPath" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.4);" alt=""/> }
+    else { <div style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;">@(s.DisplayName.Length > 0 ? s.DisplayName[0].ToString().ToUpper() : "?")</div> }
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:18px;font-weight:800;">@s.DisplayName</div>
+      <div style="font-size:12px;opacity:.85;">@s.AdmissionNo · @s.ClassName @s.SectionName @s.BatchName · Admitted @(s.AdmissionDate?.ToString("dd MMM yyyy") ?? "—")</div>
+    </div>
+    <a href="/Student/Profile360?studentId=@s.StudentId" target="_blank" class="btn btn-sm" style="background:rgba(255,255,255,.18);color:#fff;border:none;"><i class="fas fa-id-card"></i> Full 360 view</a>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0;border-bottom:1px solid #eef0f3;">
+    <div style="padding:12px 16px;border-right:1px solid #f1f5f9;"><div class="text-mu" style="font-size:11px;">Father</div><div class="fw7">@(s.FatherName ?? "—")</div><div style="font-size:12px;color:#2563eb;">@s.FatherPhone</div></div>
+    <div style="padding:12px 16px;border-right:1px solid #f1f5f9;"><div class="text-mu" style="font-size:11px;">Mother</div><div class="fw7">@(s.MotherName ?? "—")</div><div style="font-size:12px;color:#2563eb;">@s.MotherPhone</div></div>
+    <div style="padding:12px 16px;border-right:1px solid #f1f5f9;"><div class="text-mu" style="font-size:11px;">Student phone</div><div class="fw7">@(string.IsNullOrWhiteSpace(s.Phone) ? "—" : s.Phone)</div></div>
+    <div style="padding:12px 16px;"><div class="text-mu" style="font-size:11px;">Address</div><div style="font-size:12.5px;">@(string.IsNullOrWhiteSpace(s.Address) ? "—" : s.Address)</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;padding:16px;">
+    <div style="border:1px solid #e5e7eb;border-radius:12px;padding:14px;">
+      <div style="font-weight:800;margin-bottom:8px;"><i class="fas fa-calendar-check" style="color:#2563eb;"></i> Attendance</div>
+      @if (a == null || a.TotalDays == 0) { <div class="text-mu" style="font-size:12.5px;">No attendance recorded.</div> }
+      else {
+        <div style="font-size:26px;font-weight:800;color:@(a.AttendancePct >= 75 ? "#059669" : "#d97706");">@Math.Min(100, a.AttendancePct).ToString("0.#")%</div>
+        <div style="font-size:12.5px;color:#555;">Present @a.PresentDays · Absent @a.AbsentDays · Late @a.LateDays of @a.TotalDays days</div>
+      }
+    </div>
+    <div style="border:1px solid #e5e7eb;border-radius:12px;padding:14px;">
+      <div style="font-weight:800;margin-bottom:8px;"><i class="fas fa-chart-bar" style="color:#7c3aed;"></i> Test marks</div>
+      @if (Model.TestsCount == 0) { <div class="text-mu" style="font-size:12.5px;">No marks entered.</div> }
+      else {
+        <div style="font-size:26px;font-weight:800;color:@(Model.MarksPct >= 35 ? "#059669" : "#dc2626");">@Model.MarksPct.ToString("0.#")%</div>
+        <div style="font-size:12.5px;color:#555;">Average over @Model.TestsCount test entries</div>
+      }
+    </div>
+    <div style="border:1px solid #e5e7eb;border-radius:12px;padding:14px;">
+      <div style="font-weight:800;margin-bottom:8px;"><i class="fas fa-rupee-sign" style="color:#059669;"></i> Fees</div>
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr><td>Fee@(f.AdditionalCharges > 0 ? " + charges" : "")</td><td style="text-align:right;">@Money(f.BaseFee + f.AdditionalCharges)</td></tr>
+        @if (f.Discount > 0) { <tr><td class="text-mu">Discount</td><td style="text-align:right;" class="text-mu">− @Money(f.Discount)</td></tr> }
+        <tr style="border-top:1px solid #eee;"><td class="fw7">Total to receive</td><td style="text-align:right;font-weight:800;">@Money(f.NetTotal)</td></tr>
+        <tr><td>Paid</td><td style="text-align:right;color:#059669;font-weight:800;">@Money(f.Paid)</td></tr>
+        <tr><td class="fw7">Pending</td><td style="text-align:right;font-weight:800;color:@(f.Balance > 0.5m ? "#dc2626" : "#059669");">@Money(f.Balance)</td></tr>
+      </table>
+      @if (f.PreviousYearsDue > 0.5m) { <div style="font-size:11.5px;color:#b45309;margin-top:6px;">Includes @Money(f.PreviousYearsDue) from earlier years.</div> }
+    </div>
+  </div>
+
+  @if (recent.Any())
+  {
+    <div style="padding:0 16px 16px;">
+      <div style="font-weight:800;margin-bottom:6px;font-size:13px;">Recent payments</div>
+      <table style="width:100%;font-size:12.5px;border-collapse:collapse;">
+        @foreach (var p in recent)
+        {
+          <tr style="border-top:1px solid #f1f5f9;"><td style="padding:5px 0;">@p.PaymentDate.ToString("dd MMM yyyy")</td><td>@p.PaymentMode</td><td style="text-align:right;font-weight:700;">@Money(p.NetAmount)</td></tr>
+        }
+      </table>
+    </div>
+  }
+
+  @if (f.Balance > 0.5m)
+  {
+    <div style="margin:0 16px 16px;padding:10px 14px;border-radius:10px;background:#fef3c7;color:#92400e;font-size:12.5px;">
+      <i class="fas fa-exclamation-triangle"></i> <b>@Money(f.Balance)</b> is still pending. It is saved in the record, and the student stops being counted in Finance.
+    </div>
+  }
+</div>

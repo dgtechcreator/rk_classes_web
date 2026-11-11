@@ -21,6 +21,8 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
         ViewBag.CurrentYearId     = currentYearId;
         ViewBag.CurrentYearName   = svc.GetYears().FirstOrDefault(y => y.IsCurrent)?.YearName ?? "";
         ViewBag.ExpenseCategories = svc.GetExpenseCategories();
+        try { ViewBag.PaymentModes = HttpContext.RequestServices.GetRequiredService<PaymentModeService>().GetAll(); }
+        catch { ViewBag.PaymentModes = new List<PaymentMode>(); }
         // Message templates live in a table added by SQL/47_MessageTemplates.sql; if that script has not
         // been run yet, keep the rest of Masters working and just flag it on the Templates tab.
         try { ViewBag.MessageTemplates = svc.GetMessageTemplates(); ViewBag.TemplatesMissing = false; }
@@ -162,6 +164,22 @@ public class MastersController(MastersService svc, FeeStructureService feeSvc, L
 
     // ── Expense Categories ────────────────────────────────────
     [HttpPost]
+    [HttpPost]
+    public IActionResult SavePaymentMode(int modeId, string modeName, bool isActive = true)
+    {
+        var (ok, err) = HttpContext.RequestServices.GetRequiredService<PaymentModeService>().Save(modeId, modeName, isActive);
+        if (ok) TempData["Success"] = "Payment mode saved."; else TempData["Error"] = err;
+        return RedirectToAction("Index", new { tab = "paymodes" });
+    }
+
+    [HttpPost]
+    public IActionResult DeletePaymentMode(int id)
+    {
+        HttpContext.RequestServices.GetRequiredService<PaymentModeService>().Delete(id);
+        TempData["Success"] = "Payment mode deleted. Old records keep the name they were saved with.";
+        return RedirectToAction("Index", new { tab = "paymodes" });
+    }
+
     public IActionResult SaveExpenseCat(int categoryId, string categoryName, bool isActive = true)
     {
         try {

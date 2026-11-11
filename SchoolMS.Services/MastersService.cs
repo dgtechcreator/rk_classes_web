@@ -36,4 +36,5 @@ public class MastersService(MastersRepo repo)
     public List<MessageTemplate> GetMessageTemplates() => repo.GetMessageTemplates();
     public int  SaveMessageTemplate(MessageTemplate m) => repo.SaveMessageTemplate(m);
     public void DeleteMessageTemplate(int id)          => repo.DeleteMessageTemplate(id);
+    public void EnsureBirthdayTemplate()               => repo.EnsureBirthdayTemplate();
 }

@@ -25,6 +25,11 @@ public class Faculty
     public string?   Address{get;set;}
     public string?   ProfilePicPath{get;set;}
     public decimal?  Salary{get;set;}
+    /// <summary>How this teacher is paid: Fixed (monthly salary), Hourly or Topic. [Salary] is the monthly amount / the rate per hour / the rate per topic. Null = Fixed.</summary>
+    public string?   SalaryType{get;set;}
+    public string    SalaryTypeOrFixed => SalaryType is "Hourly" or "Topic" ? SalaryType : "Fixed";
+    /// <summary>"₹25,000 / month", "₹500 / hour", "₹300 / topic", or "—".</summary>
+    public string    SalaryLabel => !Salary.HasValue ? "—" : SalaryTypeOrFixed == "Hourly" ? $"₹{Salary.Value:N0} / hour" : SalaryTypeOrFixed == "Topic" ? $"₹{Salary.Value:N0} / topic" : $"₹{Salary.Value:N0} / month";
     public string?   BloodGroup{get;set;}
     public string?   AadharNo{get;set;}
     public string    Status{get;set;}="Active";

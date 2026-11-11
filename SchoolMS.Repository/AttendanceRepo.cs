@@ -30,7 +30,18 @@ public class AttendanceRepo(CommonConnectivity db)
             Subject=G.G<string>(r,"Subject"), SirName=G.G<string>(r,"SirName"),
             StartTime=G.G<TimeSpan?>(r,"StartTime"), EndTime=G.G<TimeSpan?>(r,"EndTime"),
             Phone=G.G<string>(r,"Phone"), FatherPhone=G.G<string>(r,"FatherPhone"), MotherPhone=G.G<string>(r,"MotherPhone")
-        }).OrderBy(a => RollKey(a.RollNo)).ThenBy(a => a.FullName, StringComparer.OrdinalIgnoreCase).ToList();
+        }).Where(InCurrentYear()).OrderBy(a => RollKey(a.RollNo)).ThenBy(a => a.FullName, StringComparer.OrdinalIgnoreCase).ToList();
+
+    /// <summary>Only students of the Current academic year are listed (the stored procedure does not filter by year, so an older year's students of the same class / batch used to come along).</summary>
+    Func<AttendanceRecord, bool> InCurrentYear()
+    {
+        try
+        {
+            var ids = db.Sql($"SELECT StudentId FROM Students WHERE AcademicYearId = {CurrentYear.Id}", r => G.G<int>(r, "StudentId")).ToHashSet();
+            return a => ids.Contains(a.StudentId);
+        }
+        catch { return _ => true; }
+    }
 
     // Roll numbers sort numerically; students without one come after, ordered by name.
     static int RollKey(string? roll) => int.TryParse(roll?.Trim(), out var n) ? n : int.MaxValue;

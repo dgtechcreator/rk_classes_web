@@ -41,6 +41,28 @@ public class ActivityNotifier(ActivityRepo repo, NotificationService staffNotifs
             repo.Upsert(studentId, kind, title, msg, session > 1 ? $"att:{date:yyyyMMdd}:s{session}" : $"att:{date:yyyyMMdd}", null);
         });
 
+    // ── batch holiday ───────────────────────────────────────────────────────────────────────
+
+    /// <summary>"No class today" for the batch (or, when the holiday is taken back, "class is on"). One row per student + batch + day, so re-saving updates it.</summary>
+    public void BatchHoliday(int studentId, int batchId, string batchName, DateTime date, string? reason, bool cancelled)
+        => Safe(nameof(BatchHoliday), () =>
+        {
+            var name = Name(studentId);
+            var day = date.Date == DateTime.Today ? "today" : $"on {Day(date)}";
+            var why = string.IsNullOrWhiteSpace(reason) ? "" : $" Reason: {reason.Trim()}.";
+            var (title, msg) = cancelled
+                ? ("Class is on", $"Update: the holiday is cancelled - {name}'s {batchName} class is on {day} ({Day(date)}) as usual.")
+                : ("No class today", $"No class {day} ({Day(date)}) for {name}'s {batchName} batch.{why}");
+            if (!cancelled && date.Date != DateTime.Today) title = "No class";
+            repo.Upsert(studentId, ActivityType.Holiday, title, msg, $"holiday:{date:yyyyMMdd}:{batchId}", null);
+        });
+
+    // ── birthday ────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>The birthday wish, once per student per year (same key = no second notification when the page is opened again).</summary>
+    public void BirthdayWish(int studentId, int year, string title, string message)
+        => Safe(nameof(BirthdayWish), () => repo.Upsert(studentId, ActivityType.Birthday, title, message, $"bday:{year}", null));
+
     // ── marks ───────────────────────────────────────────────────────────────────────────────
 
     public void MarksEntered(int studentId, int subjectId, string examName, DateTime? testDate, decimal? marks, int maxMarks, bool isAbsent)
@@ -181,7 +203,9 @@ public class ActivityNotifier(ActivityRepo repo, NotificationService staffNotifs
 
     // ── reading (parent side) ───────────────────────────────────────────────────────────────
 
-    public List<StudentActivity> ForParent(string phone, int? studentId, int take = 100) => repo.GetForParent(phone, studentId, take);
-    public int UnreadForParent(string phone) => repo.GetUnreadForParent(phone);
+    public List<StudentActivity> ForParent(string phone, int? studentId, int take = 100, IReadOnlyCollection<string>? hiddenSections = null)
+        => repo.GetForParent(phone, studentId, take, PortalAccessService.KindsOf(hiddenSections));
+    public int UnreadForParent(string phone, IReadOnlyCollection<string>? hiddenSections = null)
+        => repo.GetUnreadForParent(phone, PortalAccessService.KindsOf(hiddenSections));
     public void MarkParentSeen(string phone) => repo.MarkSeen(phone);
 }

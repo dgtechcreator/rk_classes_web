@@ -85,4 +85,18 @@ public class AttendanceBatchSummary
     public int    Pending      => Total - Marked;
     /// <summary>True once attendance was taken for at least one student of the batch on the date.</summary>
     public bool   IsMarked     => Marked > 0;
+    /// <summary>The batch has no class on this date (holiday marked from the attendance screen; parents were told).</summary>
+    public bool   IsHoliday    { get; set; }
+    public string HolidayReason { get; set; } = "";
+}
+
+/// <summary>"No class" for one attendance batch on one date.</summary>
+public class BatchHoliday
+{
+    public int      Id { get; set; }
+    public int      BatchId { get; set; }
+    public DateTime HolidayDate { get; set; }
+    public string   Reason { get; set; } = "";
+    public string   CreatedByName { get; set; } = "";
+    public DateTime CreatedAt { get; set; }
 }

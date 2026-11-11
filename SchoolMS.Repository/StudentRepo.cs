@@ -12,7 +12,9 @@ public class StudentRepo(CommonConnectivity db)
     {
         // No year given -> the Current academic year, so every list/picker follows the Current year set in Masters.
         // Deleted (Inactive) students stay visible across years so they can always be restored.
-        if (yr == null && status != "Inactive")
+        // A list without a status means the active students (a "Deleted" student must never leak into a list).
+        status ??= "Active";
+        if (yr == null && status != "Inactive" && status != "Deleted")
             yr = db.Sql($"SELECT {CurrentYear.Id} AS YearId", r => (int?)G.G<int?>(r, "YearId")).FirstOrDefault();
         var op = new SqlParameter("@TotalCount", SqlDbType.Int) { Direction = ParameterDirection.Output };
         // The stored procedure only looks at name / admission no / father's name. A search is done here instead, so a
@@ -72,6 +74,19 @@ public class StudentRepo(CommonConnectivity db)
     {
         db.Exec("sp_DeleteStudent", new() { { "@StudentId", id } });
         ActionAudit.StampDeleted(db, "student", id, by);
+        StudentNameDirectory.Invalidate();
+    }
+    /// <summary>Second step of the life cycle: Inactive -> Deleted. A deleted student is shown only on Deleted Records.</summary>
+    public void MarkDeleted(int id, int by = 0)
+    {
+        db.ExecSql("UPDATE Students SET Status='Deleted' WHERE StudentId=@Id", new() { { "@Id", id } });
+        ActionAudit.StampDeleted(db, "student", id, by);
+        StudentNameDirectory.Invalidate();
+    }
+    /// <summary>Deleted -> Inactive (one step back; the "deleted by" stamp stays).</summary>
+    public void SetInactive(int id)
+    {
+        db.ExecSql("UPDATE Students SET Status='Inactive' WHERE StudentId=@Id", new() { { "@Id", id } });
         StudentNameDirectory.Invalidate();
     }
     public void Restore(int id)

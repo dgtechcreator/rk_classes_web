@@ -11,7 +11,7 @@ namespace SchoolMS.Web.Controllers.Api;
 [Route("api/attendance")]
 [ApiRequireStaff]
 public class AttendanceApiController(AttendanceService svc, StudentService studentSvc, AttendanceBatchService batchSvc,
-    FacultyService facultySvc, MastersService mastersSvc) : ControllerBase
+    FacultyService facultySvc, MastersService mastersSvc, BatchHolidayService holidays) : ControllerBase
 {
     // A CR's rows: matched by student id (sp_GetAttendance does not return class / section / batch ids).
     private Func<AttendanceRecord, bool> InScope(CrScope cr)
@@ -86,13 +86,13 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
             var mine = dayRecords.Select(r => r.StudentId).ToHashSet();
             allBatches = allBatches.Where(b => b.StudentIds.Any(mine.Contains)).ToList();
         }
-        var batches = batchSvc.BuildSummaries(allBatches, dayRecords);
+        var batches = batchSvc.BuildSummaries(allBatches, dayRecords, holidays.ForDate(d));
         return Ok(new {
             date = d,
             session,
             sessions = SessionList(d),
             batches = batches.Select(b => new {
-                b.BatchId, b.BatchName, b.Total, b.Present, b.Absent, b.Late, b.Marked, b.Pending, b.IsMarked,
+                b.BatchId, b.BatchName, b.Total, b.Present, b.Absent, b.Late, b.Marked, b.Pending, b.IsMarked, b.IsHoliday, b.HolidayReason,
             }),
         });
     }
@@ -114,6 +114,9 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
         var payload = DayPayload(d, records, session);
         payload["batchId"] = batch.BatchId;
         payload["batchName"] = batch.BatchName;
+        var hol = holidays.ForDate(d);
+        payload["isHoliday"] = hol.ContainsKey(batch.BatchId);
+        payload["holidayReason"] = hol.TryGetValue(batch.BatchId, out var hh) ? hh.Reason : "";
         return Ok(payload);
     }
 
@@ -129,12 +132,37 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
         });
     }
 
+    public record HolidayReq(int AttBatchId, DateTime Date, string? Reason);
+
+    /// <summary>"No class today" for one attendance batch; the parents of its students are notified.</summary>
+    [HttpPost("holiday")]
+    [ApiRequirePermission("attendance_entry")]
+    public IActionResult MarkHoliday([FromBody] HolidayReq req)
+    {
+        var (ok, error, n) = holidays.Mark(req.AttBatchId, req.Date, req.Reason, User.UserId() ?? 0, StaffName());
+        return ok ? Ok(new { success = true, notified = n }) : BadRequest(new { error });
+    }
+
+    [HttpPost("holiday/cancel")]
+    [ApiRequirePermission("attendance_entry")]
+    public IActionResult CancelHoliday([FromBody] HolidayReq req)
+    {
+        var (ok, error, n) = holidays.Cancel(req.AttBatchId, req.Date);
+        return ok ? Ok(new { success = true, notified = n }) : BadRequest(new { error });
+    }
+
+    string StaffName()
+    {
+        try { return HttpContext.RequestServices.GetRequiredService<StaffNameService>().DisplayName(User.UserId() ?? 0); }
+        catch { return ""; }
+    }
+
     [HttpPost("save")]
     [ApiRequirePermission("attendance_entry")]
     public IActionResult Save([FromBody] AttSaveReq req)
     {
         int uid = User.UserId() ?? 1;
-        var (ok, message) = AttendanceSaveHelper.Save(req, uid, svc, studentSvc, batchSvc, HttpContext.CurrentCr());
+        var (ok, message) = AttendanceSaveHelper.Save(req, uid, svc, studentSvc, batchSvc, HttpContext.CurrentCr(), holidays);
         if (!ok) return BadRequest(new { success = false, error = message, message });
         return Ok(new { success = true, message });
     }

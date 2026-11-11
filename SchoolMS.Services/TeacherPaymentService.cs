@@ -20,6 +20,28 @@ public class TeacherPaymentService(TeacherPaymentRepo repo, StudentService stude
         return repo.Save(facultyId, paymentType, rate, quantity, totalAmount, paymentMonth, paymentYear, remarks, createdBy);
     }
 
+    public static decimal TotalOf(string paymentType, decimal rate, decimal? quantity) => paymentType switch
+    {
+        "Hourly" => (quantity ?? 0) * rate,
+        "Topic" => (quantity ?? 0) * rate,
+        "Fixed" => rate,
+        _ => 0
+    };
+
+    /// <summary>Edit an entry (the total is recalculated). Returns an error text, or null when saved.</summary>
+    public string? Update(int paymentId, string paymentType, decimal rate, decimal? quantity, int paymentMonth, int paymentYear,
+        string? remarks, string? paymentMode, string? transactionRef, DateTime? paymentDate, int by)
+    {
+        if (paymentType is not ("Hourly" or "Topic" or "Fixed")) return "Choose the payment type.";
+        if (rate <= 0) return "Enter the amount.";
+        if (paymentType != "Fixed" && (quantity ?? 0) <= 0) return paymentType == "Hourly" ? "Enter the hours." : "Enter the number of topics.";
+        if (paymentMonth is < 1 or > 12 || paymentYear < 2000) return "Choose a valid month and year.";
+        if (repo.GetById(paymentId) == null) return "This payment no longer exists.";
+        var ok = repo.Update(paymentId, paymentType, rate, paymentType == "Fixed" ? null : quantity, TotalOf(paymentType, rate, quantity),
+            paymentMonth, paymentYear, remarks, paymentMode, transactionRef, paymentDate, by);
+        return ok ? null : "Could not save the payment.";
+    }
+
     public List<TeacherPayment> GetUnpaid(int? facultyId = null) => repo.GetUnpaid(facultyId);
 
     public List<TeacherPayment> GetByMonth(int month, int year) => repo.GetByMonth(month, year);

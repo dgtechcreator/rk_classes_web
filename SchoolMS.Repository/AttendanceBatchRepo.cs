@@ -101,6 +101,10 @@ public class AttendanceBatchRepo(CommonConnectivity db)
 
     private List<int> GetBatchStudents(int batchId)
     {
-        return db.Read("sp_GetBatchStudents", new() { { "@BatchId", batchId } }, r => CommonConnectivity.G<int>(r, "StudentId"));
+        // Only ACTIVE students: a student who left / was removed must not stay in a batch's count or its attendance list.
+        return db.SqlP(@"SELECT x.StudentId FROM AttendanceBatchStudents x
+                         JOIN Students s ON s.StudentId = x.StudentId
+                         WHERE x.BatchId = @B AND s.Status = 'Active'",
+            new() { { "@B", batchId } }, r => CommonConnectivity.G<int>(r, "StudentId"));
     }
 }

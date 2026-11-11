@@ -139,5 +139,11 @@ public class MastersRepo(CommonConnectivity db)
         {"@Body",m.Body}, {"@IsActive",m.IsActive}
     }, "@NewId");
 
+    /// <summary>The Birthday wish is a normal message template (edit it in Masters -> Templates). Seeded once, when the table exists.</summary>
+    public void EnsureBirthdayTemplate()
+        => db.ExecSql(@"IF OBJECT_ID('dbo.MessageTemplates','U') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM MessageTemplates WHERE Category = 'Birthday')
+            INSERT INTO MessageTemplates (Category, Title, Body)
+            VALUES ('Birthday', N'Birthday Wish', N'Wishing you a very Happy Birthday! 🎂 May this year bring you joy, good health and great success. Keep shining and keep learning! 🌟')", new());
+
     public void DeleteMessageTemplate(int id) => db.Exec("sp_DeleteMessageTemplate", new(){{"@TemplateId",id}});
 }

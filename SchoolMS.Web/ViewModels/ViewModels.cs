@@ -147,6 +147,11 @@ public class ExpenseListVM
     public List<Expense> Expenses{get;set;}=new();
     public int Total{get;set;} public int Page{get;set;}=1; public int PageSize{get;set;}=15;
     public string? Search{get;set;} public int? CategoryFilter{get;set;} public int? MonthFilter{get;set;} public int? YearFilter{get;set;}
+    public DateTime? From{get;set;} public DateTime? To{get;set;}
+    /// <summary>month | range | all</summary>
+    public string Mode{get;set;}="month";
+    public decimal TotalAmount{get;set;}
+    public List<SchoolMS.Domain.ExpenseCategoryTotal> ByCategory{get;set;}=new();
     public List<ExpenseCat>    Categories{get;set;}=new();
     public List<AcademicYear>  Years{get;set;}=new();
     public int TotalPages => Math.Max(1,(int)Math.Ceiling((double)Total/PageSize));

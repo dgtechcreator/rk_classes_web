@@ -1,0 +1,42 @@
+📢 *RK Classes — Software Update (11 Nov 2026)*
+
+Aaj Web aur Mobile App dono me ye naye kaam add hue hain 👇
+
+💰 *Finance & Fees*
+• Finance me ab class + batch + medium wise (jaise 6th Morning Hindi / English) alag dikhta hai
+• Total fees ab discount ke baad ka dikhega (jitna paisa milna hai) — discount sirf info ke liye
+• App me bhi Additional Charges add / change kar sakte hain
+• Ek button se sab due students ke parents ko fee reminder
+
+🧾 *Expenses & Teacher Payment*
+• Teacher ki paid salary ab Expenses me bhi judti hai
+• Pichla mahina bhi dekh sakte hain + category / date / search filter
+• Teacher payment ko Edit aur Delete kar sakte hain
+• Payment Mode (Cash, Online, Cheque…) ab Masters se manage hota hai
+• Teacher Payment Summary ko Excel me export kar sakte hain
+• Faculty me ab Fixed salary / Hourly / Topic type set hota hai
+
+👨‍🎓 *Students*
+• Discontinued Students — jo student chhod gaya ya nikala gaya, uska reason, date aur paid / pending ke saath record (wapas lene ka option bhi)
+• Delete ab 2 step: Active → Inactive → Deleted. Ek saath kai students select karke delete kar sakte hain
+• Inactive students ab kisi count me nahi ginte
+• Marks aur Attendance me ab sirf chuni hui academic year ke students aate hain
+
+📅 *Attendance*
+• Kisi batch ka holiday mark kar sakte hain — parents ko "Aaj class nahi hai" notification jata hai (cancel bhi ho sakta hai)
+• Absent list class → batch → medium wise, aur jis parent ko message chala gaya wo green dikhta hai
+• Pichli date ki attendance bhi mark / update ho sakti hai
+
+🎂 *Birthday*
+• Student ke birthday par parent / student login me "Happy Birthday from RK Classes" wish dikhti hai (text Masters se edit hota hai)
+• Admin ko aaj ke birthdays dikhte hain
+
+🔐 *Access control*
+• Student / Parent login me kaun sa section dikhana hai (Lectures, Fees, Marks…) ab Admin on/off kar sakta hai
+• Har role ke default rights set kar sakte hain
+
+⚙️ *Experience*
+• Har jagah loading dikhti hai (page, save, delete) — double click ka problem nahi
+• Web aur App dono me sab kuch barabar
+
+Koi problem ho to bataiye 🙏

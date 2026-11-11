@@ -30,14 +30,17 @@ public class PagePermissionFilter : IActionFilter
         Add("Masters",      new("masters_view"), "Index", "AttendanceBatches", "GetStudentsForBatch", "EditAttendanceBatch");
         Add("Masters",      new("masters_view", true), "SaveMessageTemplate", "DeleteMessageTemplate", "SaveYear", "DeleteYear",
             "SaveClass", "DeleteClass", "SaveSection", "DeleteSection", "SaveBatch", "DeleteBatch", "SaveSubject", "DeleteSubject",
-            "SaveExpenseCat", "DeleteExpenseCat", "CreateAttendanceBatch", "DeleteAttendanceBatch", "SaveAttendanceBatch");
+            "SaveExpenseCat", "DeleteExpenseCat", "SavePaymentMode", "DeletePaymentMode", "CreateAttendanceBatch", "DeleteAttendanceBatch", "SaveAttendanceBatch");
 
         Add("Faculty",      new("faculty_view"), "Index", "Details");
         Add("Faculty",      new("faculty", true), "Create", "Edit", "Save", "Delete");
 
         Add("Student",      new("student_view"), "Index", "Details", "AdmissionForm", "ExportExcel");
-        Add("Student",      new("student", true), "Create", "Edit", "Save", "Delete", "SendWelcomeMessages");
+        Add("Student",      new("student", true), "Create", "Edit", "Save", "Delete", "BulkDelete", "SendWelcomeMessages");
         Add("Student",      new("student_profile"), "Profile360", "ExportProfile360");
+
+        Add("Discontinued", new("discontinued_students"), "Index", "New", "Search", "Students", "Overview");
+        Add("Discontinued", new("discontinued_students", true), "Save", "Revert");
 
         Add("Fees",         new("fee_collection"), "Index", "Pay", "SavePay", "UpdateAdditionalCharges", "Summary", "SummaryJson");
         Add("Fees",         new("fee_collection", true), "DeletePayment", "UpdatePayment", "SetPreviousDues");

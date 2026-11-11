@@ -7,8 +7,12 @@ namespace SchoolMS.Web.Controllers.Api;
 [ApiController]
 [Route("api/lookup")]
 [ApiRequireStaff]
-public class LookupApiController(LookupService lookup) : ControllerBase
+public class LookupApiController(LookupService lookup, PaymentModeService modes) : ControllerBase
 {
+    /// <summary>Active payment modes (names) from the Masters list - the dropdown of every payment form.</summary>
+    [HttpGet("payment-modes")]
+    public IActionResult GetPaymentModes() => Ok(modes.ActiveNames());
+
     [HttpGet("years")]
     public IActionResult GetYears() => Ok(lookup.GetYears());
 

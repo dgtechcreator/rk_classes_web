@@ -228,6 +228,12 @@
 </div>
 </form>
 
+<div id="bulkBar" style="display:none;margin-bottom:10px;padding:10px 14px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;align-items:center;gap:12px;">
+  <b id="bulkCount" style="font-size:13px;">0 selected</b>
+  <button type="button" class="btn btn-danger btn-sm" onclick="bulkDelete()"><i class="fas fa-trash"></i> @(Model.StatusFilter == "Inactive" ? "Delete selected" : "Mark selected Inactive")</button>
+  <button type="button" class="btn btn-outline btn-sm" onclick="clearSel()">Clear</button>
+</div>
+
 <div class="card">
   <div class="tbl-wrap">
     @if (!Model.Students.Any())
@@ -238,13 +244,14 @@
     {
     <table>
       <thead>
-        <tr><th>Photo</th><th>Admission No</th><th>Student Name</th><th>Std</th><th>Admission Date</th><th>Medium/Stream</th><th>Batch</th><th>Father</th><th>Father Contact</th><th>Mother Contact</th><th>Status</th><th>Added By</th><th></th>
+        <tr><th style="width:34px;" onclick="event.stopPropagation()"><input type="checkbox" id="selAll" title="Select all" onclick="toggleAll(this)"/></th><th>Photo</th><th>Admission No</th><th>Student Name</th><th>Std</th><th>Admission Date</th><th>Medium/Stream</th><th>Batch</th><th>Father</th><th>Father Contact</th><th>Mother Contact</th><th>Status</th><th>Added By</th><th></th>
         </tr>
       </thead>
       <tbody>
       @foreach (var s in Model.Students)
       {
         <tr onclick="window.location='/Student/Details/@s.StudentId'" style="cursor:pointer;">
+          <td onclick="event.stopPropagation()"><input type="checkbox" class="rowSel" value="@s.StudentId" onchange="updateSel()"/></td>
           <td>
             @if (!string.IsNullOrEmpty(s.ProfilePicPath)){<img src="@s.ProfilePicPath" class="stu-pic"/>}
             else{<div class="stu-av" style="font-size:14px;">@(s.DisplayName.Length>0?s.DisplayName[0].ToString().ToUpper():"?")</div>}
@@ -322,8 +329,9 @@
             <a href="/Student/AdmissionForm/@s.StudentId" class="btn btn-outline btn-sm btn-icon" title="Print Admission Form" target="_blank"><i class="fas fa-print"></i></a>
 
             <!-- Delete Button -->
-            <form method="post" action="/Student/Delete/@s.StudentId" style="display:inline;" onsubmit="return confirm('Mark @s.DisplayName as Inactive?')">
+            <form method="post" action="/Student/Delete/@s.StudentId" style="display:inline;" onsubmit="return confirm('@(s.Status == "Inactive" ? "Delete " + s.DisplayName.Replace("'", "") + "? They will be removed from this list and shown only on Deleted Records." : "Mark " + s.DisplayName.Replace("'", "") + " as Inactive?")')">
               @Html.AntiForgeryToken()
+              <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)"/>
               <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
             </form>
           </td>
@@ -336,6 +344,28 @@
 </div>
 
 <script>
+function selected() { return [...document.querySelectorAll('.rowSel:checked')].map(c => c.value); }
+function updateSel() {
+  const n = selected().length, all = document.querySelectorAll('.rowSel').length;
+  document.getElementById('bulkBar').style.display = n ? 'flex' : 'none';
+  document.getElementById('bulkCount').textContent = n + ' selected';
+  const sa = document.getElementById('selAll'); if (sa) { sa.checked = n > 0 && n === all; sa.indeterminate = n > 0 && n < all; }
+}
+function toggleAll(box) { document.querySelectorAll('.rowSel').forEach(c => c.checked = box.checked); updateSel(); }
+function clearSel() { document.querySelectorAll('.rowSel').forEach(c => c.checked = false); updateSel(); }
+function bulkDelete() {
+  const ids = selected(); if (!ids.length) return;
+  const inactiveView = @(Model.StatusFilter == "Inactive" ? "true" : "false");
+  const msg = inactiveView
+    ? 'Delete ' + ids.length + ' student(s)? They will be removed from this list and shown only on Deleted Records.'
+    : 'Mark ' + ids.length + ' student(s) as Inactive?';
+  if (!confirm(msg)) return;
+  const f = document.createElement('form'); f.method = 'post'; f.action = '/Student/BulkDelete';
+  ids.forEach(v => { const i = document.createElement('input'); i.type = 'hidden'; i.name = 'ids'; i.value = v; f.appendChild(i); });
+  const r = document.createElement('input'); r.type = 'hidden'; r.name = 'returnUrl'; r.value = location.pathname + location.search; f.appendChild(r);
+  document.body.appendChild(f); f.submit();
+}
+
 function toggleDropdown(e, id) {
   e.preventDefault();
   e.stopPropagation();

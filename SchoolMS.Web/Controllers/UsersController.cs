@@ -8,7 +8,7 @@ namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
 public class UsersController(UserMgmtService svc, ClassRepService crSvc, UserAccessCache access, ProfilePhotoStore photos,
-    FacultyService facultySvc, TeacherAccountLinker linker) : Controller
+    FacultyService facultySvc, TeacherAccountLinker linker, PortalAccessService portal, RoleTemplateService roleTemplates) : Controller
 {
     bool IsAdmin => HttpContext.Session.GetInt32("RoleId") == 1;
     int Me => HttpContext.Session.GetUserId() ?? 0;
@@ -168,8 +168,15 @@ public class UsersController(UserMgmtService svc, ClassRepService crSvc, UserAcc
             var (linkOk, linkErr) = svc.LinkFaculty(id, model.FacultyId);
             if (!linkOk) TempData["Error"] = linkErr;
         }
+        bool isNewUser = model.UserId <= 0, templated = false;
+        if (isAdmin && isNewUser)
+        {
+            // A new login starts with the rights saved for its role (Roles & Access), when the admin has set any.
+            try { roleTemplates.ApplyTo(id, model.RoleId); templated = true; }
+            catch { /* the template is a convenience - never fail the save */ }
+        }
         access.Invalidate(id);
-        TempData["Success"] = "User saved successfully.";
+        TempData["Success"] = templated ? "User saved with the rights of the role. Adjust them below if this user needs something different." : "User saved successfully.";
 
         // Admin goes to permissions, regular users go back to index
         if (isAdmin)
@@ -210,6 +217,100 @@ public class UsersController(UserMgmtService svc, ClassRepService crSvc, UserAcc
                 canEdit = user.Permissions.FirstOrDefault(p => p.ModuleId == m.ModuleId)?.CanEdit ?? false
             }).ToList()
         });
+    }
+
+
+    // ── Roles & Access ───────────────────────────────────────────────────────────────────────
+    // One page for "what may this kind of login see": the Student / Parent portal (section switches that the website,
+    // the parent API and the mobile app all obey) and the default rights of every staff role.
+
+    /// <summary>Staff roles the admin can template: not the Super Admin role and not Class Representative (fixed modules).</summary>
+    List<Role> TemplateRoles()
+    {
+        var crRole = SafeCrRoleId();
+        return svc.GetRoles().Where(r => r.RoleId != 1 && r.RoleId != crRole).ToList();
+    }
+
+    public IActionResult Roles()
+    {
+        if (!IsAdmin) return RedirectToAction("AccessDenied", "Home");
+        ViewBag.Sections = PortalAccessService.Sections;
+        ViewBag.Hidden = portal.Hidden();
+        var roles = TemplateRoles();
+        var users = svc.GetAll();
+        ViewBag.UserCounts = roles.ToDictionary(r => r.RoleId, r => users.Count(u => u.RoleId == r.RoleId));
+        return View(roles);
+    }
+
+    [HttpPost]
+    public IActionResult SavePortal([FromBody] List<string> visible)
+    {
+        if (!IsAdmin) return Unauthorized();
+        var keep = (visible ?? new()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var hidden = PortalAccessService.Sections.Select(s => s.Key).Where(k => !keep.Contains(k)).ToList();
+        var (ok, err) = portal.SetHidden(hidden, Me);
+        return Json(new { success = ok, message = ok ? "Saved. Students and parents see the change straight away (the app picks it up when it is opened or refreshed)." : err });
+    }
+
+    [HttpGet]
+    public IActionResult GetRoleTemplate(int roleId)
+    {
+        if (!IsAdmin) return Unauthorized();
+        var role = TemplateRoles().FirstOrDefault(r => r.RoleId == roleId);
+        if (role == null) return NotFound();
+        var modules = svc.GetAllModules();
+        var template = roleTemplates.Get(roleId);
+        string source;
+        Dictionary<int, (bool view, bool edit)> map;
+        if (template != null) { map = template; source = "saved"; }
+        else
+        {
+            // no template yet: start from the rights of the first user who has this role, so the admin only adjusts
+            var first = svc.GetAll().Where(u => u.RoleId == roleId && u.UserId != 1).Select(u => svc.GetById(u.UserId)).FirstOrDefault(u => u != null && u.Permissions.Any(p => p.CanView || p.CanEdit));
+            map = first == null ? new() : first.Permissions.Where(p => p.CanView || p.CanEdit).ToDictionary(p => p.ModuleId, p => (p.CanView || p.CanEdit, p.CanEdit));
+            source = first == null ? "empty" : "user:" + first.FullName;
+        }
+        return Json(new {
+            roleId, roleName = role.RoleName, source,
+            userCount = svc.GetAll().Count(u => u.RoleId == roleId && u.UserId != 1),
+            modules = modules.Select(m => new {
+                m.ModuleId, m.ModuleName, m.ModuleKey, m.Icon, groupName = m.GroupName ?? "Other", m.OrderNo,
+                canView = map.TryGetValue(m.ModuleId, out var x) && x.view, canEdit = map.TryGetValue(m.ModuleId, out var y) && y.edit,
+            }),
+        });
+    }
+
+    public record RoleTemplateReq(int RoleId, bool ApplyToExisting, List<PermEntry> Entries);
+
+    [HttpPost]
+    public IActionResult SaveRoleTemplate([FromBody] RoleTemplateReq req)
+    {
+        try
+        {
+            if (!IsAdmin) return Unauthorized();
+            if (req == null || req.Entries == null) return Json(new { success = false, message = "Nothing received." });
+            var role = TemplateRoles().FirstOrDefault(r => r.RoleId == req.RoleId);
+            if (role == null) return Json(new { success = false, message = "This role cannot be changed here." });
+
+            var (ok, err) = roleTemplates.Save(req.RoleId, req.Entries.Select(e => (e.ModuleId, e.CanView || e.CanEdit, e.CanEdit)), Me);
+            if (!ok) return Json(new { success = false, message = err });
+
+            int applied = 0;
+            if (req.ApplyToExisting)
+            {
+                // Class Representatives keep their fixed modules; the logged-in admin is never touched.
+                var ids = roleTemplates.ApplyToRole(req.RoleId, u => CrOf(u.UserId) != null || u.UserId == Me);
+                foreach (var id in ids) access.Invalidate(id);
+                applied = ids.Count;
+            }
+            return Json(new {
+                success = true, applied,
+                message = req.ApplyToExisting
+                    ? $"Saved for the role '{role.RoleName}' and applied to {applied} existing user(s). It is in force immediately."
+                    : $"Saved. New '{role.RoleName}' users will start with these rights. Existing users were not changed.",
+            });
+        }
+        catch (Exception ex) { return Json(new { success = false, message = "Error: " + ex.Message }); }
     }
 
     public IActionResult Permissions(int id)

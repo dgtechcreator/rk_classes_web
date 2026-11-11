@@ -8,7 +8,7 @@ namespace SchoolMS.Web.Controllers.Api;
 [ApiController]
 [Route("api/masters")]
 [ApiRequireStaff]
-public class MastersApiController(MastersService svc, StudentService studentSvc, AttendanceBatchService batchSvc) : ControllerBase
+public class MastersApiController(MastersService svc, StudentService studentSvc, AttendanceBatchService batchSvc, PaymentModeService modeSvc) : ControllerBase
 {
     public record SaveYearReq(int YearId, string YearName, bool IsCurrent, bool IsActive = true);
     public record SaveClassReq(int ClassId, string ClassName, int OrderNo, bool IsActive = true);
@@ -16,6 +16,7 @@ public class MastersApiController(MastersService svc, StudentService studentSvc,
     public record SaveBatchReq(int BatchId, string BatchName, bool IsActive = true);
     public record SaveSubjectReq(int SubjectId, string SubjectName, string? SubjectCode, int ClassId = 0, int MaxMarks = 100, int PassMarks = 35, bool IsActive = true);
     public record SaveExpenseCatReq(int CategoryId, string CategoryName, bool IsActive = true);
+    public record SaveModeReq(int ModeId, string ModeName, bool IsActive = true);
     public record SaveMessageTemplateReq(int TemplateId, string Category, string Title, string Body, bool IsActive = true);
     public record CreateAttendanceBatchReq(string BatchName, List<int> StudentIds);
     public record SaveAttendanceBatchReq(int BatchId, string BatchName, List<int> StudentIds);
@@ -137,6 +138,22 @@ public class MastersApiController(MastersService svc, StudentService studentSvc,
         try { svc.DeleteExpenseCat(id); return Ok(new { success = true }); }
         catch (Exception ex) { return BadRequest(new { error = ex.Message }); }
     }
+
+    // ── Payment Modes (one list for Expense, Fee and Teacher Payment forms) ─────────────────
+    [HttpGet("paymodes")]
+    public IActionResult PaymentModes() => Ok(modeSvc.GetAll().Select(m => new { m.ModeId, m.ModeName, m.IsActive, m.UsageCount }));
+
+    [HttpPost("paymodes/save")]
+    [ApiRequirePermission("masters_view", requireEdit: true)]
+    public IActionResult SavePaymentMode([FromBody] SaveModeReq req)
+    {
+        var (ok, err) = modeSvc.Save(req.ModeId, req.ModeName, req.IsActive);
+        return ok ? Ok(new { success = true }) : BadRequest(new { error = err });
+    }
+
+    [HttpPost("paymodes/{id:int}/delete")]
+    [ApiRequirePermission("masters_view", requireEdit: true)]
+    public IActionResult DeletePaymentMode(int id) { modeSvc.Delete(id); return Ok(new { success = true }); }
 
     // ── Message Templates ─────────────────────────────────────
     // Read is open to any staff (attendance/fee screens need the texts); writes need Masters edit rights.

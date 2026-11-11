@@ -91,6 +91,21 @@ IF COL_LENGTH('dbo.ParentAccounts', 'NotifSeenAt') IS NULL
             });
     }
 
+    /// <summary>Students who got an activity of [kind] for [date] (attendance rows are keyed "att:yyyyMMdd[:sN]"), with the time it was sent.
+    /// Used by the dashboard's Absent list to show which parents have already been notified.</summary>
+    public Dictionary<int, DateTime> GetAttendanceNotified(string kind, DateTime date)
+    {
+        EnsureSchema();
+        var map = new Dictionary<int, DateTime>();
+        var rows = db.SqlP(@"
+            SELECT StudentId, MAX(CreatedAt) AS At FROM StudentActivities
+            WHERE Kind = @K AND DedupeKey LIKE @P GROUP BY StudentId",
+            new() { { "@K", kind }, { "@P", $"att:{date:yyyyMMdd}%" } },
+            r => (G.G<int>(r, "StudentId"), G.G<DateTime>(r, "At")));
+        foreach (var (id, at) in rows) map[id] = at;
+        return map;
+    }
+
     // ── looking things up for the message text ─────────────────────────────────────────────
 
     public (string display, string? className)? GetStudentLabel(int studentId)
@@ -135,7 +150,7 @@ IF COL_LENGTH('dbo.ParentAccounts', 'NotifSeenAt') IS NULL
              .FirstOrDefault() ?? new DateTime(2000, 1, 1);
 
     /// <summary>Newest first. [studentId] limits it to one child.</summary>
-    public List<StudentActivity> GetForParent(string phone, int? studentId, int take)
+    public List<StudentActivity> GetForParent(string phone, int? studentId, int take, IReadOnlyCollection<string>? exceptKinds = null)
     {
         EnsureSchema();
         var seen = SeenAt(phone);
@@ -144,8 +159,9 @@ IF COL_LENGTH('dbo.ParentAccounts', 'NotifSeenAt') IS NULL
                    s.FullName, s.FatherName, s.MotherName, c.ClassName
             {ParentScope}
               AND (@Child IS NULL OR a.StudentId = @Child)
+              {ExceptSql(exceptKinds, out var extra)}
             ORDER BY a.CreatedAt DESC, a.ActivityId DESC",
-            new() { { "@PK", PhoneMatch.Key(phone) }, { "@Child", studentId }, { "@Take", Math.Clamp(take, 1, 300) } },
+            new Dictionary<string, object?> { { "@PK", PhoneMatch.Key(phone) }, { "@Child", studentId }, { "@Take", Math.Clamp(take, 1, 300) } }.Merge(extra),
             r =>
             {
                 var created = G.G<DateTime>(r, "CreatedAt");
@@ -159,12 +175,23 @@ IF COL_LENGTH('dbo.ParentAccounts', 'NotifSeenAt') IS NULL
             });
     }
 
-    public int GetUnreadForParent(string phone)
+    public int GetUnreadForParent(string phone, IReadOnlyCollection<string>? exceptKinds = null)
     {
         EnsureSchema();
         var seen = SeenAt(phone);
-        return db.SqlP($"SELECT COUNT(*) AS cnt {ParentScope} AND a.CreatedAt > @Seen",
-            new() { { "@PK", PhoneMatch.Key(phone) }, { "@Seen", seen } }, r => G.G<int>(r, "cnt")).FirstOrDefault();
+        return db.SqlP($"SELECT COUNT(*) AS cnt {ParentScope} AND a.CreatedAt > @Seen {ExceptSql(exceptKinds, out var extra)}",
+            new Dictionary<string, object?> { { "@PK", PhoneMatch.Key(phone) }, { "@Seen", seen } }.Merge(extra), r => G.G<int>(r, "cnt")).FirstOrDefault();
+    }
+
+    /// <summary>"AND a.Kind NOT IN (...)" for the kinds of the portal sections the admin switched off (Roles &amp; Access); values are bound, never concatenated.</summary>
+    static string ExceptSql(IReadOnlyCollection<string>? kinds, out Dictionary<string, object?> p)
+    {
+        p = new();
+        if (kinds == null || kinds.Count == 0) return "";
+        var names = new List<string>();
+        int i = 0;
+        foreach (var k in kinds) { var n = "@xk" + i++; p[n] = k; names.Add(n); }
+        return "AND a.Kind NOT IN (" + string.Join(",", names) + ")";
     }
 
     public void MarkSeen(string phone)
@@ -181,4 +208,13 @@ IF COL_LENGTH('dbo.ParentAccounts', 'NotifSeenAt') IS NULL
     }
 
     static string Cut(string s, int max) => s.Length <= max ? s : s[..max];
+}
+
+static class DictionaryExtensions
+{
+    public static Dictionary<string, object?> Merge(this Dictionary<string, object?> a, Dictionary<string, object?> b)
+    {
+        foreach (var kv in b) a[kv.Key] = kv.Value;
+        return a;
+    }
 }

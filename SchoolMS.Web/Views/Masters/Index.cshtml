@@ -7,6 +7,7 @@
     var subjects     = ViewBag.Subjects          as List<SchoolMS.Domain.Subject>     ?? new();
     var feeTypes     = ViewBag.FeeTypes          as List<SchoolMS.Domain.FeeType>     ?? new();
     var expCats      = ViewBag.ExpenseCategories as List<SchoolMS.Domain.ExpenseCat>  ?? new();
+  var payModes = ViewBag.PaymentModes as List<SchoolMS.Domain.PaymentMode> ?? new();
     var msgTemplates = ViewBag.MessageTemplates as List<SchoolMS.Domain.MessageTemplate> ?? new();
     bool templatesMissing = (bool)(ViewBag.TemplatesMissing ?? false);
     var feeList      = ViewBag.FeeList  as List<SchoolMS.Domain.FeeStructure> ?? new();
@@ -73,6 +74,7 @@
       ("feesetup", "💰", "Fee Setup",   feeList.Count),
       ("subjects", "📖", "Subjects",    subjects.Count(s=>s.IsActive)),
       ("expcats",  "🏷️", "Exp. Category",  expCats.Count(e=>e.IsActive)),
+      ("paymodes", "💳", "Payment Modes", payModes.Count(m=>m.IsActive)),
       ("templates","💬", "Templates",    msgTemplates.Count)
     };
   }
@@ -595,6 +597,67 @@
 </div>
 
 @* ════════════════════════════════════════════════════════════
+   TAB — PAYMENT MODES (Cash, Online Transfer, Cheque ... used by the Expense, Fee and Teacher Payment forms)
+   ════════════════════════════════════════════════════════════ *@
+<div id="tab-paymodes" class="tab-panel" style="display:none;">
+  <div class="g2" style="align-items:start;">
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-ttl"><i class="fas fa-plus-circle" style="color:var(--p);margin-right:6px;"></i><span id="payModeFormTitle">Add Payment Mode</span></span>
+      </div>
+      <form method="post" action="/Masters/SavePaymentMode">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="modeId" id="payModeId" value="0"/>
+        <div class="fg" style="margin-bottom:14px;">
+          <label>Mode Name * <span style="font-weight:400;color:var(--mu);">(e.g. Cash, UPI, Cheque)</span></label>
+          <input type="text" name="modeName" id="payModeName" class="fc" maxlength="50" placeholder="e.g. UPI" required/>
+        </div>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px;">
+          <input type="checkbox" name="isActive" value="true" id="payModeActive" checked style="accent-color:var(--p);width:15px;height:15px;"/> Active
+        </label>
+        <div style="display:flex;gap:8px;">
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+          <button type="button" class="btn btn-outline" onclick="resetPayModeForm()"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="padding:0;">
+      <div class="card-hdr" style="padding:16px 18px;"><span class="card-ttl">Payment Modes (@payModes.Count total)</span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Mode</th><th>Status</th><th>Used In</th><th></th></tr></thead>
+          <tbody>
+          @{ int pm_n = 0; }
+          @foreach (var pm in payModes)
+          {
+            pm_n++;
+            <tr>
+              <td class="text-mu fw7">@pm_n</td>
+              <td class="fw7">@pm.ModeName</td>
+              <td><span class="badge @(pm.IsActive?"b-active":"b-inactive")">@(pm.IsActive?"Active":"Inactive")</span></td>
+              <td><span class="badge b-blue">@pm.UsageCount records</span></td>
+              <td>
+                <div class="df g8">
+                  <button class="btn btn-outline btn-sm btn-icon" data-id="@pm.ModeId" data-name="@pm.ModeName" data-active="@(pm.IsActive ? "1" : "0")" onclick="editPayMode(this)" title="Edit"><i class="fas fa-edit"></i></button>
+                  <form method="post" action="/Masters/DeletePaymentMode/@pm.ModeId" onsubmit="return confirm('Delete payment mode: &quot;@pm.ModeName&quot;? Old records keep the name they were saved with.')">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger btn-sm btn-icon" title="Delete"><i class="fas fa-trash"></i></button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          }
+          @if (!payModes.Any())
+          {<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--mu);">No payment modes yet. Add one using the form.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+@* ════════════════════════════════════════════════════════════
    TAB — MESSAGE TEMPLATES (WhatsApp texts: absent alert, fee reminder, receipt ...)
    ════════════════════════════════════════════════════════════ *@
 <div id="tab-templates" class="tab-panel" style="display:none;">
@@ -616,6 +679,7 @@
             <option value="Absent">Absent</option>
             <option value="FeeReminder">Fee Reminder</option>
             <option value="Receipt">Receipt</option>
+            <option value="Birthday">Birthday wish</option>
             <option value="General">General</option>
           </select>
         </div>
@@ -714,6 +778,22 @@ function switchTab(id) {
 const savedTab = new URLSearchParams(window.location.hash.replace('#','')).get('') ||
                  localStorage.getItem('masterTab') || '@openTab';
 switchTab(savedTab);
+
+// ── Payment modes ───────────────────────────────────────────
+function editPayMode(btn) {
+  switchTab('paymodes');
+  document.getElementById('payModeFormTitle').textContent = 'Edit Payment Mode';
+  document.getElementById('payModeId').value = btn.dataset.id;
+  document.getElementById('payModeName').value = btn.dataset.name;
+  document.getElementById('payModeActive').checked = btn.dataset.active === '1';
+  document.getElementById('payModeName').focus();
+}
+function resetPayModeForm() {
+  document.getElementById('payModeFormTitle').textContent = 'Add Payment Mode';
+  document.getElementById('payModeId').value = 0;
+  document.getElementById('payModeName').value = '';
+  document.getElementById('payModeActive').checked = true;
+}
 
 // ── Message templates ─────────────────────────────────────────
 function editTpl(btn) {

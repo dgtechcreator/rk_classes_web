@@ -56,6 +56,8 @@ public class FinanceAcademicBreakdown
 {
     public string ClassName{get;set;} = "";
     public string BatchName{get;set;} = "";
+    /// <summary>Medium (Hindi / English ...). Blank on the plain class + batch rows.</summary>
+    public string SectionName{get;set;} = "";
     public int StudentCount{get;set;}
     public decimal TotalFees{get;set;}
     public decimal EstimatedCollected{get;set;}

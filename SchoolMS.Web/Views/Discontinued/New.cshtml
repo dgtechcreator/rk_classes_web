@@ -1,0 +1,144 @@
+@{
+  ViewData["Title"] = "Discontinue a Student";
+}
+
+<style>
+  .dc-res { position:absolute; left:0; right:0; top:100%; background:#fff; border:1px solid #e5e7eb; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.12); z-index:50; max-height:300px; overflow:auto; }
+  .dc-res div { padding:10px 14px; cursor:pointer; border-bottom:1px solid #f3f4f6; font-size:13px; }
+  .dc-res div:hover { background:#f5f3ff; }
+  .dc-res small { color:#777; display:block; }
+  .dc-kind { display:flex; gap:10px; flex-wrap:wrap; }
+  .dc-kind label { flex:1; min-width:210px; border:1.5px solid #e5e7eb; border-radius:12px; padding:12px 14px; cursor:pointer; display:flex; gap:10px; align-items:flex-start; }
+  .dc-kind label:has(input:checked) { border-color:#4338ca; background:#eef2ff; }
+  @@media (max-width: 640px) { .dc-grid { grid-template-columns: 1fr !important; } }
+</style>
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <div class="breadcrumb"><a href="/Discontinued/Index">Discontinued Students</a> / <span>New</span></div>
+      <h1>🚪 Discontinue a Student</h1>
+      <p>Pick the student, check the full picture, write the reason and save. The student becomes inactive and disappears from every count and list.</p>
+    </div>
+  </div>
+</div>
+
+<div id="msg" style="margin-bottom:12px;font-size:13px;"></div>
+
+<div class="card" style="padding:16px;margin-bottom:16px;">
+  <label style="font-weight:800;font-size:13px;">1. Select student</label>
+  @{
+    var classes = ViewBag.Classes as List<SchoolMS.Domain.Class> ?? new();
+    var sections = ViewBag.Sections as List<SchoolMS.Domain.Section> ?? new();
+    var batches = ViewBag.Batches as List<SchoolMS.Domain.Batch> ?? new();
+  }
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:10px;">
+    <div><div class="text-mu" style="font-size:11.5px;margin-bottom:3px;">Std / Class *</div>
+      <select id="fClass" class="fs" style="width:100%;" onchange="loadStudents()">
+        <option value="">Select class</option>
+        @foreach (var c in classes) { <option value="@c.ClassId">@c.ClassName</option> }
+      </select></div>
+    <div><div class="text-mu" style="font-size:11.5px;margin-bottom:3px;">Medium / Stream</div>
+      <select id="fSection" class="fs" style="width:100%;" onchange="loadStudents()">
+        <option value="">All medium</option>
+        @foreach (var x in sections) { <option value="@x.SectionId">@x.SectionName</option> }
+      </select></div>
+    <div><div class="text-mu" style="font-size:11.5px;margin-bottom:3px;">Batch</div>
+      <select id="fBatch" class="fs" style="width:100%;" onchange="loadStudents()">
+        <option value="">All batches</option>
+        @foreach (var x in batches) { <option value="@x.BatchId">@x.BatchName</option> }
+      </select></div>
+    <div><div class="text-mu" style="font-size:11.5px;margin-bottom:3px;">Student *</div>
+      <select id="fStudent" class="fs" style="width:100%;" onchange="pickFromDropdown()" disabled>
+        <option value="">Select class first</option>
+      </select></div>
+  </div>
+</div>
+
+<div id="overview"></div>
+
+<div id="reasonCard" class="card" style="padding:16px;margin-top:16px;display:none;">
+  <label style="font-weight:800;font-size:13px;">3. Why is the student leaving?</label>
+  <div class="dc-kind" style="margin-top:10px;">
+    <label><input type="radio" name="kind" value="Left" checked/><span><b>Left by student / parents</b><small style="display:block;color:#777;">They decided to stop (shifted, other classes, personal reason…)</small></span></label>
+    <label><input type="radio" name="kind" value="Removed"/><span><b>Removed by institute</b><small style="display:block;color:#777;">We removed the student (fees not paid, discipline…)</small></span></label>
+  </div>
+  <div style="display:grid;grid-template-columns:200px 1fr;gap:12px;margin-top:14px;" class="dc-grid">
+    <div>
+      <label style="font-size:12px;font-weight:700;">Date</label>
+      <input id="leftOn" type="date" class="fs" style="width:100%;margin-top:4px;"/>
+    </div>
+    <div>
+      <label style="font-size:12px;font-weight:700;">Reason *</label>
+      <textarea id="reason" rows="3" class="fs" style="width:100%;margin-top:4px;" maxlength="1000" placeholder="Write the reason in your own words…"></textarea>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;">
+    <a href="/Discontinued/Index" class="btn btn-outline">Cancel</a>
+    <button id="saveBtn" class="btn btn-danger" onclick="saveDiscontinue()"><i class="fas fa-user-slash"></i> Discontinue &amp; Save</button>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+const esc = t => String(t == null ? '' : t).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+let studentId = 0;
+document.getElementById('leftOn').value = new Date().toISOString().slice(0, 10);
+
+async function loadStudents() {
+  const cls = document.getElementById('fClass').value, sel = document.getElementById('fStudent');
+  studentId = 0;
+  document.getElementById('overview').innerHTML = '';
+  document.getElementById('reasonCard').style.display = 'none';
+  if (!cls) { sel.disabled = true; sel.innerHTML = '<option value="">Select class first</option>'; return; }
+  sel.disabled = true; sel.innerHTML = '<option value="">Loading…</option>';
+  const q = new URLSearchParams({ classId: cls });
+  const sec = document.getElementById('fSection').value, bat = document.getElementById('fBatch').value;
+  if (sec) q.set('sectionId', sec); if (bat) q.set('batchId', bat);
+  try {
+    const list = await (await fetch('/Discontinued/Students?' + q)).json();
+    sel.innerHTML = list.length
+      ? '<option value="">Select student (' + list.length + ')</option>' + list.map(s => '<option value="' + s.studentId + '">' + esc(s.name) + ' — ' + esc(s.admissionNo) + (s.batch ? ' · ' + esc(s.batch) : '') + '</option>').join('')
+      : '<option value="">No active students here</option>';
+    sel.disabled = list.length === 0;
+  } catch (e) { sel.innerHTML = '<option value="">Could not load</option>'; }
+}
+function pickFromDropdown() {
+  const id = +document.getElementById('fStudent').value;
+  if (!id) { document.getElementById('overview').innerHTML = ''; document.getElementById('reasonCard').style.display = 'none'; studentId = 0; return; }
+  pick(id);
+}
+
+async function pick(id) {
+  studentId = id;
+  const ov = document.getElementById('overview');
+  ov.innerHTML = '<div class="card" style="padding:30px;text-align:center;color:#888;"><i class="fas fa-spinner fa-spin"></i> Loading the full picture…</div>';
+  document.getElementById('reasonCard').style.display = 'none';
+  try {
+    const res = await fetch('/Discontinued/Overview?studentId=' + id);
+    if (!res.ok) throw new Error();
+    ov.innerHTML = '<div style="font-weight:800;font-size:13px;margin:0 0 8px;">2. Overview</div>' + await res.text();
+    document.getElementById('reasonCard').style.display = 'block';
+  } catch (e) { ov.innerHTML = '<div class="alert alert-danger">Could not load this student.</div>'; }
+}
+
+async function saveDiscontinue() {
+  const reason = document.getElementById('reason').value.trim();
+  if (!studentId) { show({ success: false, message: 'Select a student first.' }); return; }
+  if (reason.length < 3) { show({ success: false, message: 'Please write the reason.' }); document.getElementById('reason').focus(); return; }
+  if (!confirm('Discontinue this student? They become inactive and disappear from every count and list (they can be taken back from Deleted Records).')) return;
+  const btn = document.getElementById('saveBtn'); btn.disabled = true;
+  const body = new URLSearchParams({ studentId, kind: document.querySelector('input[name=kind]:checked').value, reason, leftOn: document.getElementById('leftOn').value });
+  let d;
+  try { d = await (await fetch('/Discontinued/Save', { method: 'POST', body })).json(); }
+  catch (e) { d = { success: false, message: 'Could not reach the server or your session expired.' }; }
+  show(d);
+  if (d.success) setTimeout(() => location.href = '/Discontinued/Index', 1200); else btn.disabled = false;
+}
+function show(d) {
+  const m = document.getElementById('msg');
+  m.innerHTML = '<div class="alert ' + (d.success ? 'alert-success' : 'alert-danger') + '">' + esc(d.message) + '</div>';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+}

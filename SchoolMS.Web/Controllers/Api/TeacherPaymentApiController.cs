@@ -80,6 +80,26 @@ public class TeacherPaymentApiController(TeacherPaymentService paymentSvc, Facul
         }
     }
 
+    public record UpdatePaymentReq(int PaymentId, string PaymentType, decimal Rate, decimal? Quantity, int PaymentMonth, int PaymentYear,
+        string? Remarks, string? PaymentMode, string? TransactionRef, DateTime? PaymentDate);
+
+    /// <summary>Edit an entry (pending or paid); the total is recalculated.</summary>
+    /// <summary>One entry (used by the app to edit a salary row of the Expenses list).</summary>
+    [HttpGet("{paymentId:int}")]
+    public IActionResult GetOne(int paymentId)
+    {
+        var p = paymentSvc.GetById(paymentId);
+        return p == null ? NotFound(new { error = "Payment not found." }) : Ok(p);
+    }
+
+    [HttpPost("update")]
+    public IActionResult UpdatePayment([FromBody] UpdatePaymentReq req)
+    {
+        var err = paymentSvc.Update(req.PaymentId, req.PaymentType, req.Rate, req.Quantity, req.PaymentMonth, req.PaymentYear,
+            req.Remarks, req.PaymentMode, req.TransactionRef, req.PaymentDate, User.UserId() ?? 0);
+        return Ok(new { success = err == null, message = err ?? "Payment updated." });
+    }
+
     [HttpPost("{paymentId:int}/delete")]
     public IActionResult DeletePayment(int paymentId)
     {

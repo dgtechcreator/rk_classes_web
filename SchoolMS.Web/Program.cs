@@ -15,6 +15,15 @@ builder.Services.AddSingleton<SchoolMS.Web.Auth.ProfilePhotoStore>();
 builder.Services.AddSingleton<SchoolMS.Web.Auth.NoteFileStore>();
 builder.Services.AddSingleton<AppSettingsRepo>();
 builder.Services.AddSingleton<MaintenanceService>();
+builder.Services.AddSingleton<PortalAccessService>();
+builder.Services.AddScoped<RoleTemplateService>();
+builder.Services.AddScoped<DiscontinuedRepo>();
+builder.Services.AddScoped<DiscontinuedService>();
+builder.Services.AddScoped<BirthdayService>();
+builder.Services.AddScoped<BatchHolidayRepo>();
+builder.Services.AddScoped<BatchHolidayService>();
+builder.Services.AddScoped<PaymentModeRepo>();
+builder.Services.AddScoped<PaymentModeService>();
 builder.Services.AddControllersWithViews(o => {
     o.Filters.Add<SchoolMS.Web.Auth.ClassRepGuardFilter>();
     o.Filters.Add<SchoolMS.Web.Auth.PagePermissionFilter>();
@@ -259,6 +268,11 @@ try
     using var scope = app.Services.CreateScope();
     scope.ServiceProvider.GetRequiredService<ClassNotesRepo>().EnsureSchema();
     scope.ServiceProvider.GetRequiredService<ActivityRepo>().EnsureSchema();
+    scope.ServiceProvider.GetRequiredService<DiscontinuedRepo>().EnsureSchema();
+    scope.ServiceProvider.GetRequiredService<BatchHolidayRepo>().EnsureSchema();
+    scope.ServiceProvider.GetRequiredService<PaymentModeRepo>().EnsureSchema();
+    try { scope.ServiceProvider.GetRequiredService<FacultyRepo>().EnsureSchema(); } catch { /* Faculty table not created yet */ }
+    try { scope.ServiceProvider.GetRequiredService<MastersService>().EnsureBirthdayTemplate(); } catch { /* template table not created yet */ }
 }
 catch (Exception ex) { Console.Error.WriteLine("Start-up schema check failed: " + ex.Message); }
 

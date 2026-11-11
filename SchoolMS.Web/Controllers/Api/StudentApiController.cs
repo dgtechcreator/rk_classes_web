@@ -63,12 +63,27 @@ public class StudentApiController(StudentService svc, LookupService lookup, FeeS
         return Ok(new { success = true, agreedDiscount = amount, agreedDiscountReason = amount > 0 ? reason : null });
     }
 
+    public record BulkDeleteReq(List<int> Ids);
+
+    /// <summary>Delete several students at once: Active ones become Inactive, Inactive ones move to Deleted Records.</summary>
+    [HttpPost("bulk-delete")]
+    [ApiRequirePermission("student", requireEdit: true)]
+    public IActionResult BulkDelete([FromBody] BulkDeleteReq req)
+    {
+        int toInactive = 0, toDeleted = 0;
+        foreach (var id in (req.Ids ?? new()).Distinct().Take(1000))
+        {
+            if (svc.Delete(id, User.UserId() ?? 0) == "Deleted") toDeleted++; else toInactive++;
+        }
+        return Ok(new { success = true, inactive = toInactive, deleted = toDeleted });
+    }
+
     [HttpPost("{id:int}/delete")]
     [ApiRequirePermission("student", requireEdit: true)]
     public IActionResult Delete(int id)
     {
-        svc.Delete(id, User.UserId() ?? 0);
-        return Ok(new { success = true });
+        var result = svc.Delete(id, User.UserId() ?? 0);   // "Inactive" (was Active) or "Deleted" (was Inactive)
+        return Ok(new { success = true, status = result });
     }
 
     /// <summary>Upload / replace the student's photo (multipart field "photo"). Same file + DB column the web form uses.</summary>

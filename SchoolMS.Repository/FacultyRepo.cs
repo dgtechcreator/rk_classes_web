@@ -54,7 +54,38 @@ public class FacultyRepo(CommonConnectivity db)
     public Dictionary<int, (DateTime? at, string? by)> GetDeletedInfo() => ActionAudit.DeletedInfo(db, "faculty");
     public void Restore(int id) { db.Exec("sp_RestoreFaculty", new() { { "@FacultyId", id } }); ActionAudit.ClearDeleted(db, "faculty", id); }
 
+    static volatile bool _ready;
+    static readonly object _lock = new();
+
+    /// <summary>Faculty.SalaryType (Fixed / Hourly / Topic) is added on first start, so a deploy without a script still works.</summary>
+    public void EnsureSchema()
+    {
+        if (_ready) return;
+        lock (_lock)
+        {
+            if (_ready) return;
+            db.ExecSql("IF COL_LENGTH('dbo.Faculty', 'SalaryType') IS NULL ALTER TABLE dbo.Faculty ADD SalaryType NVARCHAR(20) NULL", new());
+            _ready = true;
+        }
+    }
+
     public int Save(Faculty f, string? pic, int by)
+    {
+        var id = SaveCore(f, pic, by);
+        if (id > 0)
+        {
+            try
+            {
+                EnsureSchema();
+                db.ExecSql("UPDATE Faculty SET SalaryType=@T WHERE FacultyId=@Id",
+                    new() { { "@T", f.SalaryType is "Hourly" or "Topic" ? f.SalaryType : "Fixed" }, { "@Id", id } });
+            }
+            catch { /* the column could not be added: the salary amount is still saved */ }
+        }
+        return id;
+    }
+
+    int SaveCore(Faculty f, string? pic, int by)
         => db.ExecOut("sp_SaveFaculty", new() {
             {"@FacultyId",f.FacultyId}, {"@EmployeeCode",f.EmployeeCode==""?null:f.EmployeeCode},
             {"@FullName",f.FullName}, {"@DesignationId",f.DesignationId},
@@ -99,6 +130,7 @@ public class FacultyRepo(CommonConnectivity db)
         Address         = G.G<string>(r,"Address"),
         ProfilePicPath  = G.G<string>(r,"ProfilePicPath"),
         Salary          = G.G<decimal?>(r,"Salary"),
+        SalaryType      = G.G<string>(r,"SalaryType"),
         BloodGroup      = G.G<string>(r,"BloodGroup"),
         AadharNo        = G.G<string>(r,"AadharNo"),
         Status          = G.G<string>(r,"Status")??"Active",
