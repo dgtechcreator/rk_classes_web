@@ -76,6 +76,12 @@ public class StudentRepo(CommonConnectivity db)
     public void SetPhoto(int id, string? path)
         => db.ExecSql("UPDATE Students SET ProfilePicPath=@P WHERE StudentId=@Id", new() { { "@Id", id }, { "@P", path } });
 
+    /// <summary>A student / parent fixing the student's own basic details: only the date of birth and the e-mail change
+    /// (sp_SaveStudent would rewrite the whole record). Email null clears it.</summary>
+    public void SetBasicDetails(int id, DateTime dateOfBirth, string? email)
+        => db.ExecSql("UPDATE Students SET DateOfBirth=@Dob, Email=@Email WHERE StudentId=@Id",
+            new() { { "@Id", id }, { "@Dob", dateOfBirth.Date }, { "@Email", string.IsNullOrWhiteSpace(email) ? null : email.Trim() } });
+
     /// <summary>Saves the discount agreed at admission (0 clears it). The SP rejects a negative amount or a missing reason.</summary>
     public void SetAgreedDiscount(int id, decimal amount, string? reason, int by)
         => db.Exec("sp_SetStudentAgreedDiscount", new() { { "@StudentId", id }, { "@Amount", amount }, { "@Reason", reason }, { "@By", by } });

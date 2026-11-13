@@ -141,8 +141,9 @@
         <div class="summary-label">Total Batches</div>
     </div>
     <div class="summary-card card2">
-        <div class="summary-value">@attendanceBatches.Sum(b => b.StudentCount)</div>
-        <div class="summary-label">Total Students</div>
+        @* A student placed in two batches (e.g. Morning + Commerce Maths) used to be added twice, so this card disagreed with the Dashboard. *@
+        <div class="summary-value">@attendanceBatches.SelectMany(b => b.StudentIds).Distinct().Count()</div>
+        <div class="summary-label">Students in Batches</div>
     </div>
     <div class="summary-card card3">
         <div class="summary-value">@(attendanceBatches.Count > 0 ? (attendanceBatches.Sum(b => b.StudentCount) / attendanceBatches.Count).ToString("F0") : "0")</div>

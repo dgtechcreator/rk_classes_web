@@ -215,7 +215,22 @@ else
       <div class="stu-meta-item"><div class="lbl">Father</div><div class="val">@(sel.FatherName ?? "—")</div></div>
       <div class="stu-meta-item"><div class="lbl">Mother</div><div class="val">@(sel.MotherName ?? "—")</div></div>
       <div class="stu-meta-item"><div class="lbl">Roll No</div><div class="val">@(sel.RollNo ?? "—")</div></div>
+      <div class="stu-meta-item"><div class="lbl">Date of Birth</div><div class="val" style="@(sel.DateOfBirth == null ? "color:#dc2626;" : "")">@(sel.DateOfBirth?.ToString("dd MMM yyyy") ?? "Not set - please add")</div></div>
+      <div class="stu-meta-item"><div class="lbl">Email</div><div class="val">@(string.IsNullOrWhiteSpace(sel.Email) ? "Not added" : sel.Email)</div></div>
     </div>
+    <details style="border-top:1px solid #f0f0f0;padding:10px 18px;" @(sel.DateOfBirth == null ? "open" : "")>
+      <summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:#2563eb;"><i class="fas fa-user-edit"></i> Edit my details</summary>
+      <form method="post" action="/Parent/UpdateChildDetails" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:10px;">
+        <input type="hidden" name="studentId" value="@sel.StudentId"/>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:flex;flex-direction:column;gap:4px;">Date of Birth *
+          <input type="date" name="dateOfBirth" required min="1980-01-01" max="@DateTime.Today.ToString("yyyy-MM-dd")" value="@(sel.DateOfBirth?.ToString("yyyy-MM-dd"))" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;"/>
+        </label>
+        <label style="font-size:12px;font-weight:600;color:#374151;display:flex;flex-direction:column;gap:4px;">Email (optional)
+          <input type="email" name="email" maxlength="150" value="@sel.Email" placeholder="name@example.com" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:220px;"/>
+        </label>
+        <button type="submit" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;">Save</button>
+      </form>
+    </details>
   </div>
 
   @* ══════════════════════ ATTENDANCE ══════════════════════ *@

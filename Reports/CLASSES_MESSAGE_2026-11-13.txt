@@ -1,0 +1,23 @@
+📢 *RK Classes — Software Update (13 Nov 2026)*
+
+Aaj Web aur Mobile App dono me ye kaam hue hain 👇
+
+👩‍🏫 *Teacher Attendance*
+• Ab Class aur Batch ke saath *Stream / Medium* (Science, Commerce, Hindi, English…) bhi select hota hai
+• Time ab waisa hi dikhta hai jaisa daala — 4 se 6 daalo to "4:00 PM - 6:00 PM" (24 ghante wala 16:00 nahi)
+• Attendance Summary me kisi bhi teacher par click karo — Class aur Medium wise detail khulti hai (kitne lecture, kitne din, kitne ghante, har lecture ki date / time / subject / topic)
+• Excel export button — ek teacher ka ya sabka, Class aur Medium wise total ke saath (Web me bhi)
+
+👨‍👩‍👧 *Parent Login*
+• "Full report" me ab discount aur total fee nahi dikhta — parent ko sirf Paid aur Balance dikhega
+
+📊 *Counts / Masters*
+• Masters me Classes, Sections aur Batches ke saamne "0 students" dikh raha tha — ab sahi count dikhta hai (sirf Active students)
+• Admin home par ab *Faculty* (teachers) aur *Users (Logins)* alag-alag dikhte hain, taaki ginti me confusion na ho
+• Faculty list ab scroll karne par apne aap aage ke teachers dikhati hai, upar "Showing 15 of 26" bhi dikhta hai
+
+🎓 *Students & Batches*
+• Student list me ek saath kai students select karke unka *Batch badal sakte hain* (Web: "Move to batch", App: Masters → Batches me icon)
+• Isse 12th Commerce ke Maths aur S.P students alag batch me tag ho sakte hain, aur Maths ke lecture me sirf Maths ke students aayenge
+
+Koi problem ho to bataiye 🙏

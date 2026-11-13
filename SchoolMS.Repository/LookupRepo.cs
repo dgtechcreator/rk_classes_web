@@ -12,12 +12,35 @@ public class LookupRepo(CommonConnectivity db)
     public List<AcademicYear> GetYears()  => db.Sql(@"SELECT y.*, (SELECT COUNT(*) FROM Students s WHERE s.AcademicYearId = y.YearId AND s.Status = 'Active') AS StudentCount
             FROM AcademicYears y WHERE y.IsActive=1 ORDER BY y.YearId DESC",
         r => new AcademicYear { YearId=G.G<int>(r,"YearId"), YearName=G.G<string>(r,"YearName")??"", IsCurrent=G.G<bool>(r,"IsCurrent"), StudentCount=G.G<int>(r,"StudentCount") });
-    public List<Class> GetClasses() => db.Sql("SELECT * FROM Classes WHERE IsActive=1 ORDER BY OrderNo",
-        r => new Class { ClassId=G.G<int>(r,"ClassId"), ClassName=G.G<string>(r,"ClassName")??"", OrderNo=G.G<int>(r,"OrderNo") });
-    public List<Section> GetSections() => db.Sql("SELECT * FROM Sections WHERE IsActive=1",
-        r => new Section { SectionId=G.G<int>(r,"SectionId"), SectionName=G.G<string>(r,"SectionName")??"" });
-    public List<Batch> GetBatches() => db.Sql("SELECT * FROM Batches WHERE IsActive=1",
-        r => new Batch { BatchId=G.G<int>(r,"BatchId"), BatchName=G.G<string>(r,"BatchName")??"" });
+    // The mobile Masters screens read these lists (GET api/lookup/...), so each row carries its ACTIVE student count - the same
+    // number the website's Masters page shows (MastersRepo). Without it every class / section / batch showed "0 students".
+    Dictionary<int, int> ActiveCountsBy(string column)
+        => db.Sql($"SELECT {column} AS Id, COUNT(*) AS Cnt FROM Students WHERE Status='Active' AND {column} IS NOT NULL GROUP BY {column}",
+            r => (Id: G.G<int>(r,"Id"), Cnt: G.G<int>(r,"Cnt"))).ToDictionary(x => x.Id, x => x.Cnt);
+    public List<Class> GetClasses()
+    {
+        var list = db.Sql("SELECT * FROM Classes WHERE IsActive=1 ORDER BY OrderNo",
+            r => new Class { ClassId=G.G<int>(r,"ClassId"), ClassName=G.G<string>(r,"ClassName")??"", OrderNo=G.G<int>(r,"OrderNo") });
+        var counts = ActiveCountsBy("ClassId");
+        foreach (var c in list) c.StudentCount = counts.TryGetValue(c.ClassId, out var n) ? n : 0;
+        return list;
+    }
+    public List<Section> GetSections()
+    {
+        var list = db.Sql("SELECT * FROM Sections WHERE IsActive=1",
+            r => new Section { SectionId=G.G<int>(r,"SectionId"), SectionName=G.G<string>(r,"SectionName")??"" });
+        var counts = ActiveCountsBy("SectionId");
+        foreach (var x in list) x.StudentCount = counts.TryGetValue(x.SectionId, out var n) ? n : 0;
+        return list;
+    }
+    public List<Batch> GetBatches()
+    {
+        var list = db.Sql("SELECT * FROM Batches WHERE IsActive=1",
+            r => new Batch { BatchId=G.G<int>(r,"BatchId"), BatchName=G.G<string>(r,"BatchName")??"" });
+        var counts = ActiveCountsBy("BatchId");
+        foreach (var b in list) b.StudentCount = counts.TryGetValue(b.BatchId, out var n) ? n : 0;
+        return list;
+    }
     public List<FeeType> GetFeeTypes() => db.Sql("SELECT * FROM FeeTypes WHERE IsActive=1",
         r => new FeeType { FeeTypeId=G.G<int>(r,"FeeTypeId"), TypeName=G.G<string>(r,"TypeName")??"" });
     public List<ExpenseCat> GetExpCats() => db.Sql("SELECT * FROM ExpenseCategories WHERE IsActive=1",

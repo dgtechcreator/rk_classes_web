@@ -10,6 +10,7 @@ public class StudentService(StudentRepo repo)
     public Student? GetById(int id) => repo.GetById(id);
     public int Save(Student s, string? pic, int by) => repo.Save(s, pic, by);
     public void SetPhoto(int id, string? path) => repo.SetPhoto(id, path);
+    public void SetBasicDetails(int id, DateTime dateOfBirth, string? email) => repo.SetBasicDetails(id, dateOfBirth, email);
     public void SetAgreedDiscount(int id, decimal amount, string? reason, int by) => repo.SetAgreedDiscount(id, amount, reason, by);
     /// <summary>Delete is two steps: an Active student becomes Inactive; deleting an Inactive student moves them to Deleted Records.</summary>
     public string Delete(int id, int by = 0)

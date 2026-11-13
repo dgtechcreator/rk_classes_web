@@ -50,6 +50,23 @@ public class ParentApiController(
         return Ok(new { profilePicPath = path });
     }
 
+    public record BasicDetailsReq(DateTime? DateOfBirth, string? Email);
+
+    /// <summary>The student / parent edits the child's own basic details: date of birth is required, e-mail is optional.</summary>
+    [HttpPost("students/{id:int}/details")]
+    public IActionResult UpdateChildDetails(int id, [FromBody] BasicDetailsReq req)
+    {
+        if (!parentSvc.GetChildren(Phone).Any(c => c.StudentId == id)) return NotFound(new { error = "Student not found." });
+        if (req.DateOfBirth == null) return BadRequest(new { error = "Date of birth is required." });
+        var dob = req.DateOfBirth.Value.Date;
+        if (dob > DateTime.Today || dob.Year < 1980) return BadRequest(new { error = "Please enter a valid date of birth." });
+        var email = req.Email?.Trim();
+        if (!string.IsNullOrEmpty(email) && (email.Length > 150 || !System.Text.RegularExpressions.Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$")))
+            return BadRequest(new { error = "Please enter a valid email address, or leave it empty." });
+        studentSvc.SetBasicDetails(id, dob, email);
+        return Ok(new { dateOfBirth = dob, email = string.IsNullOrEmpty(email) ? null : email });
+    }
+
     [HttpDelete("students/{id:int}/photo")]
     public IActionResult DeleteChildPhoto(int id)
     {

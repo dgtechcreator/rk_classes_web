@@ -131,6 +131,25 @@ public class ParentController(
         return RedirectToAction("Dashboard", new { studentId });
     }
 
+    /// <summary>The student / parent edits the child's own date of birth (required) and email (optional). Same rules as the app's api/parent/students/{id}/details.</summary>
+    [HttpPost]
+    [RequireParentLogin]
+    public IActionResult UpdateChildDetails(int studentId, DateTime? dateOfBirth, string? email)
+    {
+        var phone = HttpContext.Session.GetParentPhone() ?? "";
+        if (!parentSvc.GetChildren(phone).Any(c => c.StudentId == studentId)) return NotFound();
+        email = email?.Trim();
+        string? error = null;
+        if (dateOfBirth == null) error = "Date of birth is required.";
+        else if (dateOfBirth.Value.Date > DateTime.Today || dateOfBirth.Value.Year < 1980) error = "Please enter a valid date of birth.";
+        else if (!string.IsNullOrEmpty(email) && (email.Length > 150 || !System.Text.RegularExpressions.Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$")))
+            error = "Please enter a valid email address, or leave it empty.";
+        if (error != null) { TempData["Error"] = error; return RedirectToAction("Dashboard", new { studentId }); }
+        studentSvc.SetBasicDetails(studentId, dateOfBirth!.Value, email);
+        TempData["Success"] = "Details updated.";
+        return RedirectToAction("Dashboard", new { studentId });
+    }
+
     // ── Parent Accounts Management ────────────────────────────────
     [RequireLogin]
     public IActionResult Index()
