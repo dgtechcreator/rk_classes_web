@@ -78,6 +78,20 @@ public class StudentApiController(StudentService svc, LookupService lookup, FeeS
         return Ok(new { success = true, inactive = toInactive, deleted = toDeleted });
     }
 
+    public record SetBatchReq(List<int> Ids, int BatchId);
+
+    /// <summary>Moves several students into one batch (a combined class split into Maths / S P ...), so By-class attendance finds them.</summary>
+    [HttpPost("set-batch")]
+    [ApiRequirePermission("student", requireEdit: true)]
+    public IActionResult SetBatch([FromBody] SetBatchReq req)
+    {
+        if (req.Ids == null || req.Ids.Count == 0) return BadRequest(new { error = "Select at least one student." });
+        var batch = lookup.GetBatches().FirstOrDefault(b => b.BatchId == req.BatchId);
+        if (batch == null) return BadRequest(new { error = "Batch not found." });
+        var n = svc.SetBatch(req.Ids, req.BatchId);
+        return Ok(new { success = true, moved = n, batchName = batch.BatchName });
+    }
+
     [HttpPost("{id:int}/delete")]
     [ApiRequirePermission("student", requireEdit: true)]
     public IActionResult Delete(int id)

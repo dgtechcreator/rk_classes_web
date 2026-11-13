@@ -36,7 +36,7 @@ public class PagePermissionFilter : IActionFilter
         Add("Faculty",      new("faculty", true), "Create", "Edit", "Save", "Delete");
 
         Add("Student",      new("student_view"), "Index", "Details", "AdmissionForm", "ExportExcel");
-        Add("Student",      new("student", true), "Create", "Edit", "Save", "Delete", "BulkDelete", "SendWelcomeMessages");
+        Add("Student",      new("student", true), "Create", "Edit", "Save", "Delete", "BulkDelete", "BulkSetBatch", "SendWelcomeMessages");
         Add("Student",      new("student_profile"), "Profile360", "ExportProfile360");
 
         Add("Discontinued", new("discontinued_students"), "Index", "New", "Search", "Students", "Overview");

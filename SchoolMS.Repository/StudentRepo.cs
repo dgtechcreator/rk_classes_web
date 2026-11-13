@@ -61,6 +61,17 @@ public class StudentRepo(CommonConnectivity db)
         }, MapStudent);
         return l;
     }
+    /// <summary>Moves the given ACTIVE students to one batch (e.g. a combined class split into Maths / S P). Returns how many moved.</summary>
+    public int SetBatch(IEnumerable<int> ids, int batchId)
+    {
+        var list = ids.Distinct().Take(1000).ToList();
+        if (list.Count == 0) return 0;
+        var names = string.Join(",", list.Select((_, i) => "@I" + i));
+        var p = new Dictionary<string, object?> { { "@B", batchId } };
+        for (int i = 0; i < list.Count; i++) p["@I" + i] = list[i];
+        return db.ExecSql($"UPDATE Students SET BatchId=@B WHERE Status='Active' AND StudentId IN ({names})", p);
+    }
+
     /// <summary>Sets (or clears, with null) the photo. sp_SaveStudent uses ISNULL(@pic, old), so it can never clear one.</summary>
     public void SetPhoto(int id, string? path)
         => db.ExecSql("UPDATE Students SET ProfilePicPath=@P WHERE StudentId=@Id", new() { { "@Id", id }, { "@P", path } });

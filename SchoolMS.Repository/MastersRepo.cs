@@ -32,13 +32,24 @@ public class MastersRepo(CommonConnectivity db)
 
     public void DeleteYear(int id) => db.Exec("sp_DeleteAcademicYear", new(){{"@YearId",id}});
 
+    // The stored procedures of SQL/37 dropped the StudentCount column (every Masters tab showed "0 students"), and a database
+    // without a re-run keeps doing so - so the counts are taken here: ACTIVE students per class / section / batch, like SQL/04.
+    Dictionary<int, int> ActiveCountsBy(string column)
+        => db.Sql($"SELECT {column} AS Id, COUNT(*) AS Cnt FROM Students WHERE Status='Active' AND {column} IS NOT NULL GROUP BY {column}",
+            r => (Id: G.G<int>(r,"Id"), Cnt: G.G<int>(r,"Cnt"))).ToDictionary(x => x.Id, x => x.Cnt);
+
     // ── Class ─────────────────────────────────────────────────
-    public List<Class> GetClasses() => db.Read("sp_GetClasses", new(),
-        r => new Class {
-            ClassId=G.G<int>(r,"ClassId"), ClassName=G.G<string>(r,"ClassName")??"",
-            OrderNo=G.G<int>(r,"OrderNo"), IsActive=G.G<bool>(r,"IsActive"),
-            StudentCount=G.G<int>(r,"StudentCount")
-        });
+    public List<Class> GetClasses()
+    {
+        var list = db.Read("sp_GetClasses", new(),
+            r => new Class {
+                ClassId=G.G<int>(r,"ClassId"), ClassName=G.G<string>(r,"ClassName")??"",
+                OrderNo=G.G<int>(r,"OrderNo"), IsActive=G.G<bool>(r,"IsActive")
+            });
+        var counts = ActiveCountsBy("ClassId");
+        foreach (var c in list) c.StudentCount = counts.TryGetValue(c.ClassId, out var n) ? n : 0;
+        return list;
+    }
 
     public int SaveClass(Class m) => db.ExecOut("sp_SaveClass", new() {
         {"@ClassId",m.ClassId}, {"@ClassName",m.ClassName},
@@ -48,11 +59,17 @@ public class MastersRepo(CommonConnectivity db)
     public void DeleteClass(int id) => db.Exec("sp_DeleteClass", new(){{"@ClassId",id}});
 
     // ── Section ───────────────────────────────────────────────
-    public List<Section> GetSections() => db.Read("sp_GetSections", new(),
-        r => new Section {
-            SectionId=G.G<int>(r,"SectionId"), SectionName=G.G<string>(r,"SectionName")??"",
-            IsActive=G.G<bool>(r,"IsActive"), StudentCount=G.G<int>(r,"StudentCount")
-        });
+    public List<Section> GetSections()
+    {
+        var list = db.Read("sp_GetSections", new(),
+            r => new Section {
+                SectionId=G.G<int>(r,"SectionId"), SectionName=G.G<string>(r,"SectionName")??"",
+                IsActive=G.G<bool>(r,"IsActive")
+            });
+        var counts = ActiveCountsBy("SectionId");
+        foreach (var x in list) x.StudentCount = counts.TryGetValue(x.SectionId, out var n) ? n : 0;
+        return list;
+    }
 
     public int SaveSection(Section m) => db.ExecOut("sp_SaveSection", new() {
         {"@SectionId",m.SectionId}, {"@SectionName",m.SectionName}, {"@IsActive",m.IsActive}
@@ -61,11 +78,17 @@ public class MastersRepo(CommonConnectivity db)
     public void DeleteSection(int id) => db.Exec("sp_DeleteSection", new(){{"@SectionId",id}});
 
     // ── Batch ─────────────────────────────────────────────────
-    public List<Batch> GetBatches() => db.Read("sp_GetBatches", new(),
-        r => new Batch {
-            BatchId=G.G<int>(r,"BatchId"), BatchName=G.G<string>(r,"BatchName")??"",
-            IsActive=G.G<bool>(r,"IsActive"), StudentCount=G.G<int>(r,"StudentCount")
-        });
+    public List<Batch> GetBatches()
+    {
+        var list = db.Read("sp_GetBatches", new(),
+            r => new Batch {
+                BatchId=G.G<int>(r,"BatchId"), BatchName=G.G<string>(r,"BatchName")??"",
+                IsActive=G.G<bool>(r,"IsActive")
+            });
+        var counts = ActiveCountsBy("BatchId");
+        foreach (var b in list) b.StudentCount = counts.TryGetValue(b.BatchId, out var n) ? n : 0;
+        return list;
+    }
 
     public int SaveBatch(Batch m) => db.ExecOut("sp_SaveBatch", new() {
         {"@BatchId",m.BatchId}, {"@BatchName",m.BatchName}, {"@IsActive",m.IsActive}

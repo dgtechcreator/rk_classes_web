@@ -125,6 +125,18 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
         return BackToList(returnUrl);
     }
 
+    /// <summary>Move the selected students of the list into one batch.</summary>
+    [HttpPost]
+    public IActionResult BulkSetBatch(List<int> ids, int batchId, string? returnUrl = null)
+    {
+        ids = (ids ?? new()).Distinct().Take(1000).ToList();
+        var batch = lookup.GetBatches().FirstOrDefault(b => b.BatchId == batchId);
+        if (ids.Count == 0) TempData["Error"] = "Nothing was selected.";
+        else if (batch == null) TempData["Error"] = "Batch not found.";
+        else TempData["Success"] = $"{svc.SetBatch(ids, batchId)} student(s) moved to batch {batch.BatchName}.";
+        return BackToList(returnUrl);
+    }
+
     public IActionResult Details(int id)
     {
         var s = svc.GetById(id);

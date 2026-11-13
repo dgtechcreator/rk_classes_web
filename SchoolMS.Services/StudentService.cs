@@ -30,6 +30,7 @@ public class StudentService(StudentRepo repo)
         if (string.Equals(repo.GetById(id)?.Status, "Deleted", StringComparison.OrdinalIgnoreCase)) repo.SetInactive(id);
         else repo.Restore(id);
     }
+    public int SetBatch(IEnumerable<int> ids, int batchId) => repo.SetBatch(ids, batchId);
     public List<Student> GetByClassAndBatch(string className, string batchName)
         => repo.GetByClassAndBatch(className, batchName);
 }

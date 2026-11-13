@@ -231,6 +231,11 @@
 <div id="bulkBar" style="display:none;margin-bottom:10px;padding:10px 14px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;align-items:center;gap:12px;">
   <b id="bulkCount" style="font-size:13px;">0 selected</b>
   <button type="button" class="btn btn-danger btn-sm" onclick="bulkDelete()"><i class="fas fa-trash"></i> @(Model.StatusFilter == "Inactive" ? "Delete selected" : "Mark selected Inactive")</button>
+  <select id="bulkBatch" class="fs" style="min-width:170px;">
+    <option value="">Move to batch…</option>
+    @foreach(var b in Model.Batches){<option value="@b.BatchId">@b.BatchName</option>}
+  </select>
+  <button type="button" class="btn btn-primary btn-sm" onclick="bulkSetBatch()"><i class="fas fa-layer-group"></i> Move</button>
   <button type="button" class="btn btn-outline btn-sm" onclick="clearSel()">Clear</button>
 </div>
 
@@ -353,6 +358,17 @@ function updateSel() {
 }
 function toggleAll(box) { document.querySelectorAll('.rowSel').forEach(c => c.checked = box.checked); updateSel(); }
 function clearSel() { document.querySelectorAll('.rowSel').forEach(c => c.checked = false); updateSel(); }
+function bulkSetBatch() {
+  const ids = selected(); if (!ids.length) return;
+  const sel = document.getElementById('bulkBatch');
+  if (!sel.value) { alert('Pick the batch to move the selected students to.'); return; }
+  if (!confirm('Move ' + ids.length + ' student(s) to batch "' + sel.options[sel.selectedIndex].text + '"?')) return;
+  const f = document.createElement('form'); f.method = 'post'; f.action = '/Student/BulkSetBatch';
+  ids.forEach(v => { const i = document.createElement('input'); i.type = 'hidden'; i.name = 'ids'; i.value = v; f.appendChild(i); });
+  const b = document.createElement('input'); b.type = 'hidden'; b.name = 'batchId'; b.value = sel.value; f.appendChild(b);
+  const r = document.createElement('input'); r.type = 'hidden'; r.name = 'returnUrl'; r.value = location.pathname + location.search; f.appendChild(r);
+  document.body.appendChild(f); f.submit();
+}
 function bulkDelete() {
   const ids = selected(); if (!ids.length) return;
   const inactiveView = @(Model.StatusFilter == "Inactive" ? "true" : "false");
