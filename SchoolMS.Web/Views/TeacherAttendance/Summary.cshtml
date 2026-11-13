@@ -28,7 +28,10 @@
 <div class="sum-container">
     <div class="sum-hdr">
         <h1>My Attendance Summary</h1>
-        <a href="/TeacherAttendance/Index">← Back</a>
+        <div style="display:flex;gap:8px;">
+            <a href="/TeacherAttendance/ExportSummary" style="background:#16a34a;">⬇ Export to Excel</a>
+            <a href="/TeacherAttendance/Index">← Back</a>
+        </div>
     </div>
 
     <div class="kpi-grid">
@@ -51,12 +54,42 @@
         </div>
     </div>
 
+    @{
+        // Rates differ per class and medium, so every teacher's hours are split class-wise and stream / medium-wise.
+        var perTeacher = attendance
+            .GroupBy(a => new { a.FacultyId, Name = (a.FacultyName ?? "").Trim(), Class = a.ClassName ?? "", Medium = a.SectionName ?? "" })
+            .Select(g => new { g.Key.Name, g.Key.Class, g.Key.Medium, Lectures = g.Count(), Days = g.Select(x => x.AttendanceDate.Date).Distinct().Count(), Hours = g.Sum(x => x.TotalHours ?? 0) })
+            .OrderBy(x => x.Name).ThenBy(x => x.Class).ThenBy(x => x.Medium).ToList();
+    }
+    <h3 style="margin:0 0 10px;font-size:15px;font-weight:700;">Teacher-wise &middot; Class &amp; Medium</h3>
+    <div class="sum-tbl-wrapper" style="margin-bottom:24px;">
+        <table class="sum-tbl">
+            <thead><tr><th>Teacher</th><th>Class</th><th>Stream / Medium</th><th>Lectures</th><th>Days</th><th>Hours</th></tr></thead>
+            <tbody>
+                @foreach (var x in perTeacher)
+                {
+                    <tr>
+                        <td>@x.Name</td>
+                        <td>@(x.Class == "" ? "-" : x.Class)</td>
+                        <td>@(x.Medium == "" ? "Medium not set" : x.Medium)</td>
+                        <td>@x.Lectures</td>
+                        <td>@x.Days</td>
+                        <td>@x.Hours.ToString("F2")</td>
+                    </tr>
+                }
+                @if (perTeacher.Count == 0) { <tr><td colspan="6" style="text-align:center;color:#6b7280;padding:20px;">No records</td></tr> }
+            </tbody>
+        </table>
+    </div>
+
+    <h3 style="margin:0 0 10px;font-size:15px;font-weight:700;">All entries</h3>
     <div class="sum-tbl-wrapper">
         <table class="sum-tbl">
             <thead>
                 <tr>
                     <th>Teacher</th>
                     <th>Class</th>
+                    <th>Stream / Medium</th>
                     <th>Batch</th>
                     <th>Subject</th>
                     <th>Topic</th>
@@ -76,12 +109,13 @@
                         <tr>
                             <td>@record.FacultyName</td>
                             <td>@record.ClassName</td>
+                            <td>@(string.IsNullOrEmpty(record.SectionName) ? "-" : record.SectionName)</td>
                             <td>@record.BatchName</td>
                             <td>@record.SubjectName</td>
                             <td style="max-width:260px;">@record.Topic</td>
                             <td>@record.AttendanceDate.ToString("dd-MMM-yyyy")</td>
-                            <td>@(record.InTime?.ToString(@"hh\:mm") ?? "-")</td>
-                            <td>@(record.OutTime?.ToString(@"hh\:mm") ?? "-")</td>
+                            <td>@((record.InTime.HasValue ? DateTime.Today.Add(record.InTime.Value).ToString("h:mm tt", System.Globalization.CultureInfo.InvariantCulture) : "-"))</td>
+                            <td>@((record.OutTime.HasValue ? DateTime.Today.Add(record.OutTime.Value).ToString("h:mm tt", System.Globalization.CultureInfo.InvariantCulture) : "-"))</td>
                             <td>@(record.TotalHours?.ToString("F2") ?? "-")</td>
                             <td>@(string.IsNullOrEmpty(record.CreatedByName) ? "-" : record.CreatedByName)</td>
                             <td><button class="del-btn" onclick="deleteAttendance(@record.AttendanceId)">Delete</button></td>
@@ -91,7 +125,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="11" style="text-align: center; color: #6b7280; padding: 20px;">No records</td>
+                        <td colspan="12" style="text-align: center; color: #6b7280; padding: 20px;">No records</td>
                     </tr>
                 }
             </tbody>

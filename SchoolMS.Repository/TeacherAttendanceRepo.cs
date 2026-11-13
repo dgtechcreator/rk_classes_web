@@ -7,19 +7,34 @@ namespace SchoolMS.Repository;
 
 public class TeacherAttendanceRepo(CommonConnectivity db)
 {
+    // SectionId (Stream / Medium) is created on first use - nullable, nothing existing changes (same as SQL/77).
+    static volatile bool _ready;
+    static readonly object _lock = new();
+    void EnsureSchema()
+    {
+        if (_ready) return;
+        lock (_lock)
+        {
+            if (_ready) return;
+            db.ExecSql("IF COL_LENGTH('dbo.TeacherAttendance', 'SectionId') IS NULL ALTER TABLE dbo.TeacherAttendance ADD SectionId INT NULL;", new());
+            _ready = true;
+        }
+    }
+
     // Values are bound as parameters (the old version pasted them into the SQL text, which turned Hindi
     // subject / topic text into '???' because the literals were not N'...' strings).
-    public int Save(int facultyId, int? classId, int? batchId, string? subject, string? topic, DateTime date,
+    public int Save(int facultyId, int? classId, int? batchId, int? sectionId, string? subject, string? topic, DateTime date,
         TimeSpan? inTime, TimeSpan? outTime, decimal? totalHours, int createdBy)
     {
         try
         {
+            EnsureSchema();
             return db.SqlP(@"
-                INSERT INTO TeacherAttendance (FacultyId, ClassId, BatchId, SubjectName, Topic, AttendanceDate, InTime, OutTime, TotalHours, CreatedBy, CreatedAt, IsDeleted)
+                INSERT INTO TeacherAttendance (FacultyId, ClassId, BatchId, SectionId, SubjectName, Topic, AttendanceDate, InTime, OutTime, TotalHours, CreatedBy, CreatedAt, IsDeleted)
                 OUTPUT INSERTED.AttendanceId
-                VALUES (@Faculty, @Class, @Batch, @Subject, @Topic, @Date, @In, @Out, @Hours, @By, GETDATE(), 0)",
+                VALUES (@Faculty, @Class, @Batch, @Section, @Subject, @Topic, @Date, @In, @Out, @Hours, @By, GETDATE(), 0)",
                 new() {
-                    {"@Faculty", facultyId}, {"@Class", classId}, {"@Batch", batchId},
+                    {"@Faculty", facultyId}, {"@Class", classId}, {"@Batch", batchId}, {"@Section", sectionId},
                     {"@Subject", string.IsNullOrEmpty(subject) ? null : subject},
                     {"@Topic", string.IsNullOrEmpty(topic) ? null : topic},
                     {"@Date", date.Date}, {"@In", inTime}, {"@Out", outTime}, {"@Hours", totalHours}, {"@By", createdBy},
@@ -34,18 +49,20 @@ public class TeacherAttendanceRepo(CommonConnectivity db)
 
     const string SelectSql = @"
         SELECT ta.AttendanceId, ta.FacultyId, f.FullName AS FacultyName, ta.ClassId, c.ClassName,
-            ta.BatchId, b.BatchName, ta.SubjectName, ta.Topic, ta.AttendanceDate,
+            ta.BatchId, b.BatchName, ta.SectionId, sec.SectionName, ta.SubjectName, ta.Topic, ta.AttendanceDate,
             ta.InTime, ta.OutTime, ta.TotalHours, ta.CreatedAt, ta.CreatedBy, cu.FullName AS CreatedByName, ta.IsDeleted,
             ta.DeletedAt, ta.DeletedBy
         FROM TeacherAttendance ta
         LEFT JOIN Faculty f ON ta.FacultyId = f.FacultyId
         LEFT JOIN Classes c ON ta.ClassId = c.ClassId
         LEFT JOIN Batches b ON ta.BatchId = b.BatchId
+        LEFT JOIN Sections sec ON ta.SectionId = sec.SectionId
         LEFT JOIN Users cu  ON cu.UserId = ta.CreatedBy";
 
     /// <param name="createdBy">When set, only the rows entered by that login (a Class Representative sees just his own entries).</param>
     public List<TeacherAttendance> GetAll(int? facultyId = null, int? createdBy = null)
     {
+        EnsureSchema();
         return db.SqlP(SelectSql + @"
             WHERE ta.IsDeleted = 0 AND ISNULL(f.Status,'Active') = 'Active'
               AND (@Faculty IS NULL OR ta.FacultyId = @Faculty)
@@ -55,8 +72,10 @@ public class TeacherAttendanceRepo(CommonConnectivity db)
     }
 
     public TeacherAttendance? GetById(int attendanceId)
-        => db.SqlP(SelectSql + " WHERE ta.AttendanceId = @Id AND ta.IsDeleted = 0",
-            new() {{"@Id", attendanceId}}, MapTeacherAttendance).FirstOrDefault();
+        => EnsureSchemaThen(() => db.SqlP(SelectSql + " WHERE ta.AttendanceId = @Id AND ta.IsDeleted = 0",
+            new() {{"@Id", attendanceId}}, MapTeacherAttendance).FirstOrDefault());
+
+    T EnsureSchemaThen<T>(Func<T> f) { EnsureSchema(); return f(); }
 
     public void Delete(int attendanceId, int deletedBy)
         => db.ExecSql("UPDATE TeacherAttendance SET IsDeleted = 1, DeletedBy = @By, DeletedAt = GETDATE() WHERE AttendanceId = @Id",
@@ -89,6 +108,8 @@ public class TeacherAttendanceRepo(CommonConnectivity db)
         ClassName = G.G<string>(r, "ClassName") ?? "",
         BatchId = G.G<int?>(r, "BatchId"),
         BatchName = G.G<string>(r, "BatchName") ?? "",
+        SectionId = G.G<int?>(r, "SectionId"),
+        SectionName = G.G<string>(r, "SectionName") ?? "",
         SubjectName = G.G<string>(r, "SubjectName") ?? "",
         Topic = G.G<string>(r, "Topic") ?? "",
         AttendanceDate = G.G<DateTime>(r, "AttendanceDate"),

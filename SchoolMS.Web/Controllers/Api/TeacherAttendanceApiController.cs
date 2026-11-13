@@ -14,7 +14,7 @@ public class TeacherAttendanceApiController(
     FacultyService facultySvc,
     LookupService lookupSvc) : ControllerBase
 {
-    public record SaveAttendanceReq(int FacultyId, int? ClassId, int? BatchId, string? Subject,
+    public record SaveAttendanceReq(int FacultyId, int? ClassId, int? BatchId, int? SectionId, string? Subject,
         string? Topic, string? AttendanceDate, string? InTime, string? OutTime);
 
     [HttpGet]
@@ -32,6 +32,7 @@ public class TeacherAttendanceApiController(
             teachers = facultySvc.GetAllActive(),
             classes,
             batches,
+            sections = lookupSvc.GetSections().Where(s => s.IsActive).ToList(),
             attendance = attendanceSvc.GetAll(createdBy: cr?.UserId),
             classRep = cr == null ? null : new { editDays = CrScope.EditDays, classId = cr.ClassId, batchId = cr.EffectiveBatchId },
         });
@@ -81,7 +82,7 @@ public class TeacherAttendanceApiController(
                 if (denied != null) return Ok(new { success = false, message = denied });
             }
 
-            var attendanceId = attendanceSvc.Save(req.FacultyId, classId, batchId, req.Subject, req.Topic,
+            var attendanceId = attendanceSvc.Save(req.FacultyId, classId, batchId, req.SectionId, req.Subject, req.Topic,
                 date, inTimeSpan, outTimeSpan, userId.Value);
 
             return Ok(new { success = true, attendanceId, message = "Attendance recorded successfully" });

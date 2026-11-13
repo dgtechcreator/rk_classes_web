@@ -185,10 +185,15 @@
         <div class="kpi-val">@Model.NewToday</div>
         <div class="kpi-lbl">New Admissions Today</div>
     </div>
-    <div class="kpi teal" onclick="location.href='/Users/Index'" style="cursor:pointer;">
+    <div class="kpi teal" onclick="location.href='/Faculty/Index'" style="cursor:pointer;">
         <div class="kpi-ico teal"><i class="fas fa-chalkboard-teacher"></i></div>
+        <div class="kpi-val">@Model.TotalFaculty</div>
+        <div class="kpi-lbl">Faculty <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
+    </div>
+    <div class="kpi teal" onclick="location.href='/Users/Index'" style="cursor:pointer;">
+        <div class="kpi-ico teal"><i class="fas fa-user-shield"></i></div>
         <div class="kpi-val">@Model.TotalStaff</div>
-        <div class="kpi-lbl">Staff Members <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
+        <div class="kpi-lbl">Users (logins) <i class="fas fa-external-link-alt" style="font-size:10px;margin-left:4px;"></i></div>
     </div>
     <div class="kpi indigo" onclick="location.href='/Dashboard/FeesThisMonth'" style="cursor:pointer;">
         <div class="kpi-ico indigo"><i class="fas fa-rupee-sign"></i></div>

@@ -11,7 +11,10 @@ public class DashboardStats
     public int     Class1Count{get;set;}
     public int     Class2Count{get;set;}
     public int     Class3Count{get;set;}
+    /// <summary>Login accounts (Users) that are active - what the "Staff Members" card has always counted.</summary>
     public int     TotalStaff{get;set;}
+    /// <summary>Active faculty (teachers) - the same number the Faculty page header shows.</summary>
+    public int     TotalFaculty{get;set;}
     public decimal TotalFeesOverall{get;set;}
     public decimal TotalCollectedOverall{get;set;}
     public decimal TotalDiscountOverall{get;set;}

@@ -5,7 +5,7 @@ namespace SchoolMS.Services;
 
 public class TeacherAttendanceService(TeacherAttendanceRepo repo, FacultyService facultySvc)
 {
-    public int Save(int facultyId, int? classId, int? batchId, string? subject, string? topic, DateTime date,
+    public int Save(int facultyId, int? classId, int? batchId, int? sectionId, string? subject, string? topic, DateTime date,
         TimeSpan? inTime, TimeSpan? outTime, int createdBy)
     {
         try
@@ -18,7 +18,7 @@ public class TeacherAttendanceService(TeacherAttendanceRepo repo, FacultyService
                     totalHours = (decimal)timeSpan.TotalHours;
             }
 
-            return repo.Save(facultyId, classId, batchId, subject, topic, date, inTime, outTime, totalHours, createdBy);
+            return repo.Save(facultyId, classId, batchId, sectionId, subject, topic, date, inTime, outTime, totalHours, createdBy);
         }
         catch (Exception ex)
         {

@@ -32,6 +32,7 @@ public class TeacherAttendanceController(
         ViewBag.Teachers = teachers;
         ViewBag.Classes = classes;
         ViewBag.Batches = batches;
+        ViewBag.Sections = lookupSvc.GetSections().Where(s => s.IsActive).ToList();
         ViewBag.Attendance = attendance;
 
         ViewData["Title"] = "Teachers Attendance";
@@ -39,7 +40,7 @@ public class TeacherAttendanceController(
     }
 
     [HttpPost]
-    public IActionResult SaveAttendance(int facultyId, int? classId, int? batchId, string? subject,
+    public IActionResult SaveAttendance(int facultyId, int? classId, int? batchId, int? sectionId, string? subject,
         string? topic, string? attendanceDate, string? inTime, string? outTime)
     {
         try
@@ -97,7 +98,7 @@ public class TeacherAttendanceController(
                 if (denied != null) return Json(new { success = false, message = denied });
             }
 
-            var attendanceId = attendanceSvc.Save(facultyId, classId, batchId, subject, topic,
+            var attendanceId = attendanceSvc.Save(facultyId, classId, batchId, sectionId, subject, topic,
                 date, inTimeSpan, outTimeSpan, userId.Value);
 
             return Json(new { success = true, attendanceId, message = "Attendance recorded successfully" });
@@ -151,5 +152,30 @@ public class TeacherAttendanceController(
 
         ViewData["Title"] = "My Attendance Summary";
         return View();
+    }
+
+    /// <summary>Every lecture as a file Excel opens (CSV, UTF-8 with BOM), then the class + medium wise total of each teacher.</summary>
+    [HttpGet]
+    public IActionResult ExportSummary(int? facultyId = null)
+    {
+        var onlyMine = HttpContext.CurrentCr() != null ? HttpContext.Session.GetUserId() : null;
+        var list = attendanceSvc.GetAll(facultyId, onlyMine);
+        string Q(string? v) => "\"" + (v ?? "").Replace("\"", "\"\"") + "\"";
+        string T(TimeSpan? t) => t.HasValue ? DateTime.Today.Add(t.Value).ToString("h:mm tt", System.Globalization.CultureInfo.InvariantCulture) : "";
+        string N(decimal v) => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("Teacher,Date,Class,Stream / Medium,Batch,Subject,Topic,In Time,Out Time,Hours");
+        foreach (var a in list.OrderBy(a => (a.FacultyName ?? "").Trim()).ThenBy(a => a.AttendanceDate))
+            sb.AppendLine(string.Join(",", Q(a.FacultyName?.Trim()), a.AttendanceDate.ToString("dd-MM-yyyy"), Q(a.ClassName), Q(a.SectionName), Q(a.BatchName),
+                Q(a.SubjectName), Q(a.Topic), T(a.InTime), T(a.OutTime), a.TotalHours.HasValue ? N(a.TotalHours.Value) : ""));
+        sb.AppendLine();
+        sb.AppendLine("Class and medium wise total");
+        sb.AppendLine("Teacher,Class,Stream / Medium,Lectures,Days,Hours");
+        foreach (var g in list.GroupBy(a => new { Name = (a.FacultyName ?? "").Trim(), Class = a.ClassName ?? "", Medium = a.SectionName ?? "" })
+                              .OrderBy(g => g.Key.Name).ThenBy(g => g.Key.Class).ThenBy(g => g.Key.Medium))
+            sb.AppendLine(string.Join(",", Q(g.Key.Name), Q(g.Key.Class), Q(g.Key.Medium), g.Count(), g.Select(x => x.AttendanceDate.Date).Distinct().Count(), N(g.Sum(x => x.TotalHours ?? 0))));
+        sb.AppendLine($"Total,,,{list.Count},,{N(list.Sum(x => x.TotalHours ?? 0))}");
+        var bytes = new System.Text.UTF8Encoding(true).GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
+        return File(bytes, "text/csv", $"TeacherAttendance_{DateTime.Now:yyyyMMdd_HHmm}.csv");
     }
 }

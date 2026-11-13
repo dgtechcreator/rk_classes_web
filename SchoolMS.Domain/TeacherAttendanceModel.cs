@@ -9,6 +9,9 @@ public class TeacherAttendance
     public string ClassName { get; set; } = "";
     public int? BatchId { get; set; }
     public string BatchName { get; set; } = "";
+    /// <summary>Stream / Medium of the lecture (Section master: Science, Commerce, Hindi, English ...). Null on older entries.</summary>
+    public int? SectionId { get; set; }
+    public string SectionName { get; set; } = "";
     public string SubjectName { get; set; } = "";
     public string Topic { get; set; } = "";
     public DateTime AttendanceDate { get; set; }

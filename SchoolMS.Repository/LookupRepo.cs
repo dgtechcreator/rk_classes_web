@@ -51,6 +51,7 @@ public class LookupRepo(CommonConnectivity db)
             r => (P: G.G<int>(r, "P"), A: G.G<int>(r, "A"))).FirstOrDefault();
         stats.PresentToday = att.P;
         stats.AbsentToday = att.A;
+        stats.TotalFaculty = db.Sql("SELECT COUNT(*) AS C FROM Faculty WHERE Status = 'Active'", r => G.G<int>(r, "C")).FirstOrDefault();
 
         // "Fees This Month" and "Total Students" follow the Current academic year in C# too: a database that has not had
         // SQL/69 yet still runs the old procedure, which added up the receipts / students of EVERY year - so switching

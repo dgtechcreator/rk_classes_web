@@ -3,6 +3,7 @@
     var teachers = (dynamic)ViewBag.Teachers ?? new List<dynamic>();
     var classes = (dynamic)ViewBag.Classes ?? new List<dynamic>();
     var batches = (dynamic)ViewBag.Batches ?? new List<dynamic>();
+    var sections = (dynamic)ViewBag.Sections ?? new List<dynamic>();
     var subjects = (dynamic)ViewBag.Subjects ?? new List<dynamic>();
     var attendance = (List<SchoolMS.Domain.TeacherAttendance>)ViewBag.Attendance ?? new List<SchoolMS.Domain.TeacherAttendance>();
     var cr = ViewBag.Cr as SchoolMS.Domain.CrScope;
@@ -88,6 +89,17 @@
                 </div>
 
                 <div class="att-group">
+                    <label for="sectionSelect">Stream / Medium</label>
+                    <select id="sectionSelect" name="sectionId">
+                        <option value="">-- Select Stream / Medium --</option>
+                        @foreach (var sec in sections)
+                        {
+                            <option value="@sec.SectionId" selected="@(cr != null && cr.SectionId == sec.SectionId)">@sec.SectionName</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="att-group">
                     <label for="subjectInput">Subject</label>
                     <input type="text" id="subjectInput" name="subject" maxlength="100" placeholder="Enter subject name"/>
                 </div>
@@ -159,6 +171,7 @@
         const teacherId = document.getElementById('teacherSelect').value;
         const classId = document.getElementById('classSelect').value || null;
         const batchId = document.getElementById('batchSelect').value || null;
+        const sectionId = document.getElementById('sectionSelect').value || null;
         const subject = document.getElementById('subjectInput').value;
         const topic = document.getElementById('topicInput').value;
         const attendanceDate = document.getElementById('dateInput').value;
@@ -182,6 +195,7 @@
         params.append('facultyId', teacherId);
         if (classId) params.append('classId', classId);
         if (batchId) params.append('batchId', batchId);
+        if (sectionId) params.append('sectionId', sectionId);
         if (subject) params.append('subject', subject);
         if (topic) params.append('topic', topic);
         params.append('attendanceDate', attendanceDate);
