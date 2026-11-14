@@ -21,4 +21,19 @@ public class FacultyService(FacultyRepo repo)
         var (data, _) = GetAll(null, "Active", null, 1, 1000);
         return data;
     }
+
+    /// <summary>
+    /// Attendance rows store the bare faculty name. Students / parents should see it the way staff pick it
+    /// ("Rakesh Mishra SIR" / "... MA'AM"), so swap in the Faculty display name. Unknown names are left as they are.
+    /// </summary>
+    public void ApplyTeacherLabels(IEnumerable<StudentAttendanceDetail> rows)
+    {
+        var list = rows.Where(r => !string.IsNullOrWhiteSpace(r.SirName)).ToList();
+        if (list.Count == 0) return;
+        var byName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var f in GetAllActive())
+            if (!string.IsNullOrWhiteSpace(f.FullName)) byName[f.FullName.Trim()] = f.DisplayName;
+        foreach (var r in list)
+            if (byName.TryGetValue(r.SirName!.Trim(), out var label)) r.SirName = label;
+    }
 }

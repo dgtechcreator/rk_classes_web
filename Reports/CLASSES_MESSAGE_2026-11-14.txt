@@ -1,0 +1,47 @@
+📢 *RK Classes — Software Update (14 Nov 2026)*
+
+Aaj Web aur Mobile App dono me ye naye features aur sudhaar hue hain 👇
+
+🚪 *Classroom (naya)*
+• Admin sab classrooms add kar sakta hai (Room 101, Lab, Hall…)
+• Lecture schedule karte waqt classroom chunna hota hai — students aur teacher ko pata chalta hai lecture kis room me hai
+• Ek room me ek time par do lectures nahi ho sakte
+• Admin live dekh sakta hai: kaunsa room engaged hai, kab tak, kaunsa lecture / teacher / class / batch / medium, aur kaunsa room free hai. Purana record bhi poori detail me
+
+📞 *Fee Follow-up (naya)*
+• Kisne, kab, kisse baat ki, kya baat hui, fees kyun pending hai — sab note hota hai
+• Next date: parent ne di ya khud set ki (kab dobara call karna hai)
+• Summary me har student ka balance, aakhri follow-up, next date aur status (Overdue / Aaj / Aage / Follow-up nahi hua)
+• Detail me poori history aur Excel export
+
+👆 *Fingerprint se login (naya)*
+• App me aur Web me — pehli baar password se login karke fingerprint on kar lo, phir sirf fingerprint se login
+• Sab ke liye: Admin, Teacher, Students / Parents
+
+🔐 *Login Activity (naya)*
+• Kaun kis phone / browser se kab login hua — Admin sab ki dekh sakta hai
+• Har user apni khud ki login activity dekh sakta hai
+
+👩‍🏫 *Teacher Attendance*
+• Student attendance me teacher, subject aur time bharne par teacher ki attendance apne aap lag jati hai (Today's Entries me dikhti hai)
+• Summary me Edit aur Delete — edit / delete par teacher ko notification jata hai (kaun si entry, kisne, kab) aur teacher apna log dekh sakta hai
+
+🔎 *Search har jagah*
+• Dropdown me bhi search (teacher, student, class…)
+• Attendance ke student rows, marks entry, lecture summary, top students, fees, teacher payment, lectures aur baaki lists me search box
+
+👨‍👩‍👧 *Parent / Student Login*
+• Attendance me teacher ka naam ab "Sir / Ma'am" ke saath
+• Paid / Balance aur Receipts ab admin alag-alag on / off kar sakta hai (Roles & Access). Receipt ab sirf dekh sakte hain
+• Student banate waqt Date of Birth, Gender, Father / Mother name, Contact, Address aur Admission Date zaroori hain
+
+🧾 *Finance / Masters*
+• Fee Structure aur Fee Heads ab alag-alag screen me
+• Subject banate waqt Max / Pass marks nahi puchhte — test banate waqt teacher khud dalta hai (20 / 30 / 50 / 100…)
+
+⚙️ *Login aur Session*
+• Web par session bahut jaldi expire ho jata tha — theek kiya, ab 30 din tak login bana rehta hai
+• Notification ka bell ab page khulte hi aur turant update hota hai
+• Task "Done" karne par task list se gayab nahi hota aur baaki notifications read nahi hoti
+
+Koi problem ho to bataiye 🙏

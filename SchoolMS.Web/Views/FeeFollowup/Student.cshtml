@@ -1,0 +1,74 @@
+@using SchoolMS.Domain
+@model List<FeeFollowup>
+@{
+    ViewData["Title"] = "Fee Follow-up";
+    var fin = ViewBag.Fin as FinanceStudentRow;
+    bool isAdmin = ViewBag.IsAdmin == true; int uid = ViewBag.Uid;
+    int sid = ViewBag.StudentId; string name = ViewBag.StudentName;
+    string tel(string? p) => new string((p ?? "").Where(char.IsDigit).ToArray());
+}
+<style>
+.fu-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px 18px; margin-bottom:14px; }
+.fu-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; } .fu-grid label { display:block; font-size:12px; font-weight:700; margin-bottom:3px; }
+.fu-grid .full { grid-column:1 / -1; }
+.fu-item { border-left:4px solid #2563eb; background:#f8fafc; border-radius:8px; padding:10px 14px; margin-bottom:10px; }
+.fu-item .t { font-weight:800; } .fu-item .m { font-size:12px; color:#6b7280; margin-top:2px; } .fu-item .b { font-size:13px; margin-top:6px; white-space:pre-wrap; }
+</style>
+<div class="pg-hdr"><div class="pg-row">
+  <div><h1>📞 @name</h1><p>@(fin == null ? "" : string.Join(" · ", new[] { fin.AdmissionNo, fin.ClassName, fin.SectionName, fin.BatchName }.Where(x => !string.IsNullOrWhiteSpace(x))))</p></div>
+  <div><a class="btn" href="/FeeFollowup/Index" style="text-decoration:none;">← All follow-ups</a></div>
+</div></div>
+
+@if (fin != null) {
+<div class="fu-card"><div class="fu-grid">
+  <div><label>Total fees</label><b>₹@fin.TotalFees.ToString("N0")</b></div>
+  <div><label>Collected</label><b style="color:#16a34a">₹@fin.Collected.ToString("N0")</b></div>
+  <div><label>Balance</label><b style="color:@(fin.Balance > 0 ? "#dc2626" : "#16a34a")">₹@fin.Balance.ToString("N0")</b></div>
+  <div><label>Phones</label>
+    @foreach (var p in new[] { ("Student", fin.Phone), ("Father", fin.FatherPhone), ("Mother", fin.MotherPhone) }.Where(x => !string.IsNullOrWhiteSpace(x.Item2)).DistinctBy(x => tel(x.Item2))) {
+      <div style="font-size:12.5px;">@p.Item1: <a href="tel:@p.Item2">@p.Item2</a> · <a href="https://wa.me/91@(tel(p.Item2).TakeLast(10).Aggregate("", (a, c) => a + c))" target="_blank">WhatsApp</a></div> }
+  </div>
+</div></div> }
+
+<div class="fu-card">
+  <h3 style="margin:0 0 10px;font-size:16px;">Add a follow-up</h3>
+  <div class="fu-grid">
+    <div><label>How *</label><select id="fMode" class="fs">@foreach (var m in FeeFollowupRules.Modes) { <option>@m</option> }</select></div>
+    <div><label>Spoke to</label><select id="fSpoke" class="fs"><option value="">—</option>@foreach (var m in FeeFollowupRules.SpokeTo) { <option>@m</option> }</select></div>
+    <div><label>What came of it *</label><select id="fOutcome" class="fs"><option value="">— Select —</option>@foreach (var m in FeeFollowupRules.Outcomes) { <option>@m</option> }</select></div>
+    <div><label>Done on</label><input type="datetime-local" id="fAt" class="fc" value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")"/></div>
+    <div class="full"><label>Reason the fees are pending</label><input type="text" id="fReason" class="fc" maxlength="300" placeholder="e.g. waiting for salary, father out of station"/></div>
+    <div class="full"><label>What was said (the conversation)</label><textarea id="fNotes" class="fc" rows="3" maxlength="1500" placeholder="Write what the parent said and what you told them"></textarea></div>
+    <div><label>Amount promised (₹)</label><input type="number" id="fProm" class="fc" min="0" step="1"/></div>
+    <div><label>Next date</label><input type="date" id="fNext" class="fc" min="@DateTime.Today.ToString("yyyy-MM-dd")"/></div>
+    <div><label>This date was</label>
+      <select id="fNextBy" class="fs"><option value="Parent">Given by the parent (they will pay / we should call)</option><option value="Self">Set by me (to call again)</option></select></div>
+  </div>
+  <div id="fErr" style="display:none;color:#dc2626;font-size:12.5px;margin-top:8px;"></div>
+  <div style="margin-top:12px;"><button class="btn btn-p" onclick="addFollowup()">Save follow-up</button></div>
+</div>
+
+<h3 style="font-size:16px;margin:18px 0 8px;">History (@Model.Count)</h3>
+@if (!Model.Any()) { <div style="color:#6b7280;font-size:13px;">No follow-up recorded for this student yet.</div> }
+@foreach (var f in Model) {
+  <div class="fu-item">
+    <div style="display:flex;justify-content:space-between;gap:8px;">
+      <div><span class="t">@f.FollowupAt.ToString("dd MMM yyyy, h:mm tt")</span> · <b>@f.Outcome</b></div>
+      @if (isAdmin || f.FollowedBy == uid) { <button class="btn" style="color:#dc2626;font-size:11px;padding:2px 8px;" onclick="delFollowup(@f.FollowupId)">Delete</button> }
+    </div>
+    <div class="m">by <b>@(string.IsNullOrWhiteSpace(f.FollowedByName) ? "—" : f.FollowedByName)</b> · @f.Mode@(string.IsNullOrWhiteSpace(f.SpokeTo) ? "" : " · spoke to " + f.SpokeTo)@(f.BalanceAtTime.HasValue ? " · balance then ₹" + f.BalanceAtTime.Value.ToString("N0") : "")</div>
+    @if (!string.IsNullOrWhiteSpace(f.Reason)) { <div class="b"><b>Reason:</b> @f.Reason</div> }
+    @if (!string.IsNullOrWhiteSpace(f.Notes)) { <div class="b">@f.Notes</div> }
+    @if (f.NextDate != null || f.PromisedAmount > 0) { <div class="m" style="margin-top:6px;color:#1e40af;font-weight:700;">@(f.NextDate != null ? "Next: " + f.NextDate.Value.ToString("dd MMM yyyy") + (f.NextDateBy == "Parent" ? " (parent said)" : " (we will call again)") : "")@(f.PromisedAmount > 0 ? " · promised ₹" + f.PromisedAmount.Value.ToString("N0") : "")</div> }
+  </div>
+}
+<script>
+async function post(url, body) { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return r.json(); }
+async function addFollowup() {
+  const v = id => document.getElementById(id).value;
+  const j = await post('/FeeFollowup/Add', { studentId: @sid, mode: v('fMode'), spokeTo: v('fSpoke') || null, outcome: v('fOutcome'), reason: v('fReason') || null, notes: v('fNotes') || null,
+    promisedAmount: v('fProm') ? parseFloat(v('fProm')) : null, nextDate: v('fNext') || null, nextDateBy: v('fNextBy'), followupAt: v('fAt') || null });
+  if (j.success) location.reload(); else { const e = document.getElementById('fErr'); e.textContent = j.error || 'Could not save.'; e.style.display = 'block'; }
+}
+async function delFollowup(id) { if (!confirm('Delete this follow-up?')) return; const j = await post('/FeeFollowup/Delete', { id }); if (j.success) location.reload(); else alert(j.error || 'Could not delete.'); }
+</script>

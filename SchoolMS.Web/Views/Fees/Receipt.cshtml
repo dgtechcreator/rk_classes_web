@@ -8,6 +8,11 @@
         dueDate = ViewBag.DueDate as DateTime?;
     }
     var remainingBalance = ViewBag.RemainingBalance as decimal? ?? 0;
+
+    // A parent / student opening this page (not staff): view only - no print / WhatsApp / share - and the due amount is
+    // left off unless the admin switched "Fees: Paid & Balance" on (Roles & Access).
+    bool isParentView = Context.Session.GetInt32("ParentId") != null && Context.Session.GetInt32("UserId") == null;
+    bool hideDue = isParentView && Context.RequestServices.GetRequiredService<SchoolMS.Services.PortalAccessService>().Hidden().Contains("fees_summary");
 }
 @functions {
     static string AmountInWords(decimal number)
@@ -130,8 +135,12 @@ body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
 
 <div class="no-print">
   <div class="btn-group">
-    <button class="btn-print"     onclick="printPortrait()">🖨️ Print Receipt (Portrait)</button>
-    <button class="btn-landscape" onclick="printLandscape()">🖨️ Print Landscape</button>
+    @* FUTURE: parents may be allowed to print / share their receipt again - remove the isParentView check to bring the buttons back. *@
+    @if (!isParentView)
+    {
+      <button class="btn-print"     onclick="printPortrait()">🖨️ Print Receipt (Portrait)</button>
+      <button class="btn-landscape" onclick="printLandscape()">🖨️ Print Landscape</button>
+    }
     <button class="btn-close"     onclick="history.back()">✕ Close</button>
   </div>
   @{
@@ -149,7 +158,8 @@ body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
       if (n != "" && !rcNums.Any(x => x.N == n)) rcNums.Add((l, n));
     }
   }
-  @if (rcNums.Any())
+  @* WhatsApp sending is staff only (same switch as above). *@
+  @if (rcNums.Any() && !isParentView)
   {
     <div class="btn-group">
       @foreach (var c in rcNums)
@@ -239,10 +249,13 @@ body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
       <td><b>IFSC Code:-</b> @(string.IsNullOrWhiteSpace(chequeNo) ? "NA" : "-")</td>
       <td colspan="2"><b>Online Tranx. No.:-</b> @(string.IsNullOrWhiteSpace(onlineRef) ? "NA" : onlineRef)</td>
     </tr>
+    @if (!hideDue)
+    {
     <tr>
       <td><b>Due Date:-</b> @(dueDate.HasValue ? dueDate.Value.ToString("dd-MM-yyyy") : "Nil")</td>
       <td colspan="2"><b>Due fees:-</b> @(remainingBalance > 0 ? "₹" + remainingBalance.ToString("N0") : "Nil")</td>
     </tr>
+    }
   </table>
 
   <div class="terms">

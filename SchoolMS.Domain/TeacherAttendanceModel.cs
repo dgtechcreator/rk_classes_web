@@ -24,4 +24,11 @@ public class TeacherAttendance
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }
     public int? DeletedBy { get; set; }
+    public string DeletedByName { get; set; } = "";
+
+    /// <summary>"student" when the entry was made automatically from the student attendance page (teacher + subject + start / end time); empty for an entry typed on the Teacher Attendance page.</summary>
+    public string Source { get; set; } = "";
+    public int? UpdatedBy { get; set; }
+    public string UpdatedByName { get; set; } = "";
+    public DateTime? UpdatedAt { get; set; }
 }

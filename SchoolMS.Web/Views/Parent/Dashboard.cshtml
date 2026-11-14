@@ -14,6 +14,11 @@
       .OrderByDescending(g => g.Key.Date)
       .ToList();
 
+  // The two Fees switches of Roles & Access: Paid / Balance numbers, and the receipts list.
+  var portalHidden = Context.RequestServices.GetRequiredService<SchoolMS.Services.PortalAccessService>().Hidden();
+  var showNums = !portalHidden.Contains("fees_summary");
+  var showRecs = !portalHidden.Contains("fees_receipts");
+
   // Pre-compute fees alert variables
   var showWarning = sel != null && Model.Balance > 0;
   var showSuccess = sel != null && !showWarning && Model.TotalPaid > 0;
@@ -479,7 +484,7 @@ else
             <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">
               <div class="lec-time">${l.startTime} – ${l.endTime}</div><span class="lec-badge ${l.status}">${l.status}</span></div>
             <div style="font-weight:800;font-size:15px;margin-top:4px;">${lecEsc(l.subject)}</div>
-            <div style="font-size:12px;color:#6b7280;">${lecEsc(l.teacher || '')}${l.topic ? ' · ' + lecEsc(l.topic) : ''}</div>
+            <div style="font-size:12px;color:#6b7280;">${lecEsc(l.teacher || '')}${l.classroom ? ' · 🚪 ' + lecEsc(l.classroom) : ''}${l.topic ? ' · ' + lecEsc(l.topic) : ''}</div>
             ${l.status === 'Cancelled' && l.statusNote ? `<div style="font-size:12px;color:#991b1b;margin-top:4px;">${lecEsc(l.statusNote)}</div>` : ''}
           </div>`).join('') : '<div class="pp-table-wrap"><div class="pp-empty"><i class="fas fa-chalkboard-teacher"></i>No lectures on this day</div></div>';
       } catch (e) { document.getElementById('lecDay').innerHTML = '<div class="pp-empty">Could not load lectures.</div>'; }
@@ -492,6 +497,8 @@ else
   @if (activeTab == "fees")
   {
     <div class="sec-title"><i class="fas fa-rupee-sign"></i> Fee Details</div>
+    @if (showNums)
+    {
     <div class="fee-kpi-row">
       <div class="fee-kpi">
         <div class="kv" style="color:#15803d;">₹@Model.TotalPaid.ToString("N0")</div>
@@ -502,8 +509,9 @@ else
         <div class="kl">Balance Due</div>
       </div>
     </div>
+    }
 
-    @if (showWarning)
+    @if (showNums && showWarning)
     {
       <div class="alert-warn"><i class="fas fa-exclamation-triangle"></i> Balance of ₹@Model.Balance.ToString("N0") is due@(Model.InstallmentDate.HasValue ? " by " + Model.InstallmentDate.Value.ToString("dd MMM yyyy") : "")@(Model.PreviousYearsDue > 0 ? " (includes ₹" + Model.PreviousYearsDue.ToString("N0") + " of earlier years)" : ""). Please contact the school.</div>
       @if (Model.InstallmentDate.HasValue)
@@ -513,12 +521,16 @@ else
         </div>
       }
     }
-    else if (showSuccess)
+    else if (showNums && showSuccess)
     {
       <div class="alert-ok"><i class="fas fa-check-circle"></i> All fees paid. No balance due.</div>
     }
 
-    @if (Model.FeeHistory.Any())
+    @if (!showRecs)
+    {
+      @* receipts switched off in Roles & Access: nothing to list *@
+    }
+    else if (Model.FeeHistory.Any())
     {
       <div class="pp-table-wrap">
         <table class="pp-table">
@@ -535,16 +547,20 @@ else
                 <td>@f.PaymentMode</td>
                 <td style="color:#666;font-size:12px;">@(string.IsNullOrWhiteSpace(AdditionalCharges.Strip(f.Remarks)) ? "—" : AdditionalCharges.Strip(f.Remarks))</td>
                 <td style="text-align:center;">
-                  <a href="/Fees/Receipt/@f.PaymentId" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#f3f0ff;color:#2563eb;border:none;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;"><i class="fas fa-print"></i> Receipt</a>
+                  @* View only: the receipt page itself has print / share switched off for parents. *@
+                  <a href="/Fees/Receipt/@f.PaymentId" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#f3f0ff;color:#2563eb;border:none;padding:8px 14px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;cursor:pointer;white-space:nowrap;"><i class="fas fa-receipt"></i> View receipt</a>
                 </td>
               </tr>
             }
           </tbody>
+          @if (showNums)
+          {
           <tfoot><tr>
             <td colspan="2">Total Paid</td>
             <td style="text-align:right;color:#15803d;font-size:15px;">₹@Model.TotalPaid.ToString("N0")</td>
             <td colspan="2"></td>
           </tr></tfoot>
+          }
         </table>
       </div>
     }

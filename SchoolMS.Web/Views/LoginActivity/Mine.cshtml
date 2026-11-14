@@ -1,0 +1,94 @@
+@model List<SchoolMS.Domain.LoginActivityEntry>
+@{
+    bool isParent = ViewBag.IsParent == true;
+    Layout = isParent ? "_ParentLayout" : "_Layout";
+    ViewData["Title"] = "My Login Activity";
+    var devices = ViewBag.Devices as List<SchoolMS.Domain.DeviceUse> ?? new();
+}
+
+<style>
+@@media (max-width: 768px) { .tbl-wrap table { font-size: 12px; } .tbl-wrap table th, .tbl-wrap table td { padding: 8px 6px; } }
+.la-ok   { background:#dcfce7; color:#166534; }
+.la-fail { background:#fee2e2; color:#991b1b; }
+.la-chip { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; }
+.la-app  { background:#dbeafe; color:#1e40af; }
+.la-web  { background:#f3e8ff; color:#6b21a8; }
+</style>
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <h1>🔐 My Login Activity</h1>
+      <p>Every time your account was signed in - and from which phone or browser. If you see a device you do not know, change your password and tell the admin.</p>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:14px;padding:14px;">
+  <div class="fw7" style="margin-bottom:8px;">👆 Fingerprint login on this website</div>
+  <div id="faList" style="font-size:13px;color:#6b7280;">Loading...</div>
+  <div style="margin-top:8px;"><button class="btn btn-p" onclick="rkFingerprintRegister()">Turn on fingerprint login on this device</button></div>
+</div>
+<script src="/js/webauthn.js"></script>
+<script>
+async function faLoad() {
+  const r = await fetch('/WebAuthn/Mine'); const el = document.getElementById('faList');
+  if (!r.ok) { el.textContent = ''; return; }
+  const list = await r.json();
+  el.innerHTML = list.length ? list.map(c => `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #f0f0f0;"><span>${c.device || 'Device'} · added ${new Date(c.added).toLocaleDateString()}${c.lastUsed ? ' · last used ' + new Date(c.lastUsed).toLocaleDateString() : ''}</span><a href="#" style="color:#dc2626;" onclick="faRemove('${c.id}'); return false;">Remove</a></div>`).join('') : 'Not turned on yet.';
+}
+async function faRemove(id) { if (!confirm('Remove fingerprint login from this device?')) return; await fetch('/WebAuthn/Remove', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); faLoad(); }
+window.rkFingerprintListRefresh = faLoad; faLoad();
+</script>
+
+<div class="card" style="margin-bottom:14px;padding:14px;">
+  <div class="fw7" style="margin-bottom:8px;">📱 Devices signed in to your account</div>
+  @if (!devices.Any())
+  {
+    <div style="font-size:12px;color:var(--mu);">No sign-in recorded yet.</div>
+  }
+  else
+  {
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Device / browser</th><th style="width:80px;">Where</th><th style="width:70px;">Logins</th><th style="width:160px;">Last used</th></tr></thead>
+      <tbody>
+      @foreach (var d in devices)
+      {
+        <tr>
+          <td class="fw7">@d.Device</td>
+          <td><span class="la-chip @(d.Platform == "app" ? "la-app" : "la-web")">@(d.Platform == "app" ? "App" : "Website")</span></td>
+          <td>@d.Logins</td>
+          <td style="font-size:12px;color:var(--mu);">@d.LastUsed.ToString("dd MMM yyyy HH:mm")</td>
+        </tr>
+      }
+      </tbody>
+    </table></div>
+  }
+</div>
+
+<div class="card">
+  <div class="tbl-wrap">
+    @if (!Model.Any())
+    {
+      <div class="empty"><div class="empty-ico">🔐</div><h3>No login activity yet</h3></div>
+    }
+    else
+    {
+      <table>
+        <thead><tr><th style="width:150px;">Date &amp; time</th><th style="width:80px;">Result</th><th>Device / browser</th><th style="width:80px;">Where</th><th style="width:120px;">IP</th></tr></thead>
+        <tbody>
+          @foreach (var e in Model)
+          {
+            <tr>
+              <td style="font-size:12px;color:var(--mu);">@e.LoggedAt.ToString("dd MMM yyyy HH:mm")</td>
+              <td><span class="la-chip @(e.Success ? "la-ok" : "la-fail")">@(e.Success ? "Success" : "Failed")</span></td>
+              <td style="font-size:12.5px;">@(e.Device ?? "—")@(string.IsNullOrWhiteSpace(e.AppVersion) ? "" : " · v" + e.AppVersion)</td>
+              <td><span class="la-chip @(e.Platform == "app" ? "la-app" : "la-web")">@(e.Platform == "app" ? "App" : "Website")</span></td>
+              <td class="mono" style="font-size:12px;">@(e.IpAddress ?? "—")</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>

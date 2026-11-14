@@ -14,14 +14,14 @@ namespace SchoolMS.Web.Controllers;
 /// "My Lectures" is for the logged-in teacher's own lectures and needs no module permission.
 /// </summary>
 public class LectureController(LectureService svc, LookupService lookup, MastersService masters,
-    FacultyService faculty, TeacherAccountLinker linker) : Controller
+    FacultyService faculty, TeacherAccountLinker linker, ClassroomService rooms) : Controller
 {
     public record StatusReq(int Id, string Status, string? Note);
     public record IdReq(int Id);
 
     int Uid => HttpContext.Session.GetUserId() ?? 0;
 
-    string OptionsJson() => JsonSerializer.Serialize(LectureHelpers.OptionsPayload(lookup, masters, faculty));
+    string OptionsJson() => JsonSerializer.Serialize(LectureHelpers.OptionsPayload(lookup, masters, faculty, rooms));
 
     static LectureFilter Filter(DateTime? from, DateTime? to, int? classId, int? sectionId, int? batchId,
         string? subject, int? facultyId, string? status)

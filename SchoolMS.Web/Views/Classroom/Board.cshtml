@@ -1,0 +1,55 @@
+@{ ViewData["Title"] = "Classroom Board"; }
+<style>
+.cb-tabs a { display:inline-block; padding:7px 14px; border-radius:20px; font-weight:700; font-size:13px; text-decoration:none; color:#374151; background:#f3f4f6; margin-right:6px; }
+.cb-tabs a.on { background:#2563eb; color:#fff; }
+.cb-kpi { display:flex; gap:12px; flex-wrap:wrap; margin:14px 0; }
+.cb-kpi div { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:10px 18px; min-width:110px; text-align:center; }
+.cb-kpi b { display:block; font-size:22px; }
+.cb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:14px; }
+.cb-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px 16px; border-left:5px solid #16a34a; }
+.cb-card.busy { border-left-color:#dc2626; }
+.cb-pill { display:inline-block; padding:2px 10px; border-radius:20px; font-size:11px; font-weight:800; }
+.cb-free { background:#dcfce7; color:#166534; } .cb-busy { background:#fee2e2; color:#991b1b; }
+.cb-sub { font-size:12px; color:#6b7280; margin-top:3px; }
+.cb-day { margin-top:8px; border-top:1px dashed #e5e7eb; padding-top:6px; font-size:12px; }
+.cb-day div { padding:2px 0; }
+</style>
+<div class="pg-hdr"><div class="pg-row">
+  <div><h1>🚪 Classroom Board</h1><p>Which room is engaged right now, until when, and which lecture is on or coming</p></div>
+  <div><input type="date" id="bDate" class="fc" onchange="load()" /></div>
+</div></div>
+<div class="cb-tabs">
+  <a href="/Classroom/Board" class="on">Live board</a><a href="/Classroom/History">History</a>
+  @if (Context.Session.HasEditPerm("lecture_schedule")) { <a href="/Classroom/Manage">Manage rooms</a> }
+  <a href="/Lecture/Index">Lecture schedule</a>
+</div>
+<div class="cb-kpi" id="kpi"></div>
+<div class="cb-grid" id="grid"><div style="color:#6b7280;">Loading...</div></div>
+<script>
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ap = t => { const [h, m] = t.split(':').map(Number); return (h % 12 || 12) + ':' + String(m).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM'); };
+const lec = l => `<b>${esc(l.subject)}</b> · ${esc(l.teacher || '')}<div class="cb-sub">${esc(l.groupLabel)} · ${ap(l.startTime)} - ${ap(l.endTime)}${l.topic ? ' · ' + esc(l.topic) : ''}</div>`;
+async function load() {
+  const d = document.getElementById('bDate').value;
+  const r = await fetch('/Classroom/BoardJson' + (d ? '?date=' + d : '')); const j = await r.json();
+  if (!document.getElementById('bDate').value) document.getElementById('bDate').value = j.date;
+  document.getElementById('kpi').innerHTML = j.isToday
+    ? `<div><b style="color:#dc2626">${j.busy}</b>Engaged now</div><div><b style="color:#16a34a">${j.free}</b>Free now</div><div><b>${j.total}</b>Classrooms</div><div><b>${ap(j.now)}</b>Time now</div>`
+    : `<div><b>${j.total}</b>Classrooms</div><div style="color:#6b7280;align-self:center;">Day plan of ${esc(j.date)}</div>`;
+  if (!j.rooms.length) { document.getElementById('grid').innerHTML = '<div style="color:#6b7280;">No classrooms yet. Add them under Manage rooms.</div>'; return; }
+  document.getElementById('grid').innerHTML = j.rooms.map(r => {
+    const busy = r.state === 'busy';
+    return `<div class="cb-card ${busy ? 'busy' : ''}">
+      <div style="display:flex;justify-content:space-between;align-items:center;"><div><b style="font-size:16px;">${esc(r.name)}</b>
+        <div class="cb-sub">${r.location ? esc(r.location) : ''}${r.capacity ? ' · ' + r.capacity + ' seats' : ''}</div></div>
+        ${j.isToday ? `<span class="cb-pill ${busy ? 'cb-busy' : 'cb-free'}">${busy ? 'ENGAGED' : 'FREE'}</span>` : ''}</div>
+      ${busy ? `<div style="margin-top:8px;">${lec(r.current)}<div class="cb-sub" style="color:#991b1b;font-weight:700;">Engaged until ${ap(r.busyUntil)}</div></div>` : ''}
+      ${!busy && j.isToday ? `<div class="cb-sub" style="margin-top:8px;">${r.next ? 'Free until ' + ap(r.next.startTime) : 'Free for the rest of the day'}</div>` : ''}
+      ${r.next && (busy || !j.isToday) ? `<div class="cb-day"><span style="font-weight:700;color:#2563eb;">${j.isToday ? 'Next' : 'First'}:</span> ${lec(r.next)}</div>` : ''}
+      ${!busy && j.isToday && r.next ? `<div class="cb-day"><span style="font-weight:700;color:#2563eb;">Next:</span> ${lec(r.next)}</div>` : ''}
+      ${r.day.length ? `<div class="cb-day"><div style="font-weight:700;margin-bottom:2px;">Today's plan (${r.day.length})</div>${r.day.map(l => `<div style="${l.phase === 'ongoing' ? 'color:#991b1b;font-weight:700;' : l.phase === 'ended' || l.phase === 'done' ? 'color:#9ca3af;' : ''}">${ap(l.startTime)}-${ap(l.endTime)} · ${esc(l.subject)} · ${esc(l.groupLabel)} · ${esc(l.teacher || '')}</div>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+load(); setInterval(() => { if (document.hidden) return; const d = document.getElementById('bDate').value; if (!d || d === new Date().toISOString().slice(0, 10)) load(); }, 60000);
+</script>

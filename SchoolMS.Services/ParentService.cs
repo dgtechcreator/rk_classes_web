@@ -5,6 +5,15 @@ namespace SchoolMS.Services;
 
 public class ParentService(ParentRepo repo)
 {
+    /// <summary>Sign-in already proven by the fingerprint / passkey: the active parent account, or null.</summary>
+    public ParentAccount? LoginWithoutPassword(int parentId)
+    {
+        var p = repo.GetAllParents().FirstOrDefault(x => x.ParentId == parentId && x.IsActive);
+        if (p == null) return null;
+        repo.UpdateLastLogin(p.ParentId);
+        return p;
+    }
+
     // Login — returns (ok, parent, errorMessage)
     public (bool ok, ParentAccount? parent, string msg) Login(string phone, string password)
     {

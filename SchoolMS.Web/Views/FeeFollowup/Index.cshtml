@@ -1,0 +1,69 @@
+@using SchoolMS.Domain
+@using SchoolMS.Web.Utils
+@model List<FollowupSummaryRow>
+@{
+    ViewData["Title"] = "Fee Follow-up";
+    var classes = ViewBag.Classes as List<string> ?? new(); var sections = ViewBag.Sections as List<string> ?? new(); var batches = ViewBag.Batches as List<string> ?? new();
+    var followers = ViewBag.Followers as List<(int Key, string FollowedByName)> ?? new();
+    string qs = Context.Request.QueryString.Value ?? "";
+    string St(string s) => FollowupHelpers.StatusLabel(s);
+}
+<style>
+.fu-kpi { display:flex; gap:10px; flex-wrap:wrap; margin:12px 0; } .fu-kpi div { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:8px 16px; text-align:center; min-width:96px; } .fu-kpi b { display:block; font-size:20px; }
+.fu-f { display:flex; flex-wrap:wrap; gap:8px; } .fu-f .fs, .fu-f .fc { width:auto; flex:1 1 150px; }
+.fu-pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:800; white-space:nowrap; }
+.st-Overdue { background:#fee2e2; color:#991b1b; } .st-Today { background:#fef3c7; color:#92400e; } .st-Upcoming { background:#dbeafe; color:#1e40af; }
+.st-NoNextDate { background:#f3e8ff; color:#6b21a8; } .st-NotFollowed { background:#f3f4f6; color:#374151; } .st-PaidUp { background:#dcfce7; color:#166534; }
+.fu-note { font-size:11.5px; color:#6b7280; max-width:260px; }
+</style>
+<div class="pg-hdr"><div class="pg-row">
+  <div><h1>📞 Fee Follow-up</h1><p>Who followed up with whom, when, what was said, why the fees are pending and when to call again</p></div>
+  <div class="df g8"><a class="btn btn-p" href="/FeeFollowup/Export@(qs)" style="text-decoration:none;"><i class="fas fa-file-excel"></i> Export to Excel</a></div>
+</div></div>
+
+<div class="fu-kpi">
+  <div><b style="color:#dc2626">@Model.Count(r => r.Status == "Overdue")</b>Overdue</div>
+  <div><b style="color:#d97706">@Model.Count(r => r.Status == "Today")</b>Due today</div>
+  <div><b style="color:#2563eb">@Model.Count(r => r.Status == "Upcoming")</b>Upcoming</div>
+  <div><b style="color:#7c3aed">@Model.Count(r => r.Status == "NoNextDate")</b>No next date</div>
+  <div><b>@Model.Count(r => r.Status == "NotFollowed")</b>Not followed up</div>
+  <div><b>₹@Model.Sum(r => Math.Max(0, r.Balance)).ToString("N0")</b>Balance of these</div>
+</div>
+
+<div class="card" style="padding:14px;margin-bottom:14px;">
+  <form method="get" class="fu-f">
+    <input type="text" name="q" value="@ViewBag.Q" class="fc" placeholder="Search student, phone, notes..." style="flex:2 1 220px;"/>
+    <select name="status" class="fs"><option value="">All status</option>
+      @foreach (var s in new[] { "Overdue", "Today", "Upcoming", "NoNextDate", "NotFollowed", "PaidUp" }) { <option value="@s" selected="@(ViewBag.Status == s)">@St(s)</option> }</select>
+    <select name="className" class="fs"><option value="">All classes</option>@foreach (var c in classes) { <option selected="@(ViewBag.ClassName == c)">@c</option> }</select>
+    <select name="sectionName" class="fs"><option value="">All medium / stream</option>@foreach (var c in sections) { <option selected="@(ViewBag.SectionName == c)">@c</option> }</select>
+    <select name="batchName" class="fs"><option value="">All batches</option>@foreach (var c in batches) { <option selected="@(ViewBag.BatchName == c)">@c</option> }</select>
+    <select name="followedBy" class="fs"><option value="">Followed by: anyone</option>@foreach (var f in followers) { <option value="@f.Key" selected="@(ViewBag.FollowedBy == f.Key)">@f.FollowedByName</option> }</select>
+    <select name="outcome" class="fs"><option value="">Any outcome</option>@foreach (var o in FeeFollowupRules.Outcomes) { <option selected="@(ViewBag.Outcome == o)">@o</option> }</select>
+    <input type="date" name="from" value="@ViewBag.From" class="fc" title="Followed up from"/><input type="date" name="to" value="@ViewBag.To" class="fc" title="Followed up to"/>
+    <button class="btn btn-p" type="submit">Search</button><a class="btn" href="/FeeFollowup/Index" style="text-decoration:none;">Clear</a>
+  </form>
+</div>
+
+<div class="card"><div class="tbl-wrap">
+  @if (!Model.Any()) { <div class="empty"><div class="empty-ico">📞</div><h3>No students found</h3><p>Students with pending fees or a follow-up appear here.</p></div> }
+  else {
+  <table>
+    <thead><tr><th>Student</th><th>Class · Medium · Batch</th><th style="text-align:right;">Balance</th><th>Follow-ups</th><th>Last follow-up</th><th>Outcome / reason</th><th>Next date</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var r in Model) {
+      var l = r.Last;
+      <tr>
+        <td><a href="/FeeFollowup/Student/@r.StudentId" class="fw7" style="text-decoration:none;">@r.StudentName</a><div class="fu-note">@r.AdmissionNo @(string.IsNullOrWhiteSpace(r.Phone) ? "" : "· " + r.Phone)</div></td>
+        <td style="font-size:12px;">@string.Join(" · ", new[] { r.ClassName, r.SectionName, r.BatchName }.Where(x => !string.IsNullOrWhiteSpace(x)))</td>
+        <td style="text-align:right;font-weight:700;color:@(r.Balance > 0 ? "#dc2626" : "#16a34a");">₹@r.Balance.ToString("N0")</td>
+        <td>@r.Count</td>
+        <td style="font-size:12px;white-space:nowrap;">@if (l != null) { <b>@l.FollowupAt.ToString("dd MMM yyyy, h:mm tt")</b><div class="fu-note">by @(string.IsNullOrWhiteSpace(l.FollowedByName) ? "—" : l.FollowedByName) · @l.Mode@(string.IsNullOrWhiteSpace(l.SpokeTo) ? "" : " · spoke to " + l.SpokeTo)</div> } else { <span style="color:#9ca3af;">Never</span> }</td>
+        <td>@if (l != null) { <div style="font-size:12.5px;font-weight:700;">@l.Outcome</div><div class="fu-note">@(string.IsNullOrWhiteSpace(l.Reason) ? "" : "Reason: " + l.Reason)@(string.IsNullOrWhiteSpace(l.Notes) ? "" : (string.IsNullOrWhiteSpace(l.Reason) ? "" : " · ") + l.Notes)</div> }</td>
+        <td style="white-space:nowrap;">@if (l?.NextDate != null) { <b>@l.NextDate.Value.ToString("dd MMM yyyy")</b><div class="fu-note">@(l.NextDateBy == "Parent" ? "parent said" : "we will call")@(l.PromisedAmount > 0 ? " · ₹" + l.PromisedAmount.Value.ToString("N0") : "")</div> } else { <span style="color:#9ca3af;">—</span> }</td>
+        <td><span class="fu-pill st-@r.Status">@St(r.Status)</span></td>
+        <td><a class="btn btn-p" href="/FeeFollowup/Student/@r.StudentId" style="text-decoration:none;font-size:12px;">Follow up</a></td>
+      </tr> }
+    </tbody>
+  </table> }
+</div></div>

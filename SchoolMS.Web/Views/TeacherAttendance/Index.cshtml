@@ -133,6 +133,44 @@
             <button type="submit" class="att-btn">Save Attendance</button>
         </form>
     </div>
+
+    @* Today's entries: typed here, or made automatically when the student attendance was saved with teacher + subject + start / end time. *@
+    @{
+        var todays = attendance.Where(a => a.AttendanceDate.Date == DateTime.Today).OrderByDescending(a => a.CreatedAt).ToList();
+        string Clk(TimeSpan? t) => t.HasValue ? DateTime.Today.Add(t.Value).ToString("h:mm tt", System.Globalization.CultureInfo.InvariantCulture) : "-";
+    }
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-top:18px;">
+        <h3 style="margin-top:0;margin-bottom:12px;font-weight:700;font-size:16px;">Today's Entries (@todays.Count)</h3>
+        @if (todays.Count == 0)
+        {
+            <div style="color:#6b7280;font-size:13px;">No attendance marked for today yet.</div>
+        }
+        else
+        {
+            <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+                <thead><tr style="background:#f3f4f6;text-align:left;"><th style="padding:8px;">Teacher</th><th style="padding:8px;">Class</th><th style="padding:8px;">Subject</th><th style="padding:8px;">Time</th><th style="padding:8px;">Hours</th><th style="padding:8px;">By</th><th style="padding:8px;"></th></tr></thead>
+                <tbody>
+                @foreach (var t in todays)
+                {
+                    <tr style="border-bottom:1px solid #e5e7eb;">
+                        <td style="padding:8px;font-weight:600;">@t.FacultyName</td>
+                        <td style="padding:8px;">@string.Join(" · ", new[] { t.ClassName, t.SectionName, t.BatchName }.Where(x => !string.IsNullOrWhiteSpace(x)))</td>
+                        <td style="padding:8px;">@t.SubjectName</td>
+                        <td style="padding:8px;">@Clk(t.InTime) - @Clk(t.OutTime)</td>
+                        <td style="padding:8px;">@(t.TotalHours?.ToString("F2") ?? "-")</td>
+                        <td style="padding:8px;">
+                            @if (t.Source == "student") { <span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;" title="Made automatically from the student attendance">Auto · student attendance</span> }
+                            else { @(string.IsNullOrEmpty(t.CreatedByName) ? "-" : t.CreatedByName) }
+                        </td>
+                        <td style="padding:8px;"><button type="button" onclick="deleteAttendance(@t.AttendanceId)" style="background:#ef4444;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;">Delete</button></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+            </div>
+        }
+    </div>
 </div>
 
 <script>

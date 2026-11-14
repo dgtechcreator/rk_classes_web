@@ -58,6 +58,16 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
             picPath = saved;
         }
         bool isNew = model.Student.StudentId == 0;
+        // A NEW student must have these (the form marks them required; this catches anything that bypasses the form).
+        if (isNew)
+        {
+            var missing = SchoolMS.Services.StudentRules.MissingRequired(model.Student);
+            if (missing.Count > 0)
+            {
+                TempData["Error"] = "Please fill: " + string.Join(", ", missing) + ".";
+                return RedirectToAction("Create");
+            }
+        }
         // Agreed discount (fee settled at admission): only staff who handle fees may set it, and a reason is mandatory.
         bool canSetDiscount = HttpContext.Session.HasPerm("fee_collection");
         decimal agreed = Math.Max(0, model.Student.AgreedDiscount);

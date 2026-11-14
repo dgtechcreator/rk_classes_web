@@ -36,6 +36,12 @@ public class StudentApiController(StudentService svc, LookupService lookup, FeeS
     {
         int uid = User.UserId() ?? 1;
         bool isNew = model.StudentId == 0;
+        if (isNew)
+        {
+            var missing = SchoolMS.Services.StudentRules.MissingRequired(model);
+            if (missing.Count > 0)
+                return BadRequest(new { error = "Please fill: " + string.Join(", ", missing) + ".", message = "Please fill: " + string.Join(", ", missing) + "." });
+        }
         var id = svc.Save(model, null, uid);
         if (id > 0) feeSvc.ApplyToStudent(id);   // also re-syncs fees when class/section changed
         return Ok(new { studentId = id, isNew });

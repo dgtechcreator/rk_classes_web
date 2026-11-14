@@ -21,7 +21,13 @@ public class PortalAccessService(AppSettingsRepo repo)
         new("attendance",    "Attendance",       "fas fa-calendar-check",    "Daily attendance and absent days"),
         new("lectures",      "Lectures",         "fas fa-chalkboard-teacher", "Day-wise lecture timetable"),
         new("marks",         "Test Marks",       "fas fa-chart-bar",         "Marks of every test + class toppers"),
-        new("fees",          "Fees",             "fas fa-rupee-sign",        "Paid, balance and receipts"),
+        // "Fees" is two switches so the admin decides separately what a parent sees:
+        //   fees_summary  = the Paid / Balance numbers, due alerts, next installment and the fee pie in the report
+        //   fees_receipts = the list of payments and the receipt itself (view only - sharing / printing it is switched off in code)
+        // The old single "fees" key is no longer stored: it is derived in Hidden() (= both switched off), so every older
+        // "is Fees hidden" check - web menu, API, app builds already installed - keeps working.
+        new("fees_summary",  "Fees: Paid & Balance", "fas fa-rupee-sign",    "Paid amount, balance due and installment date"),
+        new("fees_receipts", "Fees: Receipts",   "fas fa-receipt",           "Payment list and receipts (view only)"),
         new("notes",         "Notes & Papers",   "fas fa-file-lines",        "Class notes and practice papers"),
         new("notifications", "Notifications",    "fas fa-bell",              "Absent / marks / fee / lecture alerts"),
         new("contact",       "Contact Us",       "fas fa-envelope",          "Message to the institute"),
@@ -38,7 +44,8 @@ public class PortalAccessService(AppSettingsRepo repo)
                 case "attendance": kinds.AddRange(new[] { "absent", "present", "late", "holiday" }); break;
                 case "lectures":   kinds.AddRange(new[] { "lecture", "lecture_update", "lecture_cancel", "lecture_done" }); break;
                 case "marks":      kinds.Add("marks"); break;
-                case "fees":       kinds.Add("fee"); break;
+                case "fees":
+                case "fees_receipts": kinds.Add("fee"); break;   // "Receipt RC-... received" alerts belong to the receipts switch
                 case "notes":      kinds.AddRange(new[] { "notes", "practice" }); break;
             }
         return kinds.Count == 0 ? null : kinds;
@@ -58,7 +65,9 @@ public class PortalAccessService(AppSettingsRepo repo)
             try
             {
                 var all = repo.GetAll();
-                _hidden = Parse(all.TryGetValue(Key, out var v) ? v : "");
+                var raw = all.TryGetValue(Key, out var v) ? v : "";
+                if (!all.ContainsKey(SplitMarker)) raw = MigrateFeesSplit(raw);
+                _hidden = Derive(Parse(raw));
             }
             catch { /* keep the last known list */ }
             _at = DateTime.UtcNow;
@@ -71,16 +80,42 @@ public class PortalAccessService(AppSettingsRepo repo)
     static HashSet<string> Parse(string? csv)
     {
         var valid = Sections.Select(s => s.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return (csv ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(valid.Contains).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var keys = (csv ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        // a list saved before the Fees switch was split: "fees" off = both new switches off
+        if (keys.Any(k => k.Equals("fees", StringComparison.OrdinalIgnoreCase))) { keys.Add("fees_summary"); keys.Add("fees_receipts"); }
+        return keys.Where(valid.Contains).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>"fees" (the whole Fees tab) counts as hidden when both of its switches are off. Never stored.</summary>
+    static HashSet<string> Derive(HashSet<string> set)
+    {
+        if (set.Contains("fees_summary") && set.Contains("fees_receipts")) set.Add("fees");
+        return set;
+    }
+
+    const string SplitMarker = "portal.fees_split";
+
+    /// <summary>
+    /// One time, the first time the split switches are read: an old "fees" switch is carried over, and Paid / Balance
+    /// starts switched OFF (parents see receipts only) - the admin turns it on in Roles &amp; Access when wanted.
+    /// </summary>
+    string MigrateFeesSplit(string raw)
+    {
+        var keys = (raw ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(k => !k.Equals("fees", StringComparison.OrdinalIgnoreCase)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if ((raw ?? "").Split(',', StringSplitOptions.TrimEntries).Any(k => k.Equals("fees", StringComparison.OrdinalIgnoreCase))) { keys.Add("fees_receipts"); }
+        keys.Add("fees_summary");
+        var joined = string.Join(',', keys);
+        try { repo.Set(Key, joined, 0); repo.Set(SplitMarker, "1", 0); } catch { /* applied for now, retried on the next read */ }
+        return joined;
     }
 
     public (bool ok, string? error) SetHidden(IEnumerable<string> hidden, int by)
     {
         var set = Parse(string.Join(',', hidden ?? Array.Empty<string>()));
-        try { repo.Set(Key, string.Join(',', set), by); }
+        try { repo.Set(Key, string.Join(',', set), by); repo.Set(SplitMarker, "1", by); }
         catch (Exception ex) { return (false, "Could not save (" + ex.Message + ")."); }
-        lock (_lock) { _hidden = set; _at = DateTime.UtcNow; }
+        lock (_lock) { _hidden = Derive(set); _at = DateTime.UtcNow; }
         return (true, null);
     }
 }

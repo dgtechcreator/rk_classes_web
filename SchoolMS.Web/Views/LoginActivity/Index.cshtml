@@ -1,0 +1,125 @@
+@model SchoolMS.Web.Controllers.LoginActivityController.IndexVM
+@{ ViewData["Title"] = "Login Activity"; }
+
+<style>
+@@media (max-width: 768px) { .tbl-wrap table { font-size: 12px; } .tbl-wrap table th, .tbl-wrap table td { padding: 8px 6px; } }
+.la-filters { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.la-filters .fs, .la-filters .fc { width:auto; flex:1 1 170px; }
+.la-ok   { background:#dcfce7; color:#166534; }
+.la-fail { background:#fee2e2; color:#991b1b; }
+.la-chip { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; }
+.la-app  { background:#dbeafe; color:#1e40af; }
+.la-web  { background:#f3e8ff; color:#6b21a8; }
+</style>
+
+<div class="pg-hdr">
+  <div class="pg-row">
+    <div>
+      <h1>🔐 Login Activity</h1>
+      <p>Who signed in, from which phone or browser, and when - staff, teachers, students and parents</p>
+    </div>
+    <div><a href="/LoginActivity/Mine" class="btn" style="text-decoration:none;">My own activity</a></div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:14px;padding:14px;">
+  <form method="get" class="la-filters">
+    <select name="type" class="fs">
+      <option value="">All logins</option>
+      <option value="staff"  selected="@(Model.Type == "staff")">Staff / Teachers / Admin</option>
+      <option value="parent" selected="@(Model.Type == "parent")">Students / Parents</option>
+    </select>
+    <select name="result" class="fs">
+      <option value="">Success + failed</option>
+      <option value="ok"     selected="@(Model.Result == "ok")">Successful only</option>
+      <option value="failed" selected="@(Model.Result == "failed")">Failed only</option>
+    </select>
+    <input type="date" name="from" value="@Model.From" class="fc" title="From date"/>
+    <input type="date" name="to"   value="@Model.To"   class="fc" title="To date"/>
+    <input type="text" name="q" value="@Model.Q" class="fc" placeholder="Name, phone / username, device, IP..." style="min-width:240px;"/>
+    <button type="submit" class="btn btn-p">Search</button>
+    <a href="/LoginActivity/Index" class="btn" style="text-decoration:none;">Clear</a>
+  </form>
+</div>
+
+@if (Model.DevicesOf != null)
+{
+  <div class="card" style="margin-bottom:14px;padding:14px;">
+    <div class="fw7" style="margin-bottom:8px;">📱 Devices used by @Model.DevicesOf</div>
+    @if (!Model.Devices.Any())
+    {
+      <div style="font-size:12px;color:var(--mu);">No successful sign-in recorded yet.</div>
+    }
+    else
+    {
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Device / browser</th><th style="width:80px;">Where</th><th style="width:80px;">Logins</th><th style="width:160px;">Last used</th><th style="width:140px;">Last IP</th></tr></thead>
+        <tbody>
+        @foreach (var d in Model.Devices)
+        {
+          <tr>
+            <td class="fw7">@d.Device</td>
+            <td><span class="la-chip @(d.Platform == "app" ? "la-app" : "la-web")">@(d.Platform == "app" ? "App" : "Website")</span></td>
+            <td>@d.Logins</td>
+            <td style="font-size:12px;color:var(--mu);">@d.LastUsed.ToString("dd MMM yyyy HH:mm")</td>
+            <td style="font-size:12px;" class="mono">@(d.LastIp ?? "—")</td>
+          </tr>
+        }
+        </tbody>
+      </table></div>
+    }
+  </div>
+}
+
+<div class="card">
+  <div class="tbl-wrap">
+    @if (!Model.Entries.Any())
+    {
+      <div class="empty"><div class="empty-ico">🔐</div><h3>No login activity found</h3></div>
+    }
+    else
+    {
+      <table>
+        <thead>
+          <tr>
+            <th style="width:150px;">Date &amp; time</th>
+            <th>Name</th>
+            <th style="width:130px;">Type</th>
+            <th style="width:130px;">Login ID</th>
+            <th style="width:80px;">Result</th>
+            <th>Device / browser</th>
+            <th style="width:80px;">Where</th>
+            <th style="width:70px;">App</th>
+            <th style="width:120px;">IP</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var e in Model.Entries)
+          {
+            <tr>
+              <td style="font-size:12px;color:var(--mu);">@e.LoggedAt.ToString("dd MMM yyyy HH:mm")</td>
+              <td>
+                @if (e.AccountId.HasValue)
+                {
+                  <a href="/LoginActivity/Index?account=@(e.AccountType):@e.AccountId" class="fw7" style="text-decoration:none;" title="See all devices of this person">@(string.IsNullOrWhiteSpace(e.DisplayName) ? e.LoginName : e.DisplayName)</a>
+                }
+                else
+                {
+                  <span class="fw7" style="color:var(--mu);">Unknown login</span>
+                }
+              </td>
+              <td style="font-size:12px;">@(string.IsNullOrWhiteSpace(e.RoleName) ? (e.AccountType == "parent" ? "Student / Parent" : "Staff") : e.RoleName)</td>
+              <td class="mono" style="font-size:12px;">@e.LoginName</td>
+              <td><span class="la-chip @(e.Success ? "la-ok" : "la-fail")">@(e.Success ? "Success" : "Failed")</span></td>
+              <td style="font-size:12.5px;">@(e.Device ?? "—")</td>
+              <td><span class="la-chip @(e.Platform == "app" ? "la-app" : "la-web")">@(e.Platform == "app" ? "App" : "Website")</span></td>
+              <td style="font-size:12px;">@(e.AppVersion ?? "")</td>
+              <td class="mono" style="font-size:12px;">@(e.IpAddress ?? "—")</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <div style="padding:8px 12px;font-size:11.5px;color:var(--mu);">Showing the latest @Model.Entries.Count entries. Use the filters to narrow down.</div>
+    }
+  </div>
+</div>

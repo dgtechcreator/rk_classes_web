@@ -24,7 +24,8 @@ public class ParentApiController(
     StudentService studentSvc,
     ProfilePhotoStore photos,
     PortalAccessService portal,
-    BirthdayService birthdays) : ControllerBase
+    BirthdayService birthdays,
+    FacultyService facultySvc) : ControllerBase
 {
     string Phone => User.Phone() ?? "";
 
@@ -144,28 +145,31 @@ public class ParentApiController(
         var hidden = portal.Hidden();
         var attendance = hidden.Contains("attendance") ? null : attSvc.GetStudentAttendanceSummary(sid);
         var attDetail  = hidden.Contains("attendance") ? new List<StudentAttendanceDetail>() : attSvc.GetStudentAttendanceDetail(sid);
+        facultySvc.ApplyTeacherLabels(attDetail);   // "Rakesh Mishra SIR" instead of the bare name
         var marks      = hidden.Contains("marks") ? new List<TestMark>() : marksSvc.GetStudentAllMarks(sid);
 
         var fee = feePos.Calculate(selected);
-        bool noFees = hidden.Contains("fees");
+        // Two separate switches (Roles & Access): the Paid / Balance numbers, and the receipts. Whatever is off is left empty here.
+        bool noNums = hidden.Contains("fees_summary");
+        bool noRecs = hidden.Contains("fees_receipts");
 
         return Ok(new {
             student = selected,
             attendance,
             attendanceDetail = attDetail,
             marks,
-            feeHistory = noFees ? new() : fee.History,
-            totalPaid = noFees ? 0 : fee.Paid,
-            actualFee = noFees ? 0 : fee.BaseFee,          // base fee (older app builds)
-            additionalCharges = noFees ? 0 : fee.AdditionalCharges,
-            discount = noFees ? 0 : fee.Discount,
-            netTotal = noFees ? 0 : fee.NetTotal,          // fee + charges - discount
-            balance = noFees ? 0 : fee.Balance,
-            previousFees = noFees ? 0 : fee.PreviousYearsFee,      // fees of earlier years (already inside the totals)
-            previousDue = noFees ? 0 : fee.PreviousYearsDue,       // part of the balance still owed from earlier years
-            dueDate = noFees ? null : fee.InstallmentDate,    // next installment date (older app builds read this key)
-            installmentDate = noFees ? null : fee.InstallmentDate,
-            feeStructures = noFees ? new() : fee.Structures,
+            feeHistory = noRecs ? new() : fee.History,
+            totalPaid = noNums ? 0 : fee.Paid,
+            actualFee = noNums ? 0 : fee.BaseFee,          // base fee (older app builds)
+            additionalCharges = noNums ? 0 : fee.AdditionalCharges,
+            discount = noNums ? 0 : fee.Discount,
+            netTotal = noNums ? 0 : fee.NetTotal,          // fee + charges - discount
+            balance = noNums ? 0 : fee.Balance,
+            previousFees = noNums ? 0 : fee.PreviousYearsFee,      // fees of earlier years (already inside the totals)
+            previousDue = noNums ? 0 : fee.PreviousYearsDue,       // part of the balance still owed from earlier years
+            dueDate = noNums ? null : fee.InstallmentDate,    // next installment date (older app builds read this key)
+            installmentDate = noNums ? null : fee.InstallmentDate,
+            feeStructures = noNums ? new() : fee.Structures,
         });
     }
 

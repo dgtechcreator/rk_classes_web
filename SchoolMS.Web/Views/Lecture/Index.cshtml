@@ -97,6 +97,7 @@
                 <div><label>Teacher *</label><select id="mTeacher" class="fs"></select></div>
                 <div><label>Medium</label><select id="mSection" class="fs"></select></div>
                 <div><label>Batch</label><select id="mBatch" class="fs"></select></div>
+                <div class="full"><label>Classroom</label><select id="mClassroom" class="fs"></select><div style="font-size:11px;color:#6b7280;margin-top:3px;">Students and the teacher are told which room. A room cannot hold two lectures at the same time.</div></div>
                 <div class="full"><label>Topic (optional)</label><input type="text" id="mTopic" class="fc" maxlength="200" /></div>
                 <div class="full"><label>Remarks (optional)</label><input type="text" id="mRemarks" class="fc" maxlength="300" /></div>
                 <div class="full" id="repeatBox">
@@ -150,7 +151,7 @@ function init() {
   fill('fClass', OPT.classes, 'All classes'); fill('fSection', OPT.sections, 'All mediums'); fill('fBatch', OPT.batches, 'All batches');
   fill('fSubject', OPT.subjects, 'All subjects'); fill('fTeacher', OPT.teachers, 'All teachers', 'id', 'displayName');
   if (CAN_EDIT) {
-    fill('mClass', OPT.classes, '— Select class —'); fill('mSection', OPT.sections, 'All mediums'); fill('mBatch', OPT.batches, 'All batches');
+    fill('mClass', OPT.classes, '— Select class —'); fill('mSection', OPT.sections, 'All mediums'); fill('mBatch', OPT.batches, 'All batches'); fill('mClassroom', OPT.classrooms || [], '— No classroom —');
     fill('mSubject', OPT.subjects, '— Select subject —'); fill('mTeacher', OPT.teachers, '— Select teacher —', 'id', 'displayName');
     $('mDays').innerHTML = [1,2,3,4,5,6,0].map(d => `<label><input type="checkbox" value="${d}" /> ${DAYS[d]}</label>`).join('');
   }
@@ -208,7 +209,7 @@ function render(d) {
     }
     html += `<div class="lc-row">
       <div class="lc-time">${l.startTime} – ${l.endTime}</div>
-      <div><strong>${esc(l.groupLabel)}</strong>${l.isRepeating ? '<div class="lc-sub">🔁 repeating</div>' : ''}</div>
+      <div><strong>${esc(l.groupLabel)}</strong>${l.classroom ? `<div class="lc-sub">🚪 ${esc(l.classroom)}</div>` : ''}${l.isRepeating ? '<div class="lc-sub">🔁 repeating</div>' : ''}</div>
       <div>${esc(l.subject)}${l.topic ? `<div class="lc-sub">${esc(l.topic)}</div>` : ''}</div>
       <div>${esc(l.teacher || '—')}</div>
       <div>${badge}${l.statusNote ? `<div class="lc-sub">${esc(l.statusNote)}</div>` : ''}</div>
@@ -265,7 +266,7 @@ function openForm(id) {
   $('formTitle').textContent = l ? 'Edit Lecture' : 'Add Lecture';
   $('mDate').value = l ? l.date : iso(new Date());
   $('mStart').value = l ? l.startTime : ''; $('mEnd').value = l ? l.endTime : '';
-  $('mClass').value = l ? l.classId : ''; $('mSection').value = l && l.sectionId ? l.sectionId : ''; $('mBatch').value = l && l.batchId ? l.batchId : '';
+  $('mClass').value = l ? l.classId : ''; $('mSection').value = l && l.sectionId ? l.sectionId : ''; $('mBatch').value = l && l.batchId ? l.batchId : ''; $('mClassroom').value = l && l.classroomId ? l.classroomId : '';
   $('mSubject').value = l ? l.subject : ''; $('mTeacher').value = l ? l.facultyId : '';
   $('mTopic').value = l ? (l.topic || '') : ''; $('mRemarks').value = l ? (l.remarks || '') : '';
   $('mRepeat').checked = false; toggleRepeat(); $('mUntil').value = '';
@@ -279,7 +280,7 @@ async function saveLecture() {
   const req = {
     lectureId: editId, date: $('mDate').value, startTime: $('mStart').value, endTime: $('mEnd').value,
     classId: parseInt($('mClass').value) || 0, sectionId: $('mSection').value ? parseInt($('mSection').value) : null,
-    batchId: $('mBatch').value ? parseInt($('mBatch').value) : null, subjectName: $('mSubject').value,
+    batchId: $('mBatch').value ? parseInt($('mBatch').value) : null, classroomId: $('mClassroom').value ? parseInt($('mClassroom').value) : null, subjectName: $('mSubject').value,
     facultyId: parseInt($('mTeacher').value) || 0, topic: $('mTopic').value || null, remarks: $('mRemarks').value || null,
     repeat: !editId && $('mRepeat').checked,
     repeatDays: [...document.querySelectorAll('#mDays input:checked')].map(c => parseInt(c.value)),

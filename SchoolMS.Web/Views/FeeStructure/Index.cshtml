@@ -1,6 +1,8 @@
 @model List<SchoolMS.Domain.FeeStructure>
 @{
-    ViewData["Title"] = "Fee Structure Setup";
+    string mode = ViewBag.Mode as string ?? "structure";   // structure = class summary, heads = fee heads list
+    bool headsMode = mode == "heads";
+    ViewData["Title"] = headsMode ? "Fee Heads" : "Fee Structure";
     var years    = ViewBag.Years    as List<SchoolMS.Domain.AcademicYear> ?? new();
     var classes  = ViewBag.Classes  as List<SchoolMS.Domain.Class>        ?? new();
     var sections = ViewBag.Sections as List<SchoolMS.Domain.Section>      ?? new();
@@ -10,18 +12,19 @@
 <div class="pg-hdr">
   <div class="pg-row">
     <div>
-      <h1>⚙️ Fee Structure Setup</h1>
-      <p>Define fees by Academic Year, Class and Section — auto-applied to new students</p>
+      <h1>@(headsMode ? "🧾 Fee Heads" : "⚙️ Fee Structure")</h1>
+      <p>@(headsMode ? "The fee heads of every Class and Section — add, edit or delete" : "Class and medium wise: fees set, collected and pending")</p>
     </div>
     <div class="df g8">
       <a href="/FeeStructure/Create"  class="btn btn-primary"><i class="fas fa-plus"></i> Add Fee Head</a>
+      @if (headsMode) {<a href="/FeeStructure/Index" class="btn btn-outline"><i class="fas fa-cog"></i> Fee Structure</a>} else {<a href="/FeeStructure/Heads" class="btn btn-outline"><i class="fas fa-receipt"></i> Fee Heads</a>}
       <a href="/FeeStructure/FeesDue" class="btn btn-outline"><i class="fas fa-list-alt"></i> Fees Due</a>
     </div>
   </div>
 </div>
 
 @* ── Summary cards ─────────────────────────────────────────── *@
-@if (summary.Any())
+@if (!headsMode && summary.Any())
 {
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:22px;">
     @foreach (var s in summary)
@@ -75,7 +78,7 @@
 }
 
 @* ── Filter bar ────────────────────────────────────────────── *@
-<form method="get" action="/FeeStructure/Index">
+<form method="get" action="/FeeStructure/@(headsMode ? "Heads" : "Index")">
 <div class="filter-bar">
   <i class="fas fa-filter" style="color:var(--mu);font-size:13px;"></i>
   <select name="yearId" class="fs">
@@ -96,6 +99,8 @@
 </form>
 
 @* ── Table ─────────────────────────────────────────────────── *@
+@if (headsMode)
+{
 <div class="card">
   @if (!Model.Any())
   {
@@ -166,8 +171,11 @@
     }
   }
 </div>
+}
 
-@* ── Generate Monthly Fees panel ───────────────────────────── *@
+@* ── Generate Monthly Fees panel (Fee Structure screen only) ── *@
+@if (!headsMode)
+{
 <div class="card" style="margin-top:6px;">
   <div class="card-hdr">
     <span class="card-ttl"><i class="fas fa-calendar-plus" style="color:var(--p);margin-right:6px;"></i>Generate Monthly Fees</span>
@@ -193,3 +201,4 @@
     </button>
   </form>
 </div>
+}

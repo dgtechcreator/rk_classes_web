@@ -86,7 +86,7 @@ async function load() {
     const badge = l.needsUpdate ? '<span class="ml-badge NeedsUpdate">Not updated</span>' : `<span class="ml-badge ${l.status}">${l.status}</span>`;
     const canMark = l.status === 'Scheduled' && l.date <= iso(new Date());
     html += `<div class="ml-row"><div class="ml-time">${l.startTime} – ${l.endTime}</div>
-      <div style="flex:1;min-width:180px;"><strong>${esc(l.subject)}</strong> <span style="color:#6b7280;">· ${esc(l.groupLabel)}</span>${l.topic ? `<div style="font-size:11px;color:#6b7280;">${esc(l.topic)}</div>` : ''}</div>
+      <div style="flex:1;min-width:180px;"><strong>${esc(l.subject)}</strong> <span style="color:#6b7280;">· ${esc(l.groupLabel)}</span>${l.classroom ? ` <span style="background:#dbeafe;color:#1e40af;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;">🚪 ${esc(l.classroom)}</span>` : ''}${l.topic ? `<div style="font-size:11px;color:#6b7280;">${esc(l.topic)}</div>` : ''}</div>
       <div>${badge}</div>
       ${canMark ? `<button class="btn btn-success btn-sm" onclick="setStatus(${l.lectureId},'Completed')">✓ Mark done</button>` : ''}
       ${l.status === 'Completed' ? `<button class="btn btn-outline btn-sm" onclick="setStatus(${l.lectureId},'Scheduled')">Undo</button>` : ''}</div>`;

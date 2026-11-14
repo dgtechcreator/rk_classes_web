@@ -125,6 +125,8 @@ public class ActivityNotifier(ActivityRepo repo, NotificationService staffNotifs
             var (className, sectionName, batchName, teacherName) = repo.GetLectureLabels(first.ClassId, first.SectionId, first.BatchId, first.FacultyId);
             var who = string.IsNullOrWhiteSpace(teacherName) ? "" : $" by {teacherName.Trim()}";
             var topic = string.IsNullOrWhiteSpace(first.Topic) ? "" : $" Topic: {first.Topic.Trim()}.";
+            // where to go: students and the teacher are told the classroom
+            var room = string.IsNullOrWhiteSpace(first.ClassroomName) ? "" : $" Classroom: {first.ClassroomName.Trim()}.";
             var group = string.Join(" • ", new[] { className, sectionName, batchName }.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s!.Trim()));
 
             string studentMsg, teacherMsg, title;
@@ -132,18 +134,18 @@ public class ActivityNotifier(ActivityRepo repo, NotificationService staffNotifs
             {
                 var when = $"{Day(first.LectureDate)}, {Clock(first.StartTime)} - {Clock(first.EndTime)}";
                 title = isEdit ? "Lecture updated" : "New lecture";
-                studentMsg = $"{first.SubjectName} lecture{who}: {when}.{topic}";
-                teacherMsg = $"{first.SubjectName} lecture for {group}: {when}.{topic}";
+                studentMsg = $"{first.SubjectName} lecture{who}: {when}.{room}{topic}";
+                teacherMsg = $"{first.SubjectName} lecture for {group}: {when}.{room}{topic}";
             }
             else
             {
                 var last = saved.Max(l => l.LectureDate);
                 title = "New lectures scheduled";
-                studentMsg = $"{saved.Count} {first.SubjectName} lectures{who}, {Clock(first.StartTime)} - {Clock(first.EndTime)}, from {Day(first.LectureDate)} to {Day(last)}.";
-                teacherMsg = $"{saved.Count} {first.SubjectName} lectures for {group}, {Clock(first.StartTime)} - {Clock(first.EndTime)}, from {Day(first.LectureDate)} to {Day(last)}.";
+                studentMsg = $"{saved.Count} {first.SubjectName} lectures{who}, {Clock(first.StartTime)} - {Clock(first.EndTime)}, from {Day(first.LectureDate)} to {Day(last)}.{room}";
+                teacherMsg = $"{saved.Count} {first.SubjectName} lectures for {group}, {Clock(first.StartTime)} - {Clock(first.EndTime)}, from {Day(first.LectureDate)} to {Day(last)}.{room}";
             }
 
-            var key = $"lec:{first.LectureId}:{first.SubjectName.Trim()}:{first.LectureDate:yyyyMMdd}{first.StartTime:hhmm}:{saved.Count}";
+            var key = $"lec:{first.LectureId}:{first.SubjectName.Trim()}:{first.LectureDate:yyyyMMdd}{first.StartTime:hhmm}:{saved.Count}:{first.ClassroomId}";
             repo.InsertForGroup(first.ClassId, first.SectionId, first.BatchId, isEdit ? ActivityType.LectureUpdate : ActivityType.Lecture,
                 title, studentMsg, key, first.LectureId > 0 ? first.LectureId : null);
 
@@ -189,7 +191,7 @@ public class ActivityNotifier(ActivityRepo repo, NotificationService staffNotifs
     }
 
     /// <summary>The login of a teacher: the one the admin linked on the Users form, else the automatic phone / name match.</summary>
-    int? FindTeacherUser(int facultyId)
+    public int? FindTeacherUser(int facultyId)
     {
         try { var linked = repo.GetUserIdByFaculty(facultyId); if (linked != null) return linked; }
         catch { /* Users.FacultyId (SQL/67) not there yet - fall back to the automatic match */ }

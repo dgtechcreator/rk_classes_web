@@ -10,7 +10,7 @@ namespace SchoolMS.Web.Controllers;
 
 [RequireLogin]
 public class AttendanceController(AttendanceService svc, LookupService lookup,
-    MastersService mastersSvc, FacultyService facultySvc, StudentService studentSvc, AttendanceBatchService batchSvc, BatchHolidayService holidays) : Controller
+    MastersService mastersSvc, FacultyService facultySvc, StudentService studentSvc, AttendanceBatchService batchSvc, BatchHolidayService holidays, TeacherAttendanceService teacherAttSvc) : Controller
 {
     [RequirePermission("attendance_entry")]
     public IActionResult Index(DateTime? date, int? classId, int? sectionId, int? batchId, int? attBatchId,
@@ -85,7 +85,7 @@ public class AttendanceController(AttendanceService svc, LookupService lookup,
     public IActionResult Save([FromBody] AttSaveReq req)
     {
         int uid = HttpContext.Session.GetUserId() ?? 1;
-        var (ok, message) = AttendanceSaveHelper.Save(req, uid, svc, studentSvc, batchSvc, HttpContext.CurrentCr(), holidays);
+        var (ok, message) = AttendanceSaveHelper.Save(req, uid, svc, studentSvc, batchSvc, HttpContext.CurrentCr(), holidays, teacherAttSvc);
         return Json(new { success = ok, message });
     }
 

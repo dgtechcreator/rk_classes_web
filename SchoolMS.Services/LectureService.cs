@@ -8,7 +8,7 @@ namespace SchoolMS.Services;
 /// class/medium/batch at the same time) and the counts shown in the summaries. A lecture only counts as
 /// "held" once it is marked Completed — Scheduled and Cancelled are reported separately so nothing is hidden.
 /// </summary>
-public class LectureService(LectureRepo repo, ActivityNotifier? notify = null)
+public class LectureService(LectureRepo repo, ActivityNotifier? notify = null, ClassroomRepo? rooms = null)
 {
     public const int MaxOccurrences = 400;
 
@@ -68,6 +68,9 @@ public class LectureService(LectureRepo repo, ActivityNotifier? notify = null)
             var when = $"{e.LectureDate:dd MMM}, {e.StartTime:hh\\:mm}-{e.EndTime:hh\\:mm}";
             if (e.FacultyId == cand.FacultyId)
                 return $"{(e.FacultyName ?? "This teacher").Trim()} already has {e.SubjectName.Trim()} ({e.GroupLabel}) on {when}.";
+            // the same room cannot hold two lectures at once
+            if (cand.ClassroomId != null && e.ClassroomId == cand.ClassroomId)
+                return $"Classroom {(e.ClassroomName ?? "this room").Trim()} is already used by {e.SubjectName.Trim()} ({e.GroupLabel}, {(e.FacultyName ?? "another teacher").Trim()}) on {when}.";
             if (SameStudents(cand, e))
                 return $"{e.GroupLabel} already has {e.SubjectName.Trim()} with {(e.FacultyName ?? "another teacher").Trim()} on {when}.";
         }
@@ -116,6 +119,16 @@ public class LectureService(LectureRepo repo, ActivityNotifier? notify = null)
         if (!TryParseTime(r.StartTime, out var start) || !TryParseTime(r.EndTime, out var end)) return ("Enter a valid start and end time.", 0);
         if (end <= start) return ("End time must be after the start time.", 0);
 
+        string? roomName = null;
+        if (r.ClassroomId.HasValue && r.ClassroomId.Value > 0)
+        {
+            var room = rooms?.GetById(r.ClassroomId.Value);
+            if (room == null) return ("The selected classroom no longer exists.", 0);
+            if (!room.IsActive) return ($"Classroom {room.Name} is switched off.", 0);
+            roomName = room.Name;
+        }
+        else r.ClassroomId = null;
+
         bool isEdit = r.LectureId > 0;
         var (dateErr, dates) = ExpandDates(isEdit ? new LectureSaveReq { Date = r.Date } : r);
         if (dateErr != null) return (dateErr, 0);
@@ -124,6 +137,7 @@ public class LectureService(LectureRepo repo, ActivityNotifier? notify = null)
         {
             LectureId = isEdit ? r.LectureId : 0, LectureDate = d, StartTime = start, EndTime = end,
             ClassId = r.ClassId, SectionId = r.SectionId, BatchId = r.BatchId, SubjectName = subject, FacultyId = r.FacultyId,
+            ClassroomId = r.ClassroomId, ClassroomName = roomName,
             Topic = string.IsNullOrWhiteSpace(r.Topic) ? null : r.Topic.Trim(),
             Remarks = string.IsNullOrWhiteSpace(r.Remarks) ? null : r.Remarks.Trim(), SeriesId = series,
         };

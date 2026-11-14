@@ -13,7 +13,8 @@ public class AuthApiController(
     ParentService parentSvc,
     JwtTokenService jwt,
     UserAccessCache access,
-    StaffNameService names) : ControllerBase
+    StaffNameService names,
+    LoginTracker tracker) : ControllerBase
 {
     public record StaffLoginReq(string Username, string Password);
     public record ParentLoginReq(string Phone, string Password);
@@ -23,15 +24,19 @@ public class AuthApiController(
     public IActionResult StaffLogin(StaffLoginReq req)
     {
         var (ok, u, msg) = auth.Login(req.Username, req.Password);
-        if (!ok) return Unauthorized(new { error = msg });
+        if (!ok) { tracker.Record(HttpContext, "staff", null, req.Username, null, null, false); return Unauthorized(new { error = msg }); }
 
         access.Invalidate(u!.UserId);
         var acc = access.Get(u.UserId);
         if (acc != null && !acc.CanUse)
+        {
+            tracker.Record(HttpContext, "staff", u.UserId, req.Username, u.FullName, u.RoleName, false);
             return Unauthorized(new { error = acc.CrBlocked ? "Your Class Representative access is switched off. Please contact the admin." : "This account is disabled. Please contact the admin." });
+        }
 
         var perms = acc is { Known: true } ? acc.Perms : userMgmt.GetPermissions(u.UserId);
         var token = jwt.GenerateStaffToken(u, perms);
+        tracker.Record(HttpContext, "staff", u.UserId, req.Username, u.FullName, u.RoleName, true);
         return Ok(new {
             token,
             user = new { u.UserId, u.FullName, DisplayName = SafeName(u.UserId, u.FullName), u.Username, u.RoleId, u.RoleName, u.Email, u.Phone, ProfilePicPath = acc?.ProfilePicPath ?? PicOf(u.UserId) },
@@ -77,8 +82,9 @@ public class AuthApiController(
     public IActionResult ParentLogin(ParentLoginReq req)
     {
         var (ok, p, msg) = parentSvc.Login(req.Phone, req.Password);
-        if (!ok) return Unauthorized(new { error = msg });
+        if (!ok) { tracker.Record(HttpContext, "parent", null, req.Phone, null, "Student / Parent", false); return Unauthorized(new { error = msg }); }
 
+        tracker.Record(HttpContext, "parent", p!.ParentId, req.Phone, p.FullName, "Student / Parent", true);
         var token = jwt.GenerateParentToken(p!);
         return Ok(new { token, parent = new { p!.ParentId, p.Phone, p.FullName } });
     }
@@ -89,6 +95,7 @@ public class AuthApiController(
         var (ok, p, msg) = parentSvc.Register(req.Phone, req.Password, req.FullName);
         if (!ok) return BadRequest(new { error = msg });
 
+        tracker.Record(HttpContext, "parent", p!.ParentId, req.Phone, p.FullName, "Student / Parent", true);
         var token = jwt.GenerateParentToken(p!);
         return Ok(new { token, parent = new { p!.ParentId, p.Phone, p.FullName } });
     }

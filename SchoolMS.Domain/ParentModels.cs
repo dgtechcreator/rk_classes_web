@@ -9,4 +9,7 @@ public class ParentAccount
     public bool      IsActive  { get; set; } = true;
     public DateTime  CreatedAt { get; set; }
     public DateTime? LastLogin { get; set; }
+
+    /// <summary>The students linked to this phone number (filled by the Parent Accounts list only).</summary>
+    public List<Student> Children { get; set; } = new();
 }

@@ -1,0 +1,31 @@
+📢 *RK Classes — Software Update (12–13 Nov 2026)*
+
+Pichle 2 din me Web aur Mobile App dono me ye kaam hue hain 👇
+
+👩‍🏫 *Teacher Attendance*
+• Class aur Batch ke saath ab *Stream / Medium* (Science, Commerce, Hindi, English…) bhi select hota hai
+• Time ab waisa hi dikhta hai jaisa daala — 4 se 6 daalo to "4:00 PM - 6:00 PM"
+• Attendance Summary me kisi bhi teacher par click karo — Class aur Medium wise detail (kitne lecture, din, ghante, har lecture ki date / time / subject / topic)
+• Excel export button — ek teacher ka ya sabka, Class aur Medium wise total ke saath (Web me bhi)
+
+👨‍👩‍👧 *Parent / Student Login*
+• "Full report" me ab discount aur total fee nahi dikhta — sirf Paid aur Balance
+• 100% paid / 100% present par chart ka circle gayab ho jata tha — theek kiya
+• Student / Parent ab apni *Date of Birth* (zaroori) aur *Email* (optional) khud edit kar sakte hain — App me Account → My Details, Web me bachche ke card par "Edit my details"
+• Photo pehle ki tarah avatar se badal sakte hain
+
+📊 *Counts / Masters*
+• Masters me Classes, Sections aur Batches ke saamne "0 students" dikh raha tha — ab sahi count (sirf Active students), Web aur App dono me
+• Attendance Batches ke "Total Students" me jo student 2 batch me tha wo 2 baar ginta tha — ab ek hi baar
+• Admin home par ab *Faculty* (teachers) aur *Users (Logins)* alag-alag dikhte hain
+• Faculty list scroll karne par apne aap aage ke teachers dikhati hai ("Showing 15 of 26")
+
+🎓 *Students & Batches*
+• Student list me kai students select karke ek saath unka *Batch badal sakte hain* (Web: "Move to batch", App: Masters → Batches me icon)
+• Isse 12th Commerce ke Maths aur S.P students alag batch me tag ho sakte hain, aur Maths ke lecture me sirf Maths ke students aayenge
+
+📱 *App experience*
+• Naye Android phones par neeche ka Save / button navigation bar ke neeche chhup jata tha — sab sheets me theek kiya
+• Kuch phones par ek button ka text toot jata tha (list gayab) — theek kiya
+
+Koi problem ho to bataiye 🙏

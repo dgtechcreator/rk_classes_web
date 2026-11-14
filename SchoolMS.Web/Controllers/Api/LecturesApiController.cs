@@ -15,7 +15,7 @@ namespace SchoolMS.Web.Controllers.Api;
 [Route("api/lectures")]
 [ApiRequireStaff]
 public class LecturesApiController(LectureService svc, LookupService lookup, MastersService masters,
-    FacultyService faculty, TeacherAccountLinker linker) : ControllerBase
+    FacultyService faculty, TeacherAccountLinker linker, ClassroomService rooms) : ControllerBase
 {
     public record StatusReq(string Status, string? Note);
 
@@ -31,7 +31,7 @@ public class LecturesApiController(LectureService svc, LookupService lookup, Mas
 
     /// <summary>Dropdown data for the schedule form and every filter bar.</summary>
     [HttpGet("options")]
-    public IActionResult Options() => Ok(LectureHelpers.OptionsPayload(lookup, masters, faculty));
+    public IActionResult Options() => Ok(LectureHelpers.OptionsPayload(lookup, masters, faculty, rooms));
 
     [HttpGet]
     [ApiRequirePermission("lecture_schedule")]

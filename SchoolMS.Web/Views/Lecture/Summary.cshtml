@@ -53,6 +53,7 @@
 </div>
 
 <div class="ls-kpis" id="kpis"></div>
+<div style="margin:0 0 10px;"><input type="search" class="fc" data-filter="#table tbody tr" placeholder="Search teacher, class or subject..." style="max-width:380px;width:100%;" autocomplete="off"/></div>
 <div class="card" style="padding:0;overflow:auto;" id="table"><div class="empty"><h3>Loading…</h3></div></div>
 <p style="font-size:12px;color:#6b7280;margin-top:10px;">
     <strong>Held</strong> = lectures marked Completed. <strong>Not updated</strong> = scheduled lectures whose time has passed but were never marked done or cancelled —
@@ -109,6 +110,7 @@ function render(d) {
     .map(([l,v,c]) => `<div class="ls-kpi"><div class="v" style="color:${c}">${v}</div><div class="l">${l}</div></div>`).join('');
   if (!d.rows.length) { $('table').innerHTML = '<div class="empty"><div class="empty-ico">📊</div><h3>No lectures in this period</h3></div>'; return; }
   const head = { teacher: 'Teacher', class: 'Class / Medium / Batch', subject: 'Subject' }[d.groupBy];
+  setTimeout(() => window.liveFilterAll && window.liveFilterAll(), 0);   // keep an active search applied after a reload
   const max = Math.max(...d.rows.map(r => r.total), 1);
   $('table').innerHTML = `<table class="ls-tbl"><thead><tr><th>${head}</th><th>Held</th><th>Scheduled</th><th>Cancelled</th><th>Not updated</th><th>Hours held</th><th>Total</th></tr></thead><tbody>` +
     d.rows.map(r => `<tr>

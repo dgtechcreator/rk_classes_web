@@ -117,8 +117,18 @@
                             <td>@((record.InTime.HasValue ? DateTime.Today.Add(record.InTime.Value).ToString("h:mm tt", System.Globalization.CultureInfo.InvariantCulture) : "-"))</td>
                             <td>@((record.OutTime.HasValue ? DateTime.Today.Add(record.OutTime.Value).ToString("h:mm tt", System.Globalization.CultureInfo.InvariantCulture) : "-"))</td>
                             <td>@(record.TotalHours?.ToString("F2") ?? "-")</td>
-                            <td>@(string.IsNullOrEmpty(record.CreatedByName) ? "-" : record.CreatedByName)</td>
-                            <td><button class="del-btn" onclick="deleteAttendance(@record.AttendanceId)">Delete</button></td>
+                            <td>
+                                @if (record.Source == "student") { <span style="background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;" title="Made automatically from the student attendance">Auto</span> }
+                                else { @(string.IsNullOrEmpty(record.CreatedByName) ? "-" : record.CreatedByName) }
+                                @if (record.UpdatedAt.HasValue) { <div style="font-size:10.5px;color:#6b7280;">Edited by @(string.IsNullOrEmpty(record.UpdatedByName) ? "admin" : record.UpdatedByName) · @record.UpdatedAt.Value.ToString("dd MMM, h:mm tt")</div> }
+                            </td>
+                            <td style="white-space:nowrap;">
+                                <button class="del-btn" style="background:#2563eb;" onclick="openEdit(this)"
+                                    data-id="@record.AttendanceId" data-faculty="@record.FacultyId" data-class="@record.ClassId" data-section="@record.SectionId" data-batch="@record.BatchId"
+                                    data-subject="@record.SubjectName" data-topic="@record.Topic" data-date="@record.AttendanceDate.ToString("yyyy-MM-dd")"
+                                    data-in="@(record.InTime.HasValue ? record.InTime.Value.ToString(@"hh\:mm") : "")" data-out="@(record.OutTime.HasValue ? record.OutTime.Value.ToString(@"hh\:mm") : "")">Edit</button>
+                                <button class="del-btn" onclick="deleteAttendance(@record.AttendanceId)">Delete</button>
+                            </td>
                         </tr>
                     }
                 }
@@ -133,7 +143,76 @@
     </div>
 </div>
 
+@{
+    var eTeachers = (dynamic)ViewBag.Teachers ?? new List<dynamic>();
+    var eClasses  = (dynamic)ViewBag.Classes  ?? new List<dynamic>();
+    var eBatches  = (dynamic)ViewBag.Batches  ?? new List<dynamic>();
+    var eSections = (dynamic)ViewBag.Sections ?? new List<dynamic>();
+}
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:22px;width:94%;max-width:520px;max-height:92vh;overflow:auto;">
+    <h3 style="margin:0 0 4px;font-size:17px;font-weight:700;">Edit attendance entry</h3>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:12px;">The teacher gets a notification with what changed, who did it and when.</div>
+    <input type="hidden" id="eId"/>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <label style="grid-column:1/3;font-size:12px;font-weight:600;">Teacher
+        <select id="eFaculty" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
+          @foreach (var t in eTeachers) { <option value="@t.FacultyId">@t.FullName</option> }
+        </select></label>
+      <label style="font-size:12px;font-weight:600;">Class
+        <select id="eClass" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;"><option value="">-</option>
+          @foreach (var c in eClasses) { <option value="@c.ClassId">@c.ClassName</option> }</select></label>
+      <label style="font-size:12px;font-weight:600;">Stream / Medium
+        <select id="eSection" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;"><option value="">-</option>
+          @foreach (var c in eSections) { <option value="@c.SectionId">@c.SectionName</option> }</select></label>
+      <label style="font-size:12px;font-weight:600;">Batch
+        <select id="eBatch" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;"><option value="">-</option>
+          @foreach (var c in eBatches) { <option value="@c.BatchId">@c.BatchName</option> }</select></label>
+      <label style="font-size:12px;font-weight:600;">Date <input type="date" id="eDate" style="width:100%;padding:7px;border:1px solid #d1d5db;border-radius:6px;"/></label>
+      <label style="font-size:12px;font-weight:600;">In time <input type="time" id="eIn" style="width:100%;padding:7px;border:1px solid #d1d5db;border-radius:6px;"/></label>
+      <label style="font-size:12px;font-weight:600;">Out time <input type="time" id="eOut" style="width:100%;padding:7px;border:1px solid #d1d5db;border-radius:6px;"/></label>
+      <label style="grid-column:1/3;font-size:12px;font-weight:600;">Subject <input type="text" id="eSubject" maxlength="100" style="width:100%;padding:7px;border:1px solid #d1d5db;border-radius:6px;"/></label>
+      <label style="grid-column:1/3;font-size:12px;font-weight:600;">Topic <textarea id="eTopic" rows="2" maxlength="500" style="width:100%;padding:7px;border:1px solid #d1d5db;border-radius:6px;"></textarea></label>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+      <button onclick="closeEdit()" style="background:#e5e7eb;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;">Cancel</button>
+      <button onclick="saveEdit()" style="background:#2563eb;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:700;">Save changes</button>
+    </div>
+  </div>
+</div>
+
 <script>
+function openEdit(btn) {
+    var d = btn.dataset;
+    document.getElementById('eId').value = d.id;
+    document.getElementById('eFaculty').value = d.faculty;
+    document.getElementById('eClass').value = d.class || '';
+    document.getElementById('eSection').value = d.section || '';
+    document.getElementById('eBatch').value = d.batch || '';
+    document.getElementById('eDate').value = d.date;
+    document.getElementById('eIn').value = d.in || '';
+    document.getElementById('eOut').value = d.out || '';
+    document.getElementById('eSubject').value = d.subject || '';
+    document.getElementById('eTopic').value = d.topic || '';
+    document.getElementById('editModal').style.display = 'flex';
+}
+function closeEdit() { document.getElementById('editModal').style.display = 'none'; }
+function saveEdit() {
+    var p = new URLSearchParams();
+    p.append('attendanceId', document.getElementById('eId').value);
+    p.append('facultyId', document.getElementById('eFaculty').value);
+    p.append('classId', document.getElementById('eClass').value);
+    p.append('sectionId', document.getElementById('eSection').value);
+    p.append('batchId', document.getElementById('eBatch').value);
+    p.append('attendanceDate', document.getElementById('eDate').value);
+    p.append('inTime', document.getElementById('eIn').value);
+    p.append('outTime', document.getElementById('eOut').value);
+    p.append('subject', document.getElementById('eSubject').value);
+    p.append('topic', document.getElementById('eTopic').value);
+    fetch('/TeacherAttendance/UpdateAttendance', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: p.toString() })
+      .then(function (r) { return r.json(); })
+      .then(function (res) { if (res.success) { location.reload(); } else { alert('Error: ' + res.message); } });
+}
 function deleteAttendance(attendanceId) {
     if (!confirm('Delete this record?')) return;
 

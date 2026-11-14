@@ -108,6 +108,13 @@
           </button>
         </form>
 
+        <div id="faBox" style="display:none;margin-top:12px;">
+          <button type="button" class="btn-parent" style="width:100%;cursor:pointer;" onclick="rkFingerprintLogin('faErr')"><i class="fa-solid fa-fingerprint"></i> Login with fingerprint</button>
+          <div id="faErr" style="display:none;color:#dc2626;font-size:12.5px;margin-top:6px;text-align:center;"></div>
+        </div>
+        <script src="/js/webauthn.js"></script>
+        <script>if (window.rkFingerprintSupported && window.rkFingerprintSupported()) document.getElementById('faBox').style.display = 'block';</script>
+
         <div class="or">OR</div>
 
         <a href="/Parent/Login" class="btn-parent"><i class="fa-solid fa-user-group"></i> Parent / Guardian Login</a>

@@ -407,6 +407,15 @@ public class FeesController(FeesService svc, LookupService lookup,
         var paymentData = svc.GetPaymentById(id);
         if (paymentData == null) return NotFound();
 
+        // A parent / student only views the receipt on screen (no PDF download / share link), and only when the
+        // admin left "Fees: Receipts" on in Roles & Access. FUTURE: drop this block to allow downloading again.
+        if (HttpContext.Session.GetInt32("ParentId") != null && HttpContext.Session.GetInt32("UserId") == null)
+        {
+            if (HttpContext.RequestServices.GetRequiredService<SchoolMS.Services.PortalAccessService>().Hidden().Contains("fees_receipts"))
+                return RedirectToAction("Dashboard", "Parent");
+            if (download.HasValue) return RedirectToAction("Receipt", new { id });
+        }
+
         var (dueDate, remainingBalance) = ComputeDueInfo(paymentData);
 
         // If download parameter is present, generate the full PDF receipt directly

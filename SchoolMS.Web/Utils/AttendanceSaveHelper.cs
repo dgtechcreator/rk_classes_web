@@ -48,7 +48,8 @@ public static class AttendanceSaveHelper
     }
 
     public static (bool ok, string message) Save(AttSaveReq req, int userId, AttendanceService svc,
-        StudentService studentSvc, AttendanceBatchService batchSvc, SchoolMS.Domain.CrScope? cr = null, BatchHolidayService? holidays = null)
+        StudentService studentSvc, AttendanceBatchService batchSvc, SchoolMS.Domain.CrScope? cr = null, BatchHolidayService? holidays = null,
+        TeacherAttendanceService? teacherSvc = null)
     {
         // Class Representative: only his own class, and only today / the last few days.
         if (cr != null && req.Date.Date < CrScopeEarliest())
@@ -81,6 +82,14 @@ public static class AttendanceSaveHelper
         foreach (var r in rows)
             svc.Save(r.StudentId, req.Date, r.Status, r.ClassId, r.SectionId, r.BatchId,
                 r.Remarks, userId, subject, sirName, st, et, req.Session);
+
+        // Teacher + subject + start / end time were filled in: the teacher's own attendance entry follows automatically
+        // (shows under Teacher Attendance -> Today's Entries; one entry per lecture of a class / medium / batch).
+        // The class / medium / batch of the entry: what the page had selected, else the one value all the saved students share.
+        static int? Only(IEnumerable<int?> v) { var d = v.Where(x => x.HasValue).Distinct().ToList(); return d.Count == 1 ? d[0] : null; }
+        teacherSvc?.SyncFromStudentAttendance(req.Date, req.Session, sirName, subject, st, et,
+            req.ClassId ?? Only(rows.Select(r => r.ClassId)), req.SectionId ?? Only(rows.Select(r => r.SectionId)),
+            req.BatchId ?? Only(rows.Select(r => r.BatchId)), req.AttBatchId, userId);
 
         return (true, req.Session > 1
             ? $"Attendance saved for {rows.Count} students (lecture {req.Session})."

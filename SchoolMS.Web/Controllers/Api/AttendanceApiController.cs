@@ -11,7 +11,7 @@ namespace SchoolMS.Web.Controllers.Api;
 [Route("api/attendance")]
 [ApiRequireStaff]
 public class AttendanceApiController(AttendanceService svc, StudentService studentSvc, AttendanceBatchService batchSvc,
-    FacultyService facultySvc, MastersService mastersSvc, BatchHolidayService holidays) : ControllerBase
+    FacultyService facultySvc, MastersService mastersSvc, BatchHolidayService holidays, TeacherAttendanceService teacherAttSvc) : ControllerBase
 {
     // A CR's rows: matched by student id (sp_GetAttendance does not return class / section / batch ids).
     private Func<AttendanceRecord, bool> InScope(CrScope cr)
@@ -162,7 +162,7 @@ public class AttendanceApiController(AttendanceService svc, StudentService stude
     public IActionResult Save([FromBody] AttSaveReq req)
     {
         int uid = User.UserId() ?? 1;
-        var (ok, message) = AttendanceSaveHelper.Save(req, uid, svc, studentSvc, batchSvc, HttpContext.CurrentCr(), holidays);
+        var (ok, message) = AttendanceSaveHelper.Save(req, uid, svc, studentSvc, batchSvc, HttpContext.CurrentCr(), holidays, teacherAttSvc);
         if (!ok) return BadRequest(new { success = false, error = message, message });
         return Ok(new { success = true, message });
     }

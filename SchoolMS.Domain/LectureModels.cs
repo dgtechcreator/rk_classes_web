@@ -23,6 +23,9 @@ public class Lecture
     /// <summary>null = every batch (Morning / Evening ...).</summary>
     public int?      BatchId     { get; set; }
     public string?   BatchName   { get; set; }
+    /// <summary>The room the lecture is held in (null = not set).</summary>
+    public int?      ClassroomId   { get; set; }
+    public string?   ClassroomName { get; set; }
     public string    SubjectName { get; set; } = "";
     public int       FacultyId   { get; set; }
     public string?   FacultyName { get; set; }
@@ -50,6 +53,10 @@ public class LectureFilter
     public string?   Subject { get; set; }
     public int?      FacultyId { get; set; }
     public string?   Status { get; set; }
+    /// <summary>One room only.</summary>
+    public int?      ClassroomId { get; set; }
+    /// <summary>true = only lectures that have a room.</summary>
+    public bool      WithClassroom { get; set; }
 
     public int? ForStudentClassId { get; set; }
     public int? ForStudentSectionId { get; set; }
@@ -67,6 +74,7 @@ public class LectureSaveReq
     public int       ClassId     { get; set; }
     public int?      SectionId   { get; set; }
     public int?      BatchId     { get; set; }
+    public int?      ClassroomId { get; set; }
     public string    SubjectName { get; set; } = "";
     public int       FacultyId   { get; set; }
     public string?   Topic       { get; set; }

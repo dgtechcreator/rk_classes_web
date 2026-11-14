@@ -11,7 +11,8 @@ namespace SchoolMS.Web.Controllers;
 public class TeacherAttendanceController(
     TeacherAttendanceService attendanceSvc,
     FacultyService facultySvc,
-    LookupService lookupSvc) : Controller
+    LookupService lookupSvc,
+    TeacherAttendanceNotifier notifier) : Controller
 {
     [HttpGet]
     public IActionResult Index()
@@ -125,8 +126,50 @@ public class TeacherAttendanceController(
                     return Json(new { success = false, message = "You can delete only your own recent entries." });
             }
 
+            var before = attendanceSvc.GetById(attendanceId);
             attendanceSvc.Delete(attendanceId, userId.Value);
+            if (before != null) notifier.Deleted(before, userId.Value);   // the teacher is told: what, who, when
             return Json(new { success = true, message = "Attendance deleted successfully" });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>Edit an entry. The teacher is told (what changed, who did it, when).</summary>
+    [HttpPost]
+    public IActionResult UpdateAttendance(int attendanceId, int facultyId, int? classId, int? batchId, int? sectionId, string? subject,
+        string? topic, string? attendanceDate, string? inTime, string? outTime)
+    {
+        try
+        {
+            var userId = HttpContext.Session.GetUserId();
+            if (!userId.HasValue) return Json(new { success = false, message = "Session expired. Please login again." });
+            var before = attendanceSvc.GetById(attendanceId);
+            if (before == null) return Json(new { success = false, message = "Entry not found (it may already be deleted)." });
+            var cr = HttpContext.CurrentCr();
+            if (cr != null && (before.CreatedBy != userId.Value || before.AttendanceDate.Date < CrScope.EarliestDate))
+                return Json(new { success = false, message = "You can edit only your own recent entries." });
+
+            DateTime date = before.AttendanceDate;
+            if (!string.IsNullOrWhiteSpace(attendanceDate) && !DateTime.TryParse(attendanceDate, out date))
+                return Json(new { success = false, message = $"Invalid date: {attendanceDate}." });
+            TimeSpan? inT = null, outT = null;
+            if (!string.IsNullOrWhiteSpace(inTime)) { if (TimeSpan.TryParse(inTime.Trim(), out var a)) inT = a; else return Json(new { success = false, message = "Invalid In Time." }); }
+            if (!string.IsNullOrWhiteSpace(outTime)) { if (TimeSpan.TryParse(outTime.Trim(), out var b)) outT = b; else return Json(new { success = false, message = "Invalid Out Time." }); }
+            var invalid = TeacherAttendanceCrRules.Validate(subject, topic, inT, outT);
+            if (invalid != null) return Json(new { success = false, message = invalid });
+            if (cr != null)
+            {
+                var denied = TeacherAttendanceCrRules.Apply(cr, facultySvc, facultyId, date, ref classId, ref batchId);
+                if (denied != null) return Json(new { success = false, message = denied });
+            }
+
+            attendanceSvc.Update(attendanceId, facultyId, classId, batchId, sectionId, subject, topic, date, inT, outT, userId.Value);
+            var after = attendanceSvc.GetById(attendanceId);
+            if (after != null) notifier.Edited(before, after, userId.Value);
+            return Json(new { success = true, message = "Attendance updated successfully" });
         }
         catch (Exception ex)
         {
@@ -147,6 +190,10 @@ public class TeacherAttendanceController(
         var (totalHours, totalDays) = attendanceSvc.GetSummary(createdBy: onlyMine);
 
         ViewBag.Attendance = attendance;
+        ViewBag.Teachers = facultySvc.GetAllActive();
+        ViewBag.Classes = lookupSvc.GetClasses();
+        ViewBag.Batches = lookupSvc.GetBatches();
+        ViewBag.Sections = lookupSvc.GetSections().Where(s => s.IsActive).ToList();
         ViewBag.TotalHours = totalHours;
         ViewBag.TotalDays = totalDays;
 

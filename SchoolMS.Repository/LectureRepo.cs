@@ -8,12 +8,29 @@ namespace SchoolMS.Repository;
 /// <summary>All SQL for the Lectures table — fully parameterised, soft-delete only.</summary>
 public class LectureRepo(CommonConnectivity db)
 {
+    // Classrooms table + Lectures.ClassroomId are created on first use (same DDL as SQL/79), so a deploy that forgot the script still works.
+    static volatile bool _ready;
+    static readonly object _lock = new();
+    readonly bool _schema = EnsureSchema(db);
+    static bool EnsureSchema(CommonConnectivity db)
+    {
+        if (_ready) return true;
+        lock (_lock)
+        {
+            if (_ready) return true;
+            ClassroomRepo.CreateSchema(db);
+            _ready = true;
+        }
+        return true;
+    }
+
     private const string SelectSql = @"
         SELECT l.LectureId, l.LectureDate, l.StartTime, l.EndTime,
                l.ClassId, c.ClassName, l.SectionId, s.SectionName, l.BatchId, b.BatchName,
                l.SubjectName, l.FacultyId, f.FullName AS FacultyName,
-               l.Topic, l.Remarks, l.Status, l.StatusNote, l.SeriesId
+               l.Topic, l.Remarks, l.Status, l.StatusNote, l.SeriesId, l.ClassroomId, cr.Name AS ClassroomName
         FROM Lectures l
+        LEFT JOIN Classrooms cr ON cr.ClassroomId = l.ClassroomId
         LEFT JOIN Classes  c ON c.ClassId   = l.ClassId
         LEFT JOIN Sections s ON s.SectionId = l.SectionId
         LEFT JOIN Batches  b ON b.BatchId   = l.BatchId
@@ -40,6 +57,8 @@ public class LectureRepo(CommonConnectivity db)
         Status      = G.G<string>(r, "Status") ?? LectureStatus.Scheduled,
         StatusNote  = G.G<string>(r, "StatusNote"),
         SeriesId    = G.G<Guid?>(r, "SeriesId"),
+        ClassroomId   = G.G<int?>(r, "ClassroomId"),
+        ClassroomName = G.G<string>(r, "ClassroomName"),
     };
 
     private static void P(SqlCommand cmd, string name, object? v) => cmd.Parameters.AddWithValue(name, v ?? DBNull.Value);
@@ -66,6 +85,8 @@ public class LectureRepo(CommonConnectivity db)
           AND (@Subject   IS NULL OR LTRIM(RTRIM(l.SubjectName)) = @Subject)
           AND (@FacultyId IS NULL OR l.FacultyId = @FacultyId)
           AND (@Status    IS NULL OR l.Status    = @Status)
+          AND (@RoomId IS NULL OR l.ClassroomId = @RoomId)
+          AND (@WithRoom = 0 OR l.ClassroomId IS NOT NULL)
           AND (@SClass IS NULL OR (l.ClassId = @SClass
                  AND (l.SectionId IS NULL OR l.SectionId = @SSection)
                  AND (l.BatchId   IS NULL OR l.BatchId   = @SBatch)))
@@ -76,6 +97,7 @@ public class LectureRepo(CommonConnectivity db)
             P(cmd, "@ClassId", f.ClassId); P(cmd, "@SectionId", f.SectionId); P(cmd, "@BatchId", f.BatchId);
             P(cmd, "@Subject", string.IsNullOrWhiteSpace(f.Subject) ? null : f.Subject.Trim());
             P(cmd, "@FacultyId", f.FacultyId); P(cmd, "@Status", string.IsNullOrWhiteSpace(f.Status) ? null : f.Status);
+            P(cmd, "@RoomId", f.ClassroomId); P(cmd, "@WithRoom", f.WithClassroom ? 1 : 0);
             P(cmd, "@SClass", f.ForStudentClassId); P(cmd, "@SSection", f.ForStudentSectionId); P(cmd, "@SBatch", f.ForStudentBatchId);
         });
     }
@@ -89,9 +111,9 @@ public class LectureRepo(CommonConnectivity db)
 
     private const string InsertSql = @"
         INSERT INTO Lectures (LectureDate, StartTime, EndTime, ClassId, SectionId, BatchId, SubjectName, FacultyId,
-                              Topic, Remarks, Status, SeriesId, CreatedBy, CreatedAt)
+                              Topic, Remarks, Status, SeriesId, CreatedBy, CreatedAt, ClassroomId)
         VALUES (@Date, @Start, @End, @ClassId, @SectionId, @BatchId, @Subject, @FacultyId,
-                @Topic, @Remarks, 'Scheduled', @Series, @User, GETDATE())";
+                @Topic, @Remarks, 'Scheduled', @Series, @User, GETDATE(), @Room)";
 
     /// <summary>Inserts every lecture in one transaction — all or nothing.</summary>
     public void InsertMany(List<Lecture> lectures, int userId)
@@ -104,7 +126,7 @@ public class LectureRepo(CommonConnectivity db)
             P(cmd, "@Date", l.LectureDate.Date); P(cmd, "@Start", l.StartTime); P(cmd, "@End", l.EndTime);
             P(cmd, "@ClassId", l.ClassId); P(cmd, "@SectionId", l.SectionId); P(cmd, "@BatchId", l.BatchId);
             P(cmd, "@Subject", l.SubjectName); P(cmd, "@FacultyId", l.FacultyId);
-            P(cmd, "@Topic", l.Topic); P(cmd, "@Remarks", l.Remarks); P(cmd, "@Series", l.SeriesId); P(cmd, "@User", userId);
+            P(cmd, "@Topic", l.Topic); P(cmd, "@Remarks", l.Remarks); P(cmd, "@Series", l.SeriesId); P(cmd, "@User", userId); P(cmd, "@Room", l.ClassroomId);
             cmd.ExecuteNonQuery();
         }
         tx.Commit();
@@ -114,7 +136,7 @@ public class LectureRepo(CommonConnectivity db)
     {
         const string sql = @"
             UPDATE Lectures SET LectureDate=@Date, StartTime=@Start, EndTime=@End, ClassId=@ClassId, SectionId=@SectionId,
-                   BatchId=@BatchId, SubjectName=@Subject, FacultyId=@FacultyId, Topic=@Topic, Remarks=@Remarks,
+                   BatchId=@BatchId, SubjectName=@Subject, FacultyId=@FacultyId, Topic=@Topic, Remarks=@Remarks, ClassroomId=@Room,
                    UpdatedBy=@User, UpdatedAt=GETDATE()
             WHERE LectureId=@Id AND IsDeleted=0";
         using var c = db.Open();
@@ -122,7 +144,7 @@ public class LectureRepo(CommonConnectivity db)
         P(cmd, "@Id", l.LectureId); P(cmd, "@Date", l.LectureDate.Date); P(cmd, "@Start", l.StartTime); P(cmd, "@End", l.EndTime);
         P(cmd, "@ClassId", l.ClassId); P(cmd, "@SectionId", l.SectionId); P(cmd, "@BatchId", l.BatchId);
         P(cmd, "@Subject", l.SubjectName); P(cmd, "@FacultyId", l.FacultyId);
-        P(cmd, "@Topic", l.Topic); P(cmd, "@Remarks", l.Remarks); P(cmd, "@User", userId);
+        P(cmd, "@Topic", l.Topic); P(cmd, "@Remarks", l.Remarks); P(cmd, "@User", userId); P(cmd, "@Room", l.ClassroomId);
         return cmd.ExecuteNonQuery();
     }
 

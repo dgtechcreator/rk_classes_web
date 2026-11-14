@@ -1,0 +1,53 @@
+@using SchoolMS.Web.Filters
+@model List<SchoolMS.Domain.Classroom>
+@{ ViewData["Title"] = "Classrooms"; }
+<style>
+.cb-tabs a { display:inline-block; padding:7px 14px; border-radius:20px; font-weight:700; font-size:13px; text-decoration:none; color:#374151; background:#f3f4f6; margin-right:6px; }
+.cb-tabs a.on { background:#2563eb; color:#fff; }
+.cm-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:3000; align-items:center; justify-content:center; }
+.cm-box { background:#fff; border-radius:12px; padding:22px; width:92%; max-width:420px; }
+.cm-box label { display:block; font-size:12px; font-weight:700; margin:10px 0 3px; }
+</style>
+<div class="pg-hdr"><div class="pg-row">
+  <div><h1>🚪 Classrooms</h1><p>All the rooms lectures are held in. A lecture picks one, so students and teachers know where to go</p></div>
+  <div><button class="btn btn-p" onclick="openForm(0)">+ Add classroom</button></div>
+</div></div>
+<div class="cb-tabs"><a href="/Classroom/Board">Live board</a><a href="/Classroom/History">History</a><a href="/Classroom/Manage" class="on">Manage rooms</a></div>
+<div class="card" style="margin-top:14px;"><div class="tbl-wrap">
+  @if (!Model.Any()) { <div class="empty"><div class="empty-ico">🚪</div><h3>No classrooms yet</h3><p>Add Room 101, Lab, Hall ... then pick them when scheduling a lecture.</p></div> }
+  else {
+  <table><thead><tr><th>Classroom</th><th>Floor / building</th><th style="width:100px;">Seats</th><th style="width:100px;">Status</th><th style="width:160px;"></th></tr></thead><tbody>
+  @foreach (var r in Model) {
+    <tr><td class="fw7">@r.Name</td><td>@(r.Location ?? "—")</td><td>@(r.Capacity?.ToString() ?? "—")</td>
+      <td><span class="badge @(r.IsActive ? "b-active" : "b-inactive")">@(r.IsActive ? "Active" : "Off")</span></td>
+      <td><button class="btn" onclick="openForm(@r.ClassroomId, '@r.Name.Replace("'", "\\'")', '@((r.Location ?? "").Replace("'", "\\'"))', '@r.Capacity', @(r.IsActive ? "true" : "false"))">Edit</button>
+          <button class="btn" style="color:#dc2626;" onclick="del(@r.ClassroomId)">Delete</button></td></tr> }
+  </tbody></table> }
+</div></div>
+<div class="cm-bg" id="bg"><div class="cm-box">
+  <h3 id="ttl" style="margin:0 0 4px;">Add classroom</h3>
+  <label>Name *</label><input id="fName" class="fc" maxlength="80" placeholder="e.g. Room 101" />
+  <label>Floor / building</label><input id="fLoc" class="fc" maxlength="120" placeholder="e.g. First floor, Main building" />
+  <label>Seats</label><input id="fCap" class="fc" type="number" min="0" />
+  <label style="display:flex;gap:8px;align-items:center;"><input type="checkbox" id="fAct" checked /> Active (can be picked for lectures)</label>
+  <div id="err" style="display:none;color:#dc2626;font-size:12px;margin-top:8px;"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;"><button class="btn" onclick="closeForm()">Cancel</button><button class="btn btn-p" onclick="save()">Save</button></div>
+</div></div>
+<script>
+let eid = 0;
+function openForm(id, name, loc, cap, act) {
+  eid = id; document.getElementById('ttl').textContent = id ? 'Edit classroom' : 'Add classroom';
+  fName.value = name || ''; fLoc.value = loc || ''; fCap.value = cap || ''; fAct.checked = id ? act : true;
+  err.style.display = 'none'; bg.style.display = 'flex';
+}
+function closeForm() { bg.style.display = 'none'; }
+async function post(url, body) { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return r.json(); }
+async function save() {
+  const j = await post('/Classroom/Save', { classroomId: eid, name: fName.value, capacity: fCap.value ? parseInt(fCap.value) : null, location: fLoc.value || null, isActive: fAct.checked });
+  if (j.success) location.reload(); else { err.textContent = j.error || 'Could not save.'; err.style.display = 'block'; }
+}
+async function del(id) {
+  if (!confirm('Delete this classroom?')) return;
+  const j = await post('/Classroom/Delete', { id }); if (j.success) location.reload(); else alert(j.error || 'Could not delete.');
+}
+</script>

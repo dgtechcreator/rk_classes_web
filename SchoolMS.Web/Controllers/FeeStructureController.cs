@@ -8,8 +8,15 @@ namespace SchoolMS.Web.Controllers;
 [RequireLogin]
 public class FeeStructureController(FeeStructureService svc, LookupService lookup, FeePositionService feePos) : Controller
 {
-    public IActionResult Index(int? yearId, int? classId, int? sectionId)
+    // Two screens on the same data: "Fee Structure" = the class + medium summary (fees set, collected, pending);
+    // "Fee Heads" = the list of fee heads themselves (add / edit / delete).
+    public IActionResult Index(int? yearId, int? classId, int? sectionId) => Build("structure", yearId, classId, sectionId);
+
+    public IActionResult Heads(int? yearId, int? classId, int? sectionId) => Build("heads", yearId, classId, sectionId);
+
+    IActionResult Build(string mode, int? yearId, int? classId, int? sectionId)
     {
+        ViewBag.Mode = mode;
         yearId ??= lookup.GetCurrentYearId();
         var list    = svc.GetAll(yearId, classId, sectionId);
         var summary = svc.GetSummary(yearId);
@@ -21,7 +28,7 @@ public class FeeStructureController(FeeStructureService svc, LookupService looku
         ViewBag.ClassId   = classId;
         ViewBag.SectionId = sectionId;
         ViewBag.Summary   = summary;
-        return View(list);
+        return View("Index", list);
     }
 
     public IActionResult Create()

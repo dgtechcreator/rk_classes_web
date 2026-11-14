@@ -32,6 +32,9 @@ public class PagePermissionFilter : IActionFilter
             "SaveClass", "DeleteClass", "SaveSection", "DeleteSection", "SaveBatch", "DeleteBatch", "SaveSubject", "DeleteSubject",
             "SaveExpenseCat", "DeleteExpenseCat", "SavePaymentMode", "DeletePaymentMode", "CreateAttendanceBatch", "DeleteAttendanceBatch", "SaveAttendanceBatch");
 
+        Add("Classroom",    new("lecture_schedule"), "Board", "BoardJson", "History", "HistoryJson");
+        Add("Classroom",    new("lecture_schedule", true), "Manage", "Save", "Delete");
+
         Add("Faculty",      new("faculty_view"), "Index", "Details");
         Add("Faculty",      new("faculty", true), "Create", "Edit", "Save", "Delete");
 
@@ -46,8 +49,9 @@ public class PagePermissionFilter : IActionFilter
         Add("Fees",         new("fee_collection", true), "DeletePayment", "UpdatePayment", "SetPreviousDues");
         Add("Fees",         new("fee_collect"), "Collect", "SavePayment");
 
-        Add("FeeStructure", new("fee_structure"), "Index", "Create", "Edit", "Save", "Delete");
+        Add("FeeStructure", new("fee_structure"), "Index", "Heads", "Create", "Edit", "Save", "Delete");
         Add("FeeStructure", new("fees_due"), "FeesDue", "CollectFee", "GenerateMonthly");
+        Add("FeeFollowup",  new("fees_due"), "Index", "Student", "Add", "Delete", "Export");
 
         Add("Expenses",     new("expenses_view"), "Index");
         Add("Expenses",     new("expenses", true), "Create", "Edit", "Save", "Delete");

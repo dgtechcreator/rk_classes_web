@@ -21,7 +21,9 @@ public class ParentController(
     SchoolMS.Web.Auth.NoteFileStore noteFiles,
     PortalAccessService portal,
     StudentService studentSvc,
-    SchoolMS.Web.Auth.ProfilePhotoStore photos) : Controller
+    SchoolMS.Web.Auth.ProfilePhotoStore photos,
+    FacultyService facultySvc,
+    LoginTracker tracker) : Controller
 {
     // ── Login ────────────────────────────────────────────────────
     [HttpGet]
@@ -36,7 +38,8 @@ public class ParentController(
     public IActionResult Login(ParentLoginVM m)
     {
         var (ok, parent, msg) = parentSvc.Login(m.Phone?.Trim() ?? "", m.Password ?? "");
-        if (!ok) { m.Error = msg; return View(m); }
+        if (!ok) { tracker.Record(HttpContext, "parent", null, m.Phone, null, "Student / Parent", false); m.Error = msg; return View(m); }
+        tracker.Record(HttpContext, "parent", parent!.ParentId, m.Phone, parent.FullName, "Student / Parent", true);
         HttpContext.Session.SetParentId(parent!.ParentId);
         HttpContext.Session.SetParentPhone(parent.Phone);
         HttpContext.Session.SetParentName(parent.FullName);
@@ -58,6 +61,7 @@ public class ParentController(
         var (ok, parent, msg) = parentSvc.Register(phone, pass, m.RegFullName?.Trim());
         if (!ok) { m.ShowRegister = true; m.RegError = msg; return View("Login", m); }
 
+        tracker.Record(HttpContext, "parent", parent!.ParentId, phone, parent.FullName, "Student / Parent", true);
         HttpContext.Session.SetParentId(parent!.ParentId);
         HttpContext.Session.SetParentPhone(parent.Phone);
         HttpContext.Session.SetParentName(parent.FullName);
@@ -98,6 +102,7 @@ public class ParentController(
             {
                 vm.Attendance = attSvc.GetStudentAttendanceSummary(sid);
                 vm.AttDetail  = attSvc.GetStudentAttendanceDetail(sid);
+                facultySvc.ApplyTeacherLabels(vm.AttDetail);   // "Rakesh Mishra SIR" instead of the bare name
             }
             if (!hidden.Contains("marks")) vm.Marks = marksSvc.GetStudentAllMarks(sid);
             var pos = feePos.Calculate(selected);
@@ -157,6 +162,8 @@ public class ParentController(
         if (HttpContext.Session.GetInt32("RoleId") != 1)
             return RedirectToAction("AccessDenied", "Home");
         var parentAccounts = parentSvc.GetAllParents();
+        // which student(s) / class / medium-stream each login belongs to
+        foreach (var p in parentAccounts) { try { p.Children = parentSvc.GetChildren(p.Phone); } catch { } }
         return View(parentAccounts);
     }
 

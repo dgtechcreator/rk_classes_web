@@ -18,6 +18,7 @@ public static class LectureHelpers
         classId = l.ClassId, className = l.ClassName?.Trim(),
         sectionId = l.SectionId, sectionName = l.SectionName?.Trim(),
         batchId = l.BatchId, batchName = l.BatchName?.Trim(),
+        classroomId = l.ClassroomId, classroom = l.ClassroomName?.Trim(),
         groupLabel = l.GroupLabel,
         subject = l.SubjectName.Trim(),
         facultyId = l.FacultyId, teacher = l.FacultyName?.Trim(),
@@ -89,7 +90,7 @@ public static class LectureHelpers
         };
     }
 
-    public static object OptionsPayload(LookupService lookup, MastersService masters, FacultyService faculty)
+    public static object OptionsPayload(LookupService lookup, MastersService masters, FacultyService faculty, ClassroomService? rooms = null)
     {
         var (teachers, _) = faculty.GetAll(null, "Active", null, 1, 1000);
         return new
@@ -99,6 +100,7 @@ public static class LectureHelpers
             batches = lookup.GetBatches().Select(b => new { id = b.BatchId, name = b.BatchName.Trim() }),
             subjects = masters.GetSubjects().Select(s => s.SubjectName.Trim()).Where(n => n != "").Distinct().OrderBy(n => n),
             teachers = teachers.Select(t => new { id = t.FacultyId, name = t.FullName.Trim(), displayName = t.FullName.Trim() }),
+            classrooms = (rooms?.GetAll() ?? new()).Select(c => new { id = c.ClassroomId, name = c.Name.Trim(), capacity = c.Capacity, location = c.Location }),
         };
     }
 

@@ -6,7 +6,7 @@ using SchoolMS.Web.ViewModels;
 
 namespace SchoolMS.Web.Controllers;
 
-public class AccountController(AuthService auth, UserMgmtService userMgmt, UserAccessCache access, StaffNameService names) : Controller
+public class AccountController(AuthService auth, UserMgmtService userMgmt, UserAccessCache access, StaffNameService names, LoginTracker tracker) : Controller
 {
     [HttpGet]
     public IActionResult Login(string? returnUrl)
@@ -22,16 +22,18 @@ public class AccountController(AuthService auth, UserMgmtService userMgmt, UserA
     public IActionResult Login(LoginVM m, string? returnUrl)
     {
         var (ok, u, msg) = auth.Login(m.Username, m.Password);
-        if (!ok) { m.Error = msg; return View(m); }
+        if (!ok) { tracker.Record(HttpContext, "staff", null, m.Username, null, null, false); m.Error = msg; return View(m); }
 
         access.Invalidate(u!.UserId);   // read the freshest rights at login
         var acc = access.Get(u.UserId);
         if (acc != null && !acc.CanUse)
         {
+            tracker.Record(HttpContext, "staff", u.UserId, m.Username, u.FullName, u.RoleName, false);
             m.Error = acc.CrBlocked ? "Your Class Representative access is switched off. Please contact the admin." : "This account is disabled. Please contact the admin.";
             return View(m);
         }
 
+        tracker.Record(HttpContext, "staff", u.UserId, m.Username, u.FullName, u.RoleName, true);
         HttpContext.Session.SetUser(u);
         HttpContext.Session.SetString("DisplayName", SafeDisplayName(u.UserId, u.FullName));
         var perms = acc is { Known: true } ? acc.Perms : userMgmt.GetPermissions(u.UserId);

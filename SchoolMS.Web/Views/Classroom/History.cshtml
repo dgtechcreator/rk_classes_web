@@ -1,0 +1,47 @@
+@using SchoolMS.Web.Filters
+@{ ViewData["Title"] = "Classroom History"; var rooms = ViewBag.Rooms as List<SchoolMS.Domain.Classroom> ?? new(); }
+<style>
+.cb-tabs a { display:inline-block; padding:7px 14px; border-radius:20px; font-weight:700; font-size:13px; text-decoration:none; color:#374151; background:#f3f4f6; margin-right:6px; }
+.cb-tabs a.on { background:#2563eb; color:#fff; }
+.ch-f { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; } .ch-f .fs, .ch-f .fc { width:auto; flex:1 1 160px; }
+.ch-pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:800; }
+.ph-done { background:#dcfce7; color:#166534; } .ph-ended { background:#fef3c7; color:#92400e; } .ph-ongoing { background:#fee2e2; color:#991b1b; }
+.ph-upcoming { background:#dbeafe; color:#1e40af; } .ph-cancelled { background:#f3f4f6; color:#6b7280; text-decoration:line-through; }
+</style>
+<div class="pg-hdr"><div class="pg-row"><div><h1>🗂️ Classroom History</h1><p>Every lecture held in, or planned for, a classroom - teacher, class, medium, batch and time</p></div></div></div>
+<div class="cb-tabs">
+  <a href="/Classroom/Board">Live board</a><a href="/Classroom/History" class="on">History</a>
+  @if (Context.Session.HasEditPerm("lecture_schedule")) { <a href="/Classroom/Manage">Manage rooms</a> }
+</div>
+<div class="ch-f">
+  <select id="hRoom" class="fs"><option value="">All classrooms</option>@foreach (var r in rooms) { <option value="@r.ClassroomId">@r.Name</option> }</select>
+  <input type="date" id="hFrom" class="fc" title="From" /><input type="date" id="hTo" class="fc" title="To" />
+  <input type="text" id="hQ" class="fc" placeholder="Search teacher, subject, class, room..." />
+  <button class="btn btn-p" onclick="load()">Show</button>
+</div>
+<div id="sum" style="font-size:13px;color:#374151;margin-bottom:8px;"></div>
+<div class="card"><div class="tbl-wrap"><table>
+  <thead><tr><th>Date</th><th>Time</th><th>Classroom</th><th>Subject</th><th>Teacher</th><th>Class · Medium · Batch</th><th>Topic</th><th>Status</th></tr></thead>
+  <tbody id="rows"><tr><td colspan="8" style="color:#6b7280;">Loading...</td></tr></tbody>
+</table></div></div>
+<script>
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ap = t => { const [h, m] = t.split(':').map(Number); return (h % 12 || 12) + ':' + String(m).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM'); };
+const LABEL = { done: 'Held', ended: 'Not updated', ongoing: 'Ongoing', upcoming: 'Upcoming', cancelled: 'Cancelled' };
+async function load() {
+  const p = new URLSearchParams();
+  [['classroomId','hRoom'],['from','hFrom'],['to','hTo'],['q','hQ']].forEach(([k,id]) => { const v = document.getElementById(id).value; if (v) p.append(k, v); });
+  const j = await (await fetch('/Classroom/HistoryJson?' + p)).json();
+  if (!document.getElementById('hFrom').value) document.getElementById('hFrom').value = j.from;
+  if (!document.getElementById('hTo').value) document.getElementById('hTo').value = j.to;
+  document.getElementById('sum').textContent = j.count + ' lectures · ' + j.hours + ' hours (cancelled not counted) · ' + j.from + ' to ' + j.to;
+  document.getElementById('rows').innerHTML = j.lectures.length ? j.lectures.map(l => `<tr>
+    <td style="white-space:nowrap;">${esc(l.date)}</td><td style="white-space:nowrap;">${ap(l.startTime)} - ${ap(l.endTime)}</td>
+    <td><b>${esc(l.classroom)}</b></td><td>${esc(l.subject)}</td><td>${esc(l.teacher || '')}</td><td>${esc(l.groupLabel)}</td>
+    <td style="max-width:220px;">${esc(l.topic || '')}</td>
+    <td><span class="ch-pill ph-${l.phase}">${LABEL[l.phase] || l.status}</span>${l.statusNote ? `<div style="font-size:11px;color:#6b7280;">${esc(l.statusNote)}</div>` : ''}</td></tr>`).join('')
+    : '<tr><td colspan="8" style="color:#6b7280;text-align:center;padding:18px;">No lectures found for this selection.</td></tr>';
+}
+document.getElementById('hQ').addEventListener('keydown', e => { if (e.key === 'Enter') load(); });
+load();
+</script>

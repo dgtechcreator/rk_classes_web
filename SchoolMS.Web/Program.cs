@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -99,8 +100,21 @@ try {
 } catch {
     builder.Services.AddDistributedMemoryCache();
 }
+// The session cookie is encrypted with Data Protection keys. Without a fixed place for those keys they are re-made every time
+// the app restarts / the IIS app pool recycles, and every signed-in person was thrown out (the "session expires too fast" problem).
+// Keys now live in App_Data/keys, so the session survives restarts. Rights / deactivation are still re-checked on every click
+// (RefreshSession middleware below), so a long session does not keep a removed user signed in.
+try
+{
+    var keyDir = new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "App_Data", "keys"));
+    keyDir.Create();
+    builder.Services.AddDataProtection().SetApplicationName("SchoolMS").PersistKeysToFileSystem(keyDir);
+}
+catch { /* read-only folder: fall back to the default key storage */ }
+
 builder.Services.AddSession(o => {
-    o.IdleTimeout        = TimeSpan.FromHours(8);
+    o.IdleTimeout        = TimeSpan.FromDays(30);                 // sliding: every use renews it
+    o.Cookie.MaxAge      = TimeSpan.FromDays(30);                 // a persistent cookie: survives closing the browser
     o.Cookie.HttpOnly    = true;
     o.Cookie.IsEssential = true;
     o.Cookie.Name        = ".SchoolMS.Session";
@@ -126,6 +140,14 @@ builder.Services.AddScoped<ParentRepo>();
 builder.Services.AddScoped<TaskRepo>();
 builder.Services.AddScoped<NotificationRepo>();
 builder.Services.AddScoped<ActivityRepo>();
+builder.Services.AddScoped<ClassroomRepo>();
+builder.Services.AddScoped<WebAuthnRepo>();
+builder.Services.AddScoped<FeeFollowupRepo>();
+builder.Services.AddScoped<FeeFollowupService>();
+builder.Services.AddScoped<ClassroomService>();
+builder.Services.AddScoped<LoginActivityRepo>();
+builder.Services.AddScoped<LoginActivityService>();
+builder.Services.AddScoped<SchoolMS.Web.Auth.LoginTracker>();
 builder.Services.AddScoped<ClassNotesRepo>();
 builder.Services.AddScoped<ClassNotesService>();
 builder.Services.AddScoped<AttendanceBatchRepo>();
@@ -152,6 +174,7 @@ builder.Services.AddScoped<ParentService>();
 builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<ActivityNotifier>();
+builder.Services.AddScoped<TeacherAttendanceNotifier>();
 builder.Services.AddScoped<AttendanceBatchService>();
 builder.Services.AddScoped<TeacherPaymentService>();
 builder.Services.AddScoped<TeacherAttendanceService>();
@@ -268,6 +291,9 @@ try
     using var scope = app.Services.CreateScope();
     scope.ServiceProvider.GetRequiredService<ClassNotesRepo>().EnsureSchema();
     scope.ServiceProvider.GetRequiredService<ActivityRepo>().EnsureSchema();
+    scope.ServiceProvider.GetRequiredService<LoginActivityRepo>().EnsureSchema();
+    scope.ServiceProvider.GetRequiredService<FeeFollowupRepo>().EnsureSchema();
+    _ = scope.ServiceProvider.GetRequiredService<LectureRepo>();   // creates Classrooms + Lectures.ClassroomId if missing
     scope.ServiceProvider.GetRequiredService<DiscontinuedRepo>().EnsureSchema();
     scope.ServiceProvider.GetRequiredService<BatchHolidayRepo>().EnsureSchema();
     scope.ServiceProvider.GetRequiredService<PaymentModeRepo>().EnsureSchema();

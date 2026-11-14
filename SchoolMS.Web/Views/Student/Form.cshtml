@@ -1,5 +1,9 @@
 @model SchoolMS.Web.ViewModels.StudentFormVM
-@{ ViewData["Title"] = Model.Student.StudentId == 0 ? "New Student Registration" : "Edit Student"; }
+@{
+    ViewData["Title"] = Model.Student.StudentId == 0 ? "New Student Registration" : "Edit Student";
+    // Compulsory for a NEW student only (older records may not have these yet, so editing them is not blocked).
+    var isNewStu = Model.Student.StudentId == 0;
+}
 
 <div class="pg-hdr">
   <div class="pg-row">
@@ -62,12 +66,12 @@
             <input type="text" name="Student.FullName" value="@Model.Student.FullName" class="fc" placeholder="Student's full name" required/>
           </div>
           <div class="fg">
-            <label>Date of Birth</label>
-            <input type="date" name="Student.DateOfBirth" value="@Model.Student.DateOfBirth?.ToString("yyyy-MM-dd")" class="fc"/>
+            <label>Date of Birth@(isNewStu ? " *" : "")</label>
+            <input type="date" name="Student.DateOfBirth" value="@Model.Student.DateOfBirth?.ToString("yyyy-MM-dd")" class="fc" @(isNewStu ? "required" : "")/>
           </div>
           <div class="fg">
-            <label>Gender</label>
-            <select name="Student.Gender" class="fs">
+            <label>Gender@(isNewStu ? " *" : "")</label>
+            <select name="Student.Gender" class="fs" @(isNewStu ? "required" : "")>
               <option value="">— Select —</option>
               @foreach(var g in new[]{"Male","Female","Other"})
               {<option value="@g" selected="@(Model.Student.Gender==g)">@g</option>}
@@ -82,16 +86,16 @@
             </select>
           </div>
           <div class="fg">
-            <label>Father's Name</label>
-            <input type="text" name="Student.FatherName" value="@Model.Student.FatherName" class="fc" placeholder="Father's full name"/>
+            <label>Father's Name@(isNewStu ? " *" : "")</label>
+            <input type="text" name="Student.FatherName" value="@Model.Student.FatherName" class="fc" placeholder="Father's full name" @(isNewStu ? "required" : "")/>
           </div>
           <div class="fg">
-            <label>Mother's Name</label>
-            <input type="text" name="Student.MotherName" value="@Model.Student.MotherName" class="fc" placeholder="Mother's full name"/>
+            <label>Mother's Name@(isNewStu ? " *" : "")</label>
+            <input type="text" name="Student.MotherName" value="@Model.Student.MotherName" class="fc" placeholder="Mother's full name" @(isNewStu ? "required" : "")/>
           </div>
           <div class="fg">
-            <label>Contact No.</label>
-            <input type="text" name="Student.Phone" value="@Model.Student.Phone" class="fc" placeholder="Primary contact number"/>
+            <label>Contact No.@(isNewStu ? " *" : "")</label>
+            <input type="text" name="Student.Phone" value="@Model.Student.Phone" class="fc" placeholder="Primary contact number" @(isNewStu ? "required" : "")/>
           </div>
           <div class="fg">
             <label>Father Contact No.</label>
@@ -106,12 +110,12 @@
             <input type="email" name="Student.Email" value="@Model.Student.Email" class="fc" placeholder="email@example.com"/>
           </div>
           <div class="fg full">
-            <label>Address</label>
-            <textarea name="Student.Address" class="fc" rows="2" placeholder="Full address...">@Model.Student.Address</textarea>
+            <label>Address@(isNewStu ? " *" : "")</label>
+            <textarea name="Student.Address" class="fc" rows="2" placeholder="Full address..." @(isNewStu ? "required" : "")>@Model.Student.Address</textarea>
           </div>
           <div class="fg">
-            <label>Admission Date</label>
-            <input type="date" name="Student.AdmissionDate" value="@Model.Student.AdmissionDate?.ToString("yyyy-MM-dd")" class="fc"/>
+            <label>Admission Date@(isNewStu ? " *" : "")</label>
+            <input type="date" name="Student.AdmissionDate" value="@Model.Student.AdmissionDate?.ToString("yyyy-MM-dd")" class="fc" @(isNewStu ? "required" : "")/>
           </div>
         </div>
       </div>

@@ -283,6 +283,12 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; color: #
         <span class="nav-ic"><i class="fas fa-envelope"></i></span> Contact Us
       </a>
 }
+      <a class="pp-nav-item" href="#" onclick="rkFingerprintRegister(); closeSb(); return false;">
+        <span class="nav-ic"><i class="fas fa-fingerprint"></i></span> Turn on fingerprint login
+      </a>
+      <a class="pp-nav-item" href="/LoginActivity/Mine" onclick="closeSb()">
+        <span class="nav-ic"><i class="fas fa-fingerprint"></i></span> My Login Activity
+      </a>
     </div>
   }
 
@@ -358,5 +364,6 @@ ppBell(); setInterval(ppBell, 60000);
 function closeSb() { document.getElementById('ppSidebar').classList.remove('open'); document.getElementById('ppOverlay').classList.remove('show'); }
 </script>
 @await RenderSectionAsync("Scripts", required: false)
+<script src="/js/webauthn.js"></script>
 </body>
 </html>
