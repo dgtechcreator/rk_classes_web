@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SchoolMS.Domain;
 using SchoolMS.Services;
+using SchoolMS.Web.Auth;
 using SchoolMS.Web.Filters;
 
 namespace SchoolMS.Web.Controllers;
@@ -69,10 +70,8 @@ public class TaskController(TaskService taskSvc, NotificationService notifSvc) :
         try
         {
             int userId = HttpContext.Session.GetUserId() ?? 0;
+            // Only the task itself changes. (Earlier this also marked EVERY unread notification of the user as read.)
             taskSvc.CompleteTask(taskId);
-
-            // Mark task notification as read instead of creating new one
-            notifSvc.MarkAllAsRead(userId);
 
             return Json(new { success = true, message = "Task marked as complete" });
         }
@@ -88,11 +87,6 @@ public class TaskController(TaskService taskSvc, NotificationService notifSvc) :
         try
         {
             taskSvc.DeleteTask(taskId);
-            int userId = HttpContext.Session.GetUserId() ?? 0;
-            if (userId > 0)
-            {
-                notifSvc.MarkAllAsRead(userId);
-            }
             return Json(new { success = true, message = "Task deleted" });
         }
         catch (Exception ex)
@@ -110,6 +104,23 @@ public class TaskController(TaskService taskSvc, NotificationService notifSvc) :
         var unreadCount = notifSvc.GetUnreadCount(userId) + (tasks?.Count ?? 0);
 
         return Json(new { notifications, tasks, unreadCount });
+    }
+
+    /// <summary>Short-lived JWT for the browser's SignalR connection (/hubs/notifications). The hub only accepts JWT.</summary>
+    [HttpGet]
+    public IActionResult HubToken([FromServices] JwtTokenService jwt)
+    {
+        int userId = HttpContext.Session.GetUserId() ?? 0;
+        if (userId == 0) return Unauthorized();
+
+        var u = new User {
+            UserId = userId,
+            FullName = HttpContext.Session.GetString("FullName") ?? "",
+            Username = HttpContext.Session.GetString("Username") ?? "",
+            RoleId = HttpContext.Session.GetInt32("RoleId") ?? 0,
+            RoleName = HttpContext.Session.GetString("RoleName") ?? "",
+        };
+        return Json(new { token = jwt.GenerateStaffToken(u, HttpContext.Session.GetPermissions()) });
     }
 
     [HttpPost]

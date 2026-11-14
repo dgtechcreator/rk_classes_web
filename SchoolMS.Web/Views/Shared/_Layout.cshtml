@@ -835,6 +835,25 @@ function saveTask(e) {
   });
 }
 </script>
+<!-- Real-time notifications: the server pushes on the SignalR hub; the 60s poll above stays as a fallback. -->
+<script src="https://unpkg.com/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+<script>
+(function () {
+  if (RK_IS_CR || !window.signalR) return;
+  fetch('/Task/HubToken')
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      if (!d || !d.token) return;
+      const conn = new signalR.HubConnectionBuilder()
+        .withUrl('/hubs/notifications?access_token=' + encodeURIComponent(d.token))
+        .withAutomaticReconnect()
+        .build();
+      conn.on('notification', () => loadNotifications());
+      conn.start().catch(err => console.warn('Live notifications off, polling continues:', err));
+    })
+    .catch(() => {});
+})();
+</script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

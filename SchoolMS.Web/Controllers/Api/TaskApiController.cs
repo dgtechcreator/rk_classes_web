@@ -66,9 +66,7 @@ public class TaskApiController(TaskService taskSvc, NotificationService notifSvc
     {
         try
         {
-            int userId = User.UserId() ?? 0;
             taskSvc.CompleteTask(taskId);
-            notifSvc.MarkAllAsRead(userId);
             return Ok(new { success = true, message = "Task marked as complete" });
         }
         catch (Exception ex)
@@ -83,8 +81,6 @@ public class TaskApiController(TaskService taskSvc, NotificationService notifSvc
         try
         {
             taskSvc.DeleteTask(taskId);
-            int userId = User.UserId() ?? 0;
-            if (userId > 0) notifSvc.MarkAllAsRead(userId);
             return Ok(new { success = true, message = "Task deleted" });
         }
         catch (Exception ex)
