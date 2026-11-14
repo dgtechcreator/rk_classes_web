@@ -1,0 +1,111 @@
+@using SchoolMS.Domain
+@{
+    ViewData["Title"] = "Send Notification";
+    var classes = (List<Class>)ViewBag.Classes; var sections = (List<Section>)ViewBag.Sections; var batches = (List<Batch>)ViewBag.Batches;
+    var staff = (List<(int id, string name, string role)>)ViewBag.Staff;
+}
+<style>
+.nt-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px 18px; margin-bottom:14px; max-width:760px; }
+.nt-card label { display:block; font-size:12px; font-weight:700; margin:10px 0 3px; }
+.nt-aud { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; }
+.nt-aud label { margin:0; border:1.5px solid #e5e7eb; border-radius:10px; padding:9px 10px; cursor:pointer; font-size:13px; font-weight:700; display:flex; gap:7px; align-items:center; }
+.nt-aud input:checked + span { color:#1e3ab8; }
+.nt-aud label:has(input:checked) { border-color:#2d56e8; background:#eef2ff; }
+.nt-pick { border:1px solid #e5e7eb; border-radius:10px; max-height:230px; overflow:auto; margin-top:6px; }
+.nt-pick .it { display:flex; gap:8px; align-items:center; padding:7px 10px; border-bottom:1px solid #f1f5f9; font-size:13px; cursor:pointer; }
+.nt-chip { display:inline-block; background:#eef2ff; color:#1e3ab8; border-radius:999px; padding:3px 10px; font-size:12px; font-weight:700; margin:3px 4px 0 0; }
+</style>
+<div class="pg-hdr"><div class="pg-row"><div><h1>📣 Send Notification</h1><p>One message to everybody, a group, or particular students / staff</p></div></div></div>
+
+<div class="nt-card">
+  <label style="margin-top:0">Send to *</label>
+  <div class="nt-aud">
+    <label><input type="radio" name="aud" value="everyone" checked/><span>Everybody</span></label>
+    <label><input type="radio" name="aud" value="students"/><span>All students & parents</span></label>
+    <label><input type="radio" name="aud" value="staff"/><span>All staff</span></label>
+    <label><input type="radio" name="aud" value="teachers"/><span>All teachers</span></label>
+    <label><input type="radio" name="aud" value="class"/><span>One class / batch</span></label>
+    <label><input type="radio" name="aud" value="pick_students"/><span>Particular students</span></label>
+    <label><input type="radio" name="aud" value="pick_staff"/><span>Particular staff</span></label>
+  </div>
+
+  <div id="boxClass" style="display:none">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;">
+      <div><label>Class *</label><select id="cls" class="fs"><option value="">— Select —</option>@foreach (var c in classes) { <option value="@c.ClassId">@c.ClassName</option> }</select></div>
+      <div><label>Medium / stream</label><select id="sec" class="fs"><option value="">All</option>@foreach (var c in sections) { <option value="@c.SectionId">@c.SectionName</option> }</select></div>
+      <div><label>Batch</label><select id="bat" class="fs"><option value="">All</option>@foreach (var c in batches) { <option value="@c.BatchId">@c.BatchName</option> }</select></div>
+    </div>
+  </div>
+
+  <div id="boxStu" style="display:none">
+    <label>Search students (name, father, mother, admission no)</label>
+    <input id="stuQ" class="fc" placeholder="Type to search..." autocomplete="off"/>
+    <div id="stuRes" class="nt-pick" style="display:none"></div>
+    <div id="stuSel"></div>
+  </div>
+
+  <div id="boxStaff" style="display:none">
+    <label>Search staff</label>
+    <input id="stfQ" class="fc" placeholder="Type to search..." autocomplete="off"/>
+    <div id="stfRes" class="nt-pick">
+      @foreach (var s in staff) { <div class="it" data-n="@((s.name + " " + s.role).ToLowerInvariant())"><input type="checkbox" value="@s.id"/> <b>@s.name</b> <span style="color:#6b7280">@s.role</span></div> }
+    </div>
+  </div>
+
+  <label>Title *</label>
+  <input id="ttl" class="fc" maxlength="150" placeholder="e.g. Holiday tomorrow"/>
+  <label>Message *</label>
+  <textarea id="msg" class="fc" rows="4" maxlength="900" placeholder="Write the message"></textarea>
+  <div id="err" style="display:none;color:#dc2626;font-size:12.5px;margin-top:8px;"></div>
+  <div id="ok" style="display:none;color:#16a34a;font-size:13px;font-weight:700;margin-top:8px;"></div>
+  <div style="margin-top:12px;"><button id="btn" class="btn btn-p" onclick="sendIt()">Send notification</button></div>
+</div>
+
+<script>
+const picked = new Map();   // studentId -> label
+const aud = () => document.querySelector('input[name=aud]:checked').value;
+function syncBoxes() {
+  const a = aud();
+  document.getElementById('boxClass').style.display = a === 'class' ? '' : 'none';
+  document.getElementById('boxStu').style.display = a === 'pick_students' ? '' : 'none';
+  document.getElementById('boxStaff').style.display = a === 'pick_staff' ? '' : 'none';
+}
+document.querySelectorAll('input[name=aud]').forEach(r => r.addEventListener('change', syncBoxes));
+document.getElementById('stfQ').addEventListener('input', e => {
+  const q = e.target.value.trim().toLowerCase();
+  document.querySelectorAll('#stfRes .it').forEach(it => it.style.display = !q || it.dataset.n.includes(q) ? '' : 'none');
+});
+document.querySelectorAll('#stfRes .it').forEach(it => it.addEventListener('click', e => { if (e.target.tagName !== 'INPUT') { const c = it.querySelector('input'); c.checked = !c.checked; } }));
+function drawSel() {
+  const box = document.getElementById('stuSel'); box.innerHTML = '';
+  picked.forEach((label, id) => { const s = document.createElement('span'); s.className = 'nt-chip'; s.textContent = label.split(' · ')[0] + ' ✕'; s.style.cursor = 'pointer'; s.onclick = () => { picked.delete(id); drawSel(); }; box.appendChild(s); });
+}
+let tm;
+document.getElementById('stuQ').addEventListener('input', e => {
+  clearTimeout(tm);
+  const q = e.target.value.trim(), res = document.getElementById('stuRes');
+  if (q.length < 2) { res.style.display = 'none'; return; }
+  tm = setTimeout(async () => {
+    const j = await (await fetch('/Notify/Students?q=' + encodeURIComponent(q))).json();
+    res.innerHTML = ''; res.style.display = '';
+    if (!j.students.length) { res.innerHTML = '<div class="it" style="color:#6b7280">No student found</div>'; return; }
+    j.students.forEach(s => { const d = document.createElement('div'); d.className = 'it'; d.textContent = s.label; d.onclick = () => { picked.set(s.id, s.label); drawSel(); }; res.appendChild(d); });
+  }, 250);
+});
+async function sendIt() {
+  const err = document.getElementById('err'), ok = document.getElementById('ok'), btn = document.getElementById('btn');
+  err.style.display = ok.style.display = 'none';
+  const v = id => document.getElementById(id).value;
+  const body = { title: v('ttl'), message: v('msg'), audience: aud(),
+    classId: v('cls') ? +v('cls') : null, sectionId: v('sec') ? +v('sec') : null, batchId: v('bat') ? +v('bat') : null,
+    studentIds: [...picked.keys()], userIds: [...document.querySelectorAll('#stfRes input:checked')].map(c => +c.value) };
+  btn.disabled = true;
+  try {
+    const j = await (await fetch('/Notify/Send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })).json();
+    if (!j.success) { err.textContent = j.error || 'Could not send.'; err.style.display = ''; return; }
+    ok.textContent = `Sent to ${j.students} student${j.students === 1 ? '' : 's'} and ${j.staff} staff.`; ok.style.display = '';
+    document.getElementById('ttl').value = ''; document.getElementById('msg').value = '';
+  } catch (e) { err.textContent = 'Network problem, please try again.'; err.style.display = ''; }
+  finally { btn.disabled = false; }
+}
+</script>

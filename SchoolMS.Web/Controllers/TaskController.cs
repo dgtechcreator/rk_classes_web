@@ -101,9 +101,9 @@ public class TaskController(TaskService taskSvc, NotificationService notifSvc) :
         int userId = HttpContext.Session.GetUserId() ?? 0;
         var notifications = notifSvc.GetUserNotifications(userId);
         var tasks = taskSvc.GetPendingTasks(userId);
-        var unreadCount = notifSvc.GetUnreadCount(userId) + (tasks?.Count ?? 0);
-
-        return Json(new { notifications, tasks, unreadCount });
+        int unreadNotifications = notifSvc.GetUnreadCount(userId);
+        int pendingTasks = tasks?.Count ?? 0;
+        return Json(new { notifications, tasks, unreadCount = unreadNotifications + pendingTasks, unreadNotifications, pendingTasks });
     }
 
     /// <summary>Short-lived JWT for the browser's SignalR connection (/hubs/notifications). The hub only accepts JWT.</summary>

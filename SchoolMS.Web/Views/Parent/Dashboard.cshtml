@@ -2,6 +2,7 @@
 @{
   Layout = "_ParentLayout";
   var sel = Model.SelectedChild;
+  bool isStudentLogin = SchoolMS.Repository.PhoneMatch.IsStudentLogin(Context.Session.GetParentPhone(), Model.Children);   // a student signed in with his own number: "you", not "your child"
   var activeTab = Model.ActiveTab ?? "attendance";
   ViewData["Title"] = sel != null ? sel.DisplayName : "Dashboard";
   ViewBag.SelectedStudentId = sel?.StudentId;
@@ -389,13 +390,13 @@ else
     if (!sec || !sec.top || sec.top.length === 0) return '<p style="color:#888;">No data available</p>';
     const rows = sec.top.map(s => `<div class="marks-top5-item${s.isMe ? ' me' : ''}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-          <div style="font-weight:700;font-size:14px;"><span class="marks-top5-rank">#${s.rank}</span> ${topperEsc(s.fullName)}${s.isMe ? ' <span style="font-size:11px;color:#16a34a;">(your child)</span>' : ''}</div>
+          <div style="font-weight:700;font-size:14px;"><span class="marks-top5-rank">#${s.rank}</span> ${topperEsc(s.fullName)}${s.isMe ? ' <span style="font-size:11px;color:#16a34a;">(@(isStudentLogin ? "you" : "your child"))</span>' : ''}</div>
           <div style="text-align:right;font-weight:700;font-size:15px;white-space:nowrap;">${s.percentage}%
             <div style="font-size:11px;color:#666;font-weight:600;">${s.totalObtained}/${s.totalMax}</div></div>
         </div>
       </div>`).join('');
     const mine = sec.myRank && !sec.top.some(s => s.isMe)
-      ? `<div class="marks-myrank">Your child: rank #${sec.myRank} of ${sec.ranked} (${sec.myPercentage}%)</div>` : '';
+      ? `<div class="marks-myrank">@(isStudentLogin ? "You" : "Your child"): rank #${sec.myRank} of ${sec.ranked} (${sec.myPercentage}%)</div>` : '';
     return rows + mine;
   }
   toppersPromise.then(d => {

@@ -14,6 +14,19 @@ public static class PhoneMatch
         return digits.Length > 10 ? digits[^10..] : digits;
     }
 
+    /// <summary>
+    /// A login belongs to a phone number: the father's / mother's number = a parent login, the student's own number = a student
+    /// login. A number that is both (a student using the parent's phone) counts as a parent.
+    /// </summary>
+    public static bool IsStudentLogin(string? loginPhone, IEnumerable<SchoolMS.Domain.Student> kids)
+    {
+        var key = Key(loginPhone);
+        if (key == "") return false;
+        var list = kids.ToList();
+        if (list.Any(c => Key(c.FatherPhone) == key || Key(c.MotherPhone) == key)) return false;
+        return list.Any(c => Key(c.Phone) == key);
+    }
+
     /// <summary>The same rule as [Key] as a SQL expression on a column (spaces, +, -, dots, tabs and non-breaking spaces removed).</summary>
     public static string Sql(string column)
         => $"RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(ISNULL({column}, ''), ' ', ''), '+', ''), '-', ''), '.', ''), CHAR(9), ''), NCHAR(160), ''), 10)";

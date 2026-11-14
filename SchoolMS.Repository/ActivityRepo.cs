@@ -91,6 +91,25 @@ IF COL_LENGTH('dbo.ParentAccounts', 'NotifSeenAt') IS NULL
             });
     }
 
+    /// <summary>One row for each of the given students (ids that do not exist are ignored). Returns how many were added.</summary>
+    public int InsertForStudents(IEnumerable<int> studentIds, string kind, string title, string message, string dedupeKey)
+    {
+        EnsureSchema();
+        var ids = studentIds.Distinct().ToList();
+        int added = 0;
+        for (int i = 0; i < ids.Count; i += 400)
+        {
+            var chunk = ids.Skip(i).Take(400).ToList();
+            var p = new Dictionary<string, object?> { { "@Kind", kind }, { "@Title", Cut(title, 200) }, { "@Msg", Cut(message, 1000) }, { "@Key", Cut(dedupeKey, 150) } };
+            var names = new List<string>();
+            for (int k = 0; k < chunk.Count; k++) { var n = "@s" + k; p[n] = chunk[k]; names.Add(n); }
+            added += db.ExecSql($@"
+                INSERT INTO StudentActivities (StudentId, Kind, Title, [Message], DedupeKey)
+                SELECT s.StudentId, @Kind, @Title, @Msg, @Key FROM Students s WHERE s.StudentId IN ({string.Join(",", names)})", p);
+        }
+        return added;
+    }
+
     /// <summary>Students who got an activity of [kind] for [date] (attendance rows are keyed "att:yyyyMMdd[:sN]"), with the time it was sent.
     /// Used by the dashboard's Absent list to show which parents have already been notified.</summary>
     public Dictionary<int, DateTime> GetAttendanceNotified(string kind, DateTime date)

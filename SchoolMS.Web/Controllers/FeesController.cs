@@ -307,6 +307,22 @@ public class FeesController(FeesService svc, LookupService lookup,
         });
     }
 
+    /// <summary>Collect page: what is set / paid / still due for the student just chosen (same arithmetic as the Pay page).</summary>
+    [RequireLogin]
+    public IActionResult StudentFeeInfo(int studentId)
+    {
+        var student = studentSvc.GetById(studentId);
+        if (student == null) return Json(new { found = false });
+        var structures = feeStructureSvc.GetAllForStudent(studentId);
+        decimal actualFee = structures.Sum(x => x.Amount);
+        var history = svc.GetStudentHistory(studentId);
+        decimal paid = history.Sum(x => x.NetAmount);
+        decimal discount = history.Sum(x => x.Discount) + student.AgreedDiscount;
+        decimal extra = AdditionalCharges.Total(history);
+        decimal balance = Math.Max(0, actualFee + extra - discount - paid);
+        return Json(new { found = true, feeSet = structures.Any(), total = actualFee + extra, discount, paid, balance });
+    }
+
     [RequireLogin]
     public IActionResult GetFeeAmount(int batchId, int classId, int sectionId)
     {

@@ -22,6 +22,7 @@
     "lecture_done"    => ("fa-flag-checkered", "#16a34a", "#dcfce7"),
     "birthday"        => ("fa-cake-candles", "#db2777", "#fce7f3"),
     "holiday"         => ("fa-umbrella-beach", "#b45309", "#fef3c7"),
+    "notice"          => ("fa-bullhorn", "#2d56e8", "#e4eaff"),
     _                 => ("fa-bell", "#64748b", "#f1f5f9"),
   };
 
@@ -82,7 +83,7 @@
 
   @if (Model.Count == 0)
   {
-    <div class="nt-empty"><i class="far fa-bell-slash"></i>No notifications yet. Attendance, marks, fees and lecture updates of your child will show up here.</div>
+    <div class="nt-empty"><i class="far fa-bell-slash"></i>No notifications yet. Attendance, marks, fees and lecture updates @(SchoolMS.Repository.PhoneMatch.IsStudentLogin(Context.Session.GetParentPhone(), children) ? "of yours" : "of your child") will show up here.</div>
   }
   else
   {

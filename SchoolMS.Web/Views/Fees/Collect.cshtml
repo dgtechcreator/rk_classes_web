@@ -8,6 +8,7 @@
 </div>
 
 <form method="post" action="/Fees/SavePayment" style="max-width:700px;">
+  @Html.AntiForgeryToken()
   <div class="card">
     <div class="card-hdr"><span class="card-ttl"><i class="fas fa-rupee-sign" style="color:var(--p);margin-right:6px;"></i>Payment Details</span></div>
     <div class="form-grid">
@@ -15,8 +16,9 @@
         <label>Student *</label>
         <select name="StudentId" class="fs" required>
           <option value="">— Select Student —</option>
-          @foreach(var s in Model.Students){<option value="@s.StudentId">@s.FullName (@s.AdmissionNo) — @s.ClassName</option>}
+          @foreach(var s in Model.Students){<option value="@s.StudentId" data-class="@s.ClassId" data-section="@s.SectionId" data-batch="@s.BatchId" data-year="@s.AcademicYearId">@s.FullName (@s.AdmissionNo) — @s.ClassName</option>}
         </select>
+        <div id="feeInfo" style="display:none;margin-top:8px;padding:10px 12px;border-radius:8px;background:#eff6ff;border:1px solid #bfdbfe;font-size:13px;"></div>
       </div>
       <div class="fg">
         <label>Batch *</label>
@@ -107,6 +109,46 @@ function calcNet() {
   const f = parseFloat(document.getElementById('fine')?.value) || 0;
   document.getElementById('netAmt').textContent = '₹' + (a - d + f).toFixed(2);
 }
+
+// Choosing a student fills in everything we already know about him: Std, Batch, Medium / Stream, Academic Year, and what is
+// still due (set as the Amount, editable). What the student record does not have (e.g. no batch yet) stays for the user to pick.
+function setSel(id, v) {
+  const el = document.getElementById(id) || document.querySelector('select[name=' + id + ']');
+  if (!el) return;
+  const val = (v && v !== '0') ? String(v) : '';
+  if (val && ![...el.options].some(o => o.value === val)) return;   // not one of the choices: leave as it is
+  el.value = val;                                                    // (the searchable box follows - see the layout script)
+  el.classList.toggle('fs-filled', !!val);
+}
+let feeInfoSeq = 0;
+async function onStudentChosen() {
+  const sel = document.querySelector('select[name=StudentId]');
+  const opt = sel.options[sel.selectedIndex];
+  const info = document.getElementById('feeInfo');
+  if (!opt || !opt.value) { info.style.display = 'none'; return; }
+  setSel('cClass', opt.dataset.class);
+  setSel('cBatch', opt.dataset.batch);
+  setSel('cSection', opt.dataset.section);
+  setSel('AcademicYearId', opt.dataset.year);
+  const seq = ++feeInfoSeq;
+  info.style.display = 'block'; info.textContent = 'Loading fee details...';
+  try {
+    const r = await (await fetch('/Fees/StudentFeeInfo?studentId=' + encodeURIComponent(opt.value))).json();
+    if (seq !== feeInfoSeq) return;   // another student was chosen meanwhile
+    if (!r.found) { info.style.display = 'none'; return; }
+    const m = n => '₹' + Number(n || 0).toLocaleString('en-IN');
+    if (!r.feeSet) {
+      info.innerHTML = '<b>No fee is set for this student yet.</b> Set it in Fee Structure, or type the amount below.';
+      fetchFeeAmount();
+    } else {
+      info.innerHTML = 'Total fees <b>' + m(r.total) + '</b> · Discount <b>' + m(r.discount) + '</b> · Paid <b style="color:#16a34a">' + m(r.paid) + '</b> · Balance due <b style="color:' + (r.balance > 0 ? '#dc2626' : '#16a34a') + '">' + m(r.balance) + '</b>';
+      if (r.balance > 0) { document.getElementById('amt').value = r.balance.toFixed(2); }
+      else { document.getElementById('amt').value = ''; }
+      calcNet();
+    }
+  } catch { info.style.display = 'none'; }
+}
+document.querySelector('select[name=StudentId]').addEventListener('change', onStudentChosen);
 
 async function fetchFeeAmount() {
   const batchId   = document.getElementById('cBatch')?.value;

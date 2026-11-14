@@ -141,6 +141,7 @@ builder.Services.AddScoped<TaskRepo>();
 builder.Services.AddScoped<NotificationRepo>();
 builder.Services.AddScoped<ActivityRepo>();
 builder.Services.AddScoped<ClassroomRepo>();
+builder.Services.AddScoped<BroadcastService>();
 builder.Services.AddScoped<WebAuthnRepo>();
 builder.Services.AddScoped<FeeFollowupRepo>();
 builder.Services.AddScoped<FeeFollowupService>();

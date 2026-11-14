@@ -298,7 +298,13 @@ body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f4f6; color: #
       <div class="pp-u-av">@initStr[0].ToString().ToUpper()</div>
       <div>
         <div class="pp-u-name">@(pName ?? pPhone)</div>
-        <div class="pp-u-role">Parent / Guardian</div>
+        @{
+          // a login belongs to a phone number: father's / mother's number = Parent, the student's own number = Student
+          var loginKey = SchoolMS.Repository.PhoneMatch.Key(pPhone);
+          var isStudentLogin = SchoolMS.Repository.PhoneMatch.IsStudentLogin(pPhone, children);
+          var isParentLogin = !isStudentLogin && loginKey != "" && children.Any(c => SchoolMS.Repository.PhoneMatch.Key(c.FatherPhone) == loginKey || SchoolMS.Repository.PhoneMatch.Key(c.MotherPhone) == loginKey);
+        }
+        <div class="pp-u-role">@(isStudentLogin ? "Student" : isParentLogin ? "Parent / Guardian" : "Parent / Student")</div>
       </div>
       <a href="/Parent/Logout" class="pp-logout-btn" title="Logout"><i class="fas fa-sign-out-alt"></i></a>
     </div>

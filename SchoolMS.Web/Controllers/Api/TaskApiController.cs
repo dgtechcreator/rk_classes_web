@@ -95,9 +95,11 @@ public class TaskApiController(TaskService taskSvc, NotificationService notifSvc
         int userId = User.UserId() ?? 0;
         var notifications = notifSvc.GetUserNotifications(userId);
         var tasks = taskSvc.GetPendingTasks(userId);
-        var unreadCount = notifSvc.GetUnreadCount(userId) + (tasks?.Count ?? 0);
-
-        return Ok(new { notifications, tasks, unreadCount });
+        int unreadNotifications = notifSvc.GetUnreadCount(userId);
+        int pendingTasks = tasks?.Count ?? 0;
+        // unreadCount keeps its old meaning (notifications + pending tasks) for older apps / the web bell;
+        // the app's badge and tab use unreadNotifications, and the Tasks tab uses pendingTasks.
+        return Ok(new { notifications, tasks, unreadCount = unreadNotifications + pendingTasks, unreadNotifications, pendingTasks });
     }
 
     [HttpPost("notifications/{notificationId:int}/read")]

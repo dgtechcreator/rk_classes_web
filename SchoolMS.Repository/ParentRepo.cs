@@ -55,7 +55,7 @@ public class ParentRepo(CommonConnectivity db)
         return db.SqlP($@"
             SELECT s.StudentId, s.AdmissionNo, s.FullName, s.DateOfBirth, s.Gender,
                    s.FatherName, s.MotherName, s.Phone, s.FatherPhone, s.MotherPhone,
-                   s.ProfilePicPath, s.RollNo, s.BloodGroup, s.Status, s.AdmissionDate,
+                   s.ProfilePicPath, s.RollNo, s.BloodGroup, s.Status, s.AdmissionDate, s.Email,
                    s.AcademicYearId, ay.YearName,
                    s.ClassId,   c.ClassName,
                    s.SectionId, sec.SectionName,
@@ -82,6 +82,7 @@ public class ParentRepo(CommonConnectivity db)
         Phone          = G.G<string>(r, "Phone"),
         FatherPhone    = G.G<string>(r, "FatherPhone"),
         MotherPhone    = G.G<string>(r, "MotherPhone"),
+        Email          = G.G<string>(r, "Email"),
         ProfilePicPath = G.G<string>(r, "ProfilePicPath"),
         RollNo         = G.G<string>(r, "RollNo"),
         BloodGroup     = G.G<string>(r, "BloodGroup"),

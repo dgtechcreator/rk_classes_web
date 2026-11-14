@@ -16,6 +16,8 @@ public static class ActivityType
     public const string LectureUpdate = "lecture_update";
     public const string LectureCancel = "lecture_cancel";
     public const string LectureDone = "lecture_done";
+    /// <summary>A message the admin sent (Send Notification).</summary>
+    public const string Notice = "notice";
 }
 
 /// <summary>One thing that happened to one student (marked absent, marks entered, fee received, lecture scheduled...).</summary>

@@ -194,6 +194,9 @@ public class LookupRepo(CommonConnectivity db)
 
         return stats;
     }
-    public List<Student> GetStudentDropdown() => db.Sql($"SELECT StudentId,FullName,AdmissionNo,ClassId FROM Students WHERE Status='Active' AND AcademicYearId={CurrentYear.Id} ORDER BY FullName",
-        r => new Student { StudentId=G.G<int>(r,"StudentId"), FullName=r.StudentName(db)??"", AdmissionNo=G.G<string>(r,"AdmissionNo")??"", ClassId=G.G<int?>(r,"ClassId") });
+    public List<Student> GetStudentDropdown() => db.Sql($@"SELECT s.StudentId, s.FullName, s.AdmissionNo, s.ClassId, s.SectionId, s.BatchId, s.AcademicYearId, c.ClassName
+                                                           FROM Students s LEFT JOIN Classes c ON c.ClassId = s.ClassId
+                                                           WHERE s.Status='Active' AND s.AcademicYearId={CurrentYear.Id} ORDER BY s.FullName",
+        r => new Student { StudentId=G.G<int>(r,"StudentId"), FullName=r.StudentName(db)??"", AdmissionNo=G.G<string>(r,"AdmissionNo")??"", ClassId=G.G<int?>(r,"ClassId"),
+                           SectionId=G.G<int?>(r,"SectionId"), BatchId=G.G<int?>(r,"BatchId"), AcademicYearId=G.G<int?>(r,"AcademicYearId"), ClassName=G.G<string>(r,"ClassName") });
 }

@@ -414,6 +414,10 @@
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Task"?"active":"")" href="/Task/Index">
       <span class="nav-ic"><i class="fas fa-tasks"></i></span> Tasks & Reminders
     </a>
+    @if(Context.Session.GetInt32("RoleId") == 1){
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Notify"?"active":"")" href="/Notify/Index">
+      <span class="nav-ic"><i class="fas fa-bullhorn"></i></span> Send Notification
+    </a>}
   </div>}
 
   <div class="nav-grp">
@@ -619,8 +623,9 @@ function loadNotifications() {
     .then(r => r.json())
     .then(data => {
       const badge = document.getElementById('notifBadge');
-      if (data.unreadCount > 0) {
-        badge.textContent = data.unreadCount;
+      const nUnread = data.unreadNotifications ?? data.unreadCount;   // the bell counts unread notifications (tasks are listed in the panel, not counted)
+      if (nUnread > 0) {
+        badge.textContent = nUnread;
         badge.style.display = 'flex';
       } else {
         badge.style.display = 'none';
@@ -683,7 +688,7 @@ function nfEsc(t) {
 // Activity notifications (a lecture given to a teacher, a reminder...) - newest first, unread highlighted.
 function nfSectionHtml(list) {
   const look = {
-    Lecture: ['🎓', '#dbeafe'], FeesDue: ['₹', '#fef3c7'], Attendance: ['📅', '#fee2e2'], Task: ['📋', '#fef3c7']
+    Announcement: ['📣', '#dbeafe'], Lecture: ['🎓', '#dbeafe'], FeesDue: ['₹', '#fef3c7'], Attendance: ['📅', '#fee2e2'], Task: ['📋', '#fef3c7']
   };
   const items = list.filter(n => n.status !== 'Dismissed').slice(0, 15);
   let html = `<div style="padding:12px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;">
@@ -808,8 +813,9 @@ if (!RK_IS_CR) fetch('/Task/GetNotifications')
   .then(r => r.json())
   .then(data => {
     const badge = document.getElementById('notifBadge');
-    if (data && data.unreadCount > 0) {
-      badge.textContent = data.unreadCount;
+    const nUnread = data ? (data.unreadNotifications ?? data.unreadCount) : 0;
+    if (nUnread > 0) {
+      badge.textContent = nUnread;
       badge.style.display = 'flex';
     } else {
       badge.style.display = 'none';
@@ -919,13 +925,27 @@ document.addEventListener('input', function (e) { if (e.target && e.target.match
     try {
       ts = new TomSelect(sel, { create: false, allowEmptyOption: true, maxOptions: null, sortField: null, plugins: [], placeholder: 'Search...' });
     } catch (e) { return; }
+    // Re-read the <select>: the old options are dropped first (Tom Select's sync() only ADDS), so a dropdown whose options were
+    // rebuilt by other code (class -> subjects ...) shows the new list, not the old one plus the new one.
+    function resync() { ts.clearOptions(function () { return false; }); ts.sync(); }
     // code that sets select.value = ... or rebuilds its options keeps the box in step
     Object.defineProperty(sel, 'value', {
       configurable: true,
       get: function () { return valueDesc.get.call(sel); },
-      set: function (v) { valueDesc.set.call(sel, v); ts.sync(); }
+      set: function (v) { valueDesc.set.call(sel, v); resync(); }
     });
-    new MutationObserver(function () { ts.sync(); }).observe(sel, { childList: true });
+    // Tom Select itself re-appends the chosen <option> every time it updates the <select>. That is a childList change, so the
+    // observer used to call sync() again -> which re-appended the option -> endless loop (the page froze as soon as a value was
+    // picked, worst with hundreds of options such as the student list). The observer is paused while Tom Select works on the
+    // <select> and only reacts to OTHER code rebuilding the options.
+    var mo = new MutationObserver(function () { resync(); });
+    var watch = function () { mo.observe(sel, { childList: true }); };
+    var origUpdate = ts.updateOriginalInput.bind(ts);
+    ts.updateOriginalInput = function (o) {
+      mo.disconnect();
+      try { origUpdate(o); } finally { watch(); }
+    };
+    watch();
   }
   function run() { document.querySelectorAll('select').forEach(enhance); }
   if (document.readyState === 'complete') run(); else window.addEventListener('load', run);
