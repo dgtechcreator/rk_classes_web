@@ -208,6 +208,18 @@ public class ParentController(
         return Json(ParentToppersHelper.Build(child, marksSvc, lookup));
     }
 
+    // ── All paper list (subject → paper → date, each with the child's marks and that paper's Top 5) ──
+    [HttpGet]
+    [RequireParentLogin]
+    [PortalSection("marks")]
+    public IActionResult Papers(int studentId)
+    {
+        var phone = HttpContext.Session.GetParentPhone() ?? "";
+        var child = parentSvc.GetChildren(phone).FirstOrDefault(c => c.StudentId == studentId);
+        if (child == null) return NotFound(new { error = "Student not found for this parent." });
+        return Json(ParentPapersHelper.Build(child, marksSvc, lookup));
+    }
+
     // ── Lectures of the child's own class / medium / batch (day list + month counts) ──
     [HttpGet]
     [RequireParentLogin]

@@ -195,6 +195,16 @@ public class ParentApiController(
         return Ok(ParentToppersHelper.Build(child, marksSvc, lookup));
     }
 
+    // All paper list: every paper of the child's class & medium by subject, with the child's marks and that paper's Top 5.
+    [HttpGet("papers")]
+    [PortalSection("marks")]
+    public IActionResult Papers(int studentId)
+    {
+        var child = parentSvc.GetChildren(Phone).FirstOrDefault(c => c.StudentId == studentId);
+        if (child == null) return NotFound(new { error = "Student not found for this parent." });
+        return Ok(ParentPapersHelper.Build(child, marksSvc, lookup));
+    }
+
     // Lectures of the child's own class / medium / batch: the chosen day plus the counts for that day's month.
     [HttpGet("lectures")]
     [PortalSection("lectures")]

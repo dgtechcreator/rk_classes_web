@@ -115,6 +115,34 @@ public class StudentRepo(CommonConnectivity db)
     /// <summary>StudentId -> (when, who) of every deleted student whose deletion was recorded.</summary>
     public Dictionary<int, (DateTime? at, string? by)> GetDeletedInfo() => ActionAudit.DeletedInfo(db, "student");
 
+    /// <summary>True when another ACTIVE student of the same Class + Medium (section) already has this roll number.</summary>
+    public bool RollNoTaken(int classId, int sectionId, string roll, int excludeStudentId)
+    {
+        using var c = db.Open();
+        using var cmd = new SqlCommand(@"
+            SELECT COUNT(*) FROM Students
+            WHERE ClassId = @c AND SectionId = @s AND Status = 'Active' AND StudentId <> @id
+              AND LTRIM(RTRIM(RollNo)) = @r", c);
+        cmd.Parameters.AddWithValue("@c", classId);
+        cmd.Parameters.AddWithValue("@s", sectionId);
+        cmd.Parameters.AddWithValue("@id", excludeStudentId);
+        cmd.Parameters.AddWithValue("@r", roll);
+        return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+    }
+
+    /// <summary>Next free roll number of a Class + Medium: highest existing numeric roll + 1 (never repeats one in use).</summary>
+    public int NextRollNo(int classId, int sectionId, int excludeStudentId)
+    {
+        using var c = db.Open();
+        using var cmd = new SqlCommand(@"
+            SELECT ISNULL(MAX(TRY_CAST(LTRIM(RTRIM(RollNo)) AS INT)), 0) + 1 FROM Students
+            WHERE ClassId = @c AND SectionId = @s AND Status = 'Active' AND StudentId <> @id", c);
+        cmd.Parameters.AddWithValue("@c", classId);
+        cmd.Parameters.AddWithValue("@s", sectionId);
+        cmd.Parameters.AddWithValue("@id", excludeStudentId);
+        return Convert.ToInt32(cmd.ExecuteScalar());
+    }
+
     public int Save(Student s, string? pic, int by)
     {
         var id = SaveRaw(s, pic, by);

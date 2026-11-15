@@ -28,7 +28,8 @@ public static class ParentToppersHelper
             subjectRaw = marksSvc.GetSubjectWiseRankings(null, child.ClassId, child.SectionId);
         }
 
-        var overall = Rank(raw
+        // Overall uses the full-class denominator (a missed paper counts as 0), same as the admin Top Students page.
+        var overall = Rank(marksSvc.GetOverallRankings(yearId, child.ClassId, child.SectionId)
             .GroupBy(x => x.StudentId)
             .Select(g => new TopStudent {
                 StudentId = g.Key,

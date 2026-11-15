@@ -46,6 +46,12 @@ public class StudentController(StudentService svc, LookupService lookup, FeeStru
     public IActionResult Save(StudentFormVM model)
     {
         int uid = HttpContext.Session.GetUserId() ?? 1;
+        var rollErr = svc.CheckRollNo(model.Student);
+        if (rollErr != null)
+        {
+            TempData["Error"] = rollErr;
+            return model.Student.StudentId == 0 ? RedirectToAction("Create") : RedirectToAction("Edit", new { id = model.Student.StudentId });
+        }
         string? picPath = null;
         if (model.ProfilePic != null && model.ProfilePic.Length > 0)
         {

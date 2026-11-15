@@ -183,8 +183,10 @@ public class MarksApiController(MarksService svc, LookupService lookup, MastersS
         yearId ??= lookup.GetCurrentYearId();
 
         var raw = svc.GetStudentRankings(yearId, classId, sectionId);
+        // Overall + class-wise use full-class denominators (missed papers count as 0), see MarksRepo.GetOverallRankings.
+        var overallRows = svc.GetOverallRankings(yearId, classId, sectionId);
 
-        var overallTop5 = raw
+        var overallTop5 = overallRows
             .GroupBy(x => x.StudentId)
             .Select(g => new TopStudent {
                 StudentId = g.Key,
@@ -207,7 +209,7 @@ public class MarksApiController(MarksService svc, LookupService lookup, MastersS
             .Select((x, i) => { x.Rank = i + 1; return x; })
             .ToList();
 
-        var classwiseTop5 = raw
+        var classwiseTop5 = overallRows
             .GroupBy(x => (x.StudentId, x.ClassName))
             .Select(g => new TopStudent {
                 StudentId = g.Key.StudentId,

@@ -42,6 +42,8 @@ public class StudentApiController(StudentService svc, LookupService lookup, FeeS
             if (missing.Count > 0)
                 return BadRequest(new { error = "Please fill: " + string.Join(", ", missing) + ".", message = "Please fill: " + string.Join(", ", missing) + "." });
         }
+        var rollErr = svc.CheckRollNo(model);
+        if (rollErr != null) return BadRequest(new { error = rollErr, message = rollErr });
         var id = svc.Save(model, null, uid);
         if (id > 0) feeSvc.ApplyToStudent(id);   // also re-syncs fees when class/section changed
         return Ok(new { studentId = id, isNew });

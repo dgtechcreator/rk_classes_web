@@ -294,24 +294,107 @@ public class MarksRepo(CommonConnectivity db)
         return list;
     }
 
-    // Per-student per-subject aggregated — used for Subject-wise Top 5
+    // ── Ranking denominators ─────────────────────────────────────────────────────────────────────────
+    // A student who missed a paper (or did not sit it) must NOT look better than one who sat everything.
+    // So the "out of" total is the FULL syllabus total of the class: every (exam, subject) that has marks
+    // for that class in scope, counted once at its paper max. A missed paper scores 0 against that max.
+    // ScopePairs = one row per class x exam x subject that actually has marks in scope.
+    private const string ScopePairsCte = @"
+            ScopePairs AS (
+                SELECT s.ClassId, tm.ExamId, tm.SubjectId, MAX(tm.MaxMarks) AS MaxMarks
+                FROM   TestMarks tm
+                INNER JOIN Students s ON s.StudentId = tm.StudentId
+                INNER JOIN Exams    e ON e.ExamId    = tm.ExamId
+                WHERE  s.Status = 'Active' AND e.IsActive = 1 AND tm.MarksObtained IS NOT NULL
+                  AND  (@YearId    IS NULL OR e.AcademicYearId = @YearId)
+                  AND  (@ClassId   IS NULL OR s.ClassId        = @ClassId)
+                  AND  (@SectionId IS NULL OR s.SectionId      = @SectionId)
+                GROUP BY s.ClassId, tm.ExamId, tm.SubjectId
+            )";
+
+    static decimal Pct(decimal obtained, decimal max) => max > 0 ? Math.Round(obtained * 100m / max, 2) : 0;
+
+    // Overall (all tests + all subjects combined): one row per student x class.
+    // TotalObtained = all marks the student has; TotalMax = full class total (see ScopePairsCte).
+    public List<TopStudent> GetOverallRankings(int? yearId, int? classId, int? sectionId)
+    {
+        string sql = @"
+            WITH" + ScopePairsCte + @",
+            ClassMax AS (
+                SELECT ClassId, SUM(CAST(MaxMarks AS decimal(10,2))) AS TotalMax
+                FROM   ScopePairs GROUP BY ClassId
+            )
+            SELECT
+                s.StudentId, s.FullName, s.AdmissionNo, s.RollNo,
+                c.ClassName, sec2.SectionName, b.BatchName, ay.YearName,
+                t.TotalObtained, cm.TotalMax
+            FROM   Students s
+            INNER JOIN (
+                SELECT tm.StudentId, SUM(ISNULL(tm.MarksObtained, 0)) AS TotalObtained, MAX(e.AcademicYearId) AS YearId
+                FROM   TestMarks tm
+                INNER JOIN Exams e ON e.ExamId = tm.ExamId
+                WHERE  e.IsActive = 1 AND tm.MarksObtained IS NOT NULL
+                  AND  (@YearId IS NULL OR e.AcademicYearId = @YearId)
+                GROUP BY tm.StudentId
+            ) t                      ON t.StudentId = s.StudentId
+            INNER JOIN ClassMax cm   ON cm.ClassId  = s.ClassId
+            INNER JOIN Classes  c    ON c.ClassId   = s.ClassId
+            LEFT  JOIN AcademicYears ay   ON ay.YearId      = t.YearId
+            LEFT  JOIN Sections      sec2 ON sec2.SectionId = s.SectionId
+            LEFT  JOIN Batches       b    ON b.BatchId      = s.BatchId
+            WHERE  s.Status = 'Active'
+              AND  (@ClassId   IS NULL OR s.ClassId   = @ClassId)
+              AND  (@SectionId IS NULL OR s.SectionId = @SectionId)";
+
+        var list = new List<TopStudent>();
+        using var c = db.Open();
+        using var cmd = new SqlCommand(sql, c);
+        cmd.Parameters.AddWithValue("@YearId",    (object?)yearId    ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@ClassId",   (object?)classId   ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@SectionId", (object?)sectionId ?? DBNull.Value);
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+        {
+            var obt = G.G<decimal>(r, "TotalObtained");
+            var max = G.G<decimal>(r, "TotalMax");
+            list.Add(new TopStudent {
+                StudentId     = G.G<int>(r,"StudentId"),
+                FullName      = r.StudentName(db) ?? "",
+                AdmissionNo   = G.G<string>(r,"AdmissionNo")??"",
+                RollNo        = G.G<string>(r,"RollNo"),
+                ClassName     = G.G<string>(r,"ClassName"),
+                SectionName   = G.G<string>(r,"SectionName"),
+                BatchName     = G.G<string>(r,"BatchName"),
+                YearName      = G.G<string>(r,"YearName"),
+                TotalObtained = obt,
+                TotalMax      = max,
+                Percentage    = Pct(obt, max)
+            });
+        }
+        return list;
+    }
+
+    // Per-student per-subject aggregated — used for Subject-wise Top 5.
+    // TotalMax = full class total of that subject across the exams in scope (see ScopePairsCte).
     public List<TopStudent> GetSubjectWiseRankings(int? yearId, int? classId, int? sectionId)
     {
-        const string sql = @"
+        string sql = @"
+            WITH" + ScopePairsCte + @",
+            SubjMax AS (
+                SELECT ClassId, SubjectId, SUM(CAST(MaxMarks AS decimal(10,2))) AS TotalMax
+                FROM   ScopePairs GROUP BY ClassId, SubjectId
+            )
             SELECT
                 s.StudentId, s.FullName, s.AdmissionNo, s.RollNo,
                 c.ClassName, sec2.SectionName, b.BatchName, ay.YearName,
                 sub.SubjectName, sub.SubjectCode,
-                SUM(ISNULL(tm.MarksObtained, 0))  AS TotalObtained,
-                SUM(tm.MaxMarks)                   AS TotalMax,
-                CASE WHEN SUM(tm.MaxMarks) > 0
-                     THEN CAST(SUM(ISNULL(tm.MarksObtained,0)) * 100.0
-                               / SUM(tm.MaxMarks) AS decimal(5,2))
-                     ELSE 0 END                    AS Percentage
+                SUM(ISNULL(tm.MarksObtained, 0)) AS TotalObtained,
+                sm.TotalMax                      AS TotalMax
             FROM   TestMarks tm
             INNER JOIN Students      s    ON s.StudentId    = tm.StudentId
             INNER JOIN Subjects      sub  ON sub.SubjectId  = tm.SubjectId
             INNER JOIN Exams         e    ON e.ExamId       = tm.ExamId
+            INNER JOIN SubjMax       sm   ON sm.ClassId     = s.ClassId AND sm.SubjectId = tm.SubjectId
             INNER JOIN Classes       c    ON c.ClassId      = s.ClassId
             LEFT  JOIN AcademicYears ay   ON ay.YearId      = e.AcademicYearId
             LEFT  JOIN Sections      sec2 ON sec2.SectionId = s.SectionId
@@ -324,8 +407,7 @@ public class MarksRepo(CommonConnectivity db)
               AND  (@SectionId IS NULL OR s.SectionId      = @SectionId)
             GROUP BY s.StudentId, s.FullName, s.AdmissionNo, s.RollNo,
                      c.ClassName, sec2.SectionName, b.BatchName, ay.YearName,
-                     sub.SubjectName, sub.SubjectCode
-            ORDER BY sub.SubjectName, Percentage DESC";
+                     sub.SubjectName, sub.SubjectCode, sm.TotalMax";
 
         var list = new List<TopStudent>();
         using var c = db.Open();
@@ -335,6 +417,9 @@ public class MarksRepo(CommonConnectivity db)
         cmd.Parameters.AddWithValue("@SectionId", (object?)sectionId ?? DBNull.Value);
         using var r = cmd.ExecuteReader();
         while (r.Read())
+        {
+            var obt = G.G<decimal>(r, "TotalObtained");
+            var max = G.G<decimal>(r, "TotalMax");
             list.Add(new TopStudent {
                 StudentId     = G.G<int>(r,"StudentId"),
                 FullName      = r.StudentName(db) ?? "",
@@ -346,10 +431,11 @@ public class MarksRepo(CommonConnectivity db)
                 YearName      = G.G<string>(r,"YearName"),
                 SubjectName   = G.G<string>(r,"SubjectName"),
                 SubjectCode   = G.G<string>(r,"SubjectCode"),
-                TotalObtained = G.G<decimal>(r,"TotalObtained"),
-                TotalMax      = G.G<decimal>(r,"TotalMax"),
-                Percentage    = G.G<decimal>(r,"Percentage")
+                TotalObtained = obt,
+                TotalMax      = max,
+                Percentage    = Pct(obt, max)
             });
+        }
         return list;
     }
 

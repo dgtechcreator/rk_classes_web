@@ -24,6 +24,8 @@ public class MarksService(MarksRepo repo, ActivityNotifier? notify = null)
         => repo.GetStudentRankings(yearId, classId, sectionId);
     public List<TopStudent> GetSubjectWiseRankings(int? yearId, int? classId, int? sectionId)
         => repo.GetSubjectWiseRankings(yearId, classId, sectionId);
+    public List<TopStudent> GetOverallRankings(int? yearId, int? classId, int? sectionId)
+        => repo.GetOverallRankings(yearId, classId, sectionId);
     public List<Exam> GetExamList(int? yearId, int? classId)
         => repo.GetExamList(yearId, classId);
     public List<TestMark> GetAllTestsByYear(int yearId)

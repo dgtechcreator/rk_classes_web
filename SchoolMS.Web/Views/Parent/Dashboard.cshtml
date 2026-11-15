@@ -169,6 +169,39 @@
 .marks-top5-item.me { background: #dcfce7; border-left-color: #16a34a; }
 .marks-top5-item.me .marks-top5-rank { color: #16a34a; }
 .marks-myrank { margin-top: 10px; padding: 10px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; font-size: 13px; font-weight: 600; color: #1e40af; }
+
+/* All paper list: paper cards, score circle, styled Top 5 (1st gold, 2nd silver, 3rd bronze, 4-5 plain) */
+.pap-card { display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:10px; background:#fff; border:1px solid #e5e7eb; border-radius:12px; cursor:pointer; }
+.pap-card:hover { border-color:#2563eb; }
+.pap-card-title { font-weight:700; font-size:14px; color:#111827; }
+.pap-card-date { font-size:12px; color:#6b7280; margin-top:2px; }
+.pap-card-score { font-weight:800; font-size:16px; color:#2563eb; white-space:nowrap; }
+.pap-card-score small { font-size:11px; color:#6b7280; font-weight:600; }
+.pap-tag-abs { font-size:12px; color:#b91c1c; background:#fee2e2; padding:3px 8px; border-radius:999px; }
+.pap-tag-na { color:#9ca3af; }
+.pap-circle { width:120px; height:120px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.pap-circle-in { width:96px; height:96px; border-radius:50%; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.pap-circle-marks { font-size:20px; font-weight:800; color:#111827; }
+.pap-circle-marks span { font-size:12px; color:#6b7280; font-weight:600; }
+.pap-circle-pct { font-size:12px; font-weight:700; color:#2563eb; }
+.pap-circle-na { background:#f3f4f6; color:#6b7280; font-size:13px; text-align:center; }
+.pap-detail-head { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+.pap-detail-info { flex:1; min-width:160px; }
+.pap-detail-exam { font-weight:800; font-size:16px; }
+.pap-detail-my { margin-top:8px; font-size:13px; font-weight:600; color:#1e40af; }
+.pap-top-title { font-size:14px; margin:18px 0 10px; }
+.pap-top-item { display:flex; align-items:center; gap:10px; padding:11px 12px; margin-bottom:8px; border-radius:10px; background:#f9fafb; border:1px solid #e5e7eb; }
+.pap-top-item .pap-rank { min-width:36px; font-weight:800; color:#6b7280; text-align:center; }
+.pap-top-item .pap-name { flex:1; font-weight:600; font-size:14px; }
+.pap-top-item .pap-score { font-weight:800; color:#374151; white-space:nowrap; }
+.pap-top-item em { font-style:normal; font-size:11px; color:#16a34a; }
+.pap-top-item.me { box-shadow: inset 4px 0 0 #16a34a; }
+.pap-top-1 { background:linear-gradient(90deg,#fef3c7,#fde68a); border-color:#f59e0b; }
+.pap-top-1 .pap-rank { color:#b45309; font-size:18px; }
+.pap-top-2 { background:linear-gradient(90deg,#f1f5f9,#e2e8f0); border-color:#94a3b8; }
+.pap-top-2 .pap-rank { color:#475569; font-size:18px; }
+.pap-top-3 { background:linear-gradient(90deg,#ffedd5,#fed7aa); border-color:#ea580c; }
+.pap-top-3 .pap-rank { color:#9a3412; font-size:18px; }
 .lec-day-nav { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
 .lec-nav-btn { border:1px solid #d1d5db; background:#fff; border-radius:50%; width:34px; height:34px; cursor:pointer; font-weight:800; }
 .lec-chip { border:1px solid #d1d5db; background:#fff; border-radius:20px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; }
@@ -342,25 +375,20 @@ else
         </div>
       </div>
 
-      <!-- Level 2: Subject Marks & Top 5 -->
+      <!-- Level 2: All paper list of the chosen subject (chapter / test + date) -->
       <div id="marksDetailsView" style="display:none;">
         <div class="marks-breadcrumb">
           <button onclick="goBackMarks()">← Subjects</button> / <span id="selectedMarksSubject"></span>
         </div>
+        <div id="marksPapersList"></div>
+      </div>
 
-        <div class="pp-table-wrap">
-          <table class="pp-table">
-            <thead><tr>
-              <th>Exam</th><th style="text-align:right">Marks</th><th style="text-align:right">Out of</th><th style="text-align:right">%</th><th>Grade</th><th>Result</th>
-            </tr></thead>
-            <tbody id="marksDetailsBody"></tbody>
-          </table>
+      <!-- Level 3: one paper — circle score + Top 5 of that paper -->
+      <div id="marksPaperView" style="display:none;">
+        <div class="marks-breadcrumb">
+          <button onclick="backToPapers()">← <span id="marksPaperBackSubject"></span></button> / <span id="marksPaperTitle"></span>
         </div>
-
-        <div style="margin-top:20px;padding-top:20px;border-top:2px solid #e5e7eb;">
-          <h3 style="font-size:14px;margin-bottom:12px;">🏆 Top 5 Students in this Subject</h3>
-          <div id="marksTop5List"></div>
-        </div>
+        <div id="marksPaperBody"></div>
       </div>
     }
   }
@@ -409,44 +437,99 @@ else
   });
 
   function loadMarksSubjects() {
+    // The marks markup only exists on the Test Marks tab; other tabs run this script too.
+    if (!document.getElementById('marksSubjectsList')) return;
     const html = marksData.map(s =>
       `<button class="marks-subject-pill" onclick="loadMarksForSubject('${s.subjectName}')">${s.subjectName}</button>`
     ).join('');
     document.getElementById('marksSubjectsList').innerHTML = html || '<p style="color:#888;">No subjects found</p>';
   }
 
+  // All paper list (same data the mobile app shows): papers per subject, each with the child's marks and that paper's Top 5.
+  const papersPromise = fetch(`/Parent/Papers?studentId=${studentId}`)
+    .then(r => r.ok ? r.json() : null)
+    .catch(() => null);
+  let currentPapers = [];
+
+  function papEsc(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+  function papDate(d) { return d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'No date'; }
+
+  function paperCircleHtml(p) {
+    if (p.my.absent) return '<div class="pap-circle pap-circle-na"><div>Absent</div></div>';
+    if (p.my.marks == null) return '<div class="pap-circle pap-circle-na"><div>Not entered</div></div>';
+    const deg = Math.max(0, Math.min(100, p.my.percentage || 0)) * 3.6;
+    return `<div class="pap-circle" style="background:conic-gradient(#2563eb ${deg}deg, #e5e7eb 0deg);">
+      <div class="pap-circle-in"><div class="pap-circle-marks">${p.my.marks}<span>/${p.maxMarks}</span></div><div class="pap-circle-pct">${p.my.percentage}%</div></div>
+    </div>`;
+  }
+
+  function paperTopHtml(p) {
+    if (!p.top || p.top.length === 0) return '<p style="color:#888;">No marks entered for this paper yet.</p>';
+    return p.top.map(s => {
+      const medal = s.rank === 1 ? '🥇' : s.rank === 2 ? '🥈' : s.rank === 3 ? '🥉' : '';
+      return `<div class="pap-top-item${s.rank <= 3 ? ' pap-top-' + s.rank : ''}${s.isMe ? ' me' : ''}">
+        <span class="pap-rank">${medal || '#' + s.rank}</span>
+        <span class="pap-name">${papEsc(s.fullName)}${s.isMe ? ' <em>(@(isStudentLogin ? "you" : "your child"))</em>' : ''}</span>
+        <span class="pap-score">${s.marks}/${p.maxMarks}</span>
+      </div>`;
+    }).join('');
+  }
+
   function loadMarksForSubject(subjectName) {
-    const subj = marksData.find(m => m.subjectName === subjectName);
-    if (!subj) return;
-
-    // Show marks table for current student
-    const tableHtml = subj.marks.map(exam =>
-      `<tr>
-        <td style="font-weight:600;">${exam.examName}</td>
-        <td style="text-align:right;font-weight:700;">${exam.items[0].MarksObtained ?? '—'}</td>
-        <td style="text-align:right;">${exam.items[0].MaxMarks}</td>
-        <td style="text-align:right;">${exam.items[0].MarksObtained && exam.items[0].MaxMarks > 0 ? ((exam.items[0].MarksObtained * 100 / exam.items[0].MaxMarks).toFixed(1)) + '%' : '—'}</td>
-        <td><strong>${exam.items[0].Grade ?? '—'}</strong></td>
-        <td><span class="badge ${exam.items[0].Grade === 'AB' ? 'badge-late' : exam.items[0].MarksObtained >= (exam.items[0].MaxMarks * 0.35) ? 'badge-pass' : 'badge-fail'}">${exam.items[0].Grade === 'AB' ? 'Absent' : exam.items[0].MarksObtained >= (exam.items[0].MaxMarks * 0.35) ? 'Pass' : 'Fail'}</span></td>
-      </tr>`
-    ).join('');
-    document.getElementById('marksDetailsBody').innerHTML = tableHtml;
-
-    // Top 5 of this subject in the child's own class & medium (same ranking the admin sees)
-    document.getElementById('marksTop5List').innerHTML = '<p style="color:#888;">Loading…</p>';
-    toppersPromise.then(d => {
-      const sub = d && d.subjects ? d.subjects.find(x => x.subjectName === subjectName) : null;
-      document.getElementById('marksTop5List').innerHTML = sub ? topperListHtml(sub.top) : '<p style="color:#888;">No data available</p>';
-    });
-
     document.getElementById('marksSubjectsView').style.display = 'none';
+    document.getElementById('marksPaperView').style.display = 'none';
     document.getElementById('marksDetailsView').style.display = 'block';
     document.getElementById('selectedMarksSubject').textContent = subjectName;
+    const list = document.getElementById('marksPapersList');
+    list.innerHTML = '<p style="color:#888;">Loading…</p>';
+    papersPromise.then(d => {
+      const subj = d && d.subjects ? d.subjects.find(x => x.subjectName === subjectName) : null;
+      currentPapers = subj ? subj.papers : [];
+      list.innerHTML = currentPapers.length === 0
+        ? '<p style="color:#888;">No papers found for this subject.</p>'
+        : currentPapers.map((p, i) => `
+          <div class="pap-card" onclick="openPaper(${i})">
+            <div style="flex:1;min-width:0;">
+              <div class="pap-card-title">${papEsc(p.examName)}</div>
+              <div class="pap-card-date">${papDate(p.testDate)}</div>
+            </div>
+            <div class="pap-card-score">${p.my.absent ? '<span class="pap-tag-abs">Absent</span>' : p.my.marks == null ? '<span class="pap-tag-na">—</span>' : `${p.my.marks}<small>/${p.maxMarks}</small>`}</div>
+          </div>`).join('');
+    });
+  }
+
+  function openPaper(i) {
+    const p = currentPapers[i];
+    if (!p) return;
+    document.getElementById('marksDetailsView').style.display = 'none';
+    document.getElementById('marksPaperView').style.display = 'block';
+    document.getElementById('marksPaperBackSubject').textContent = document.getElementById('selectedMarksSubject').textContent;
+    document.getElementById('marksPaperTitle').textContent = p.examName;
+    const myLine = p.my.absent ? 'Absent in this paper'
+      : p.my.marks == null ? 'Marks not entered yet'
+      : `${p.my.marks} out of ${p.maxMarks} (${p.my.percentage}%)` + (p.my.rank ? ` · Rank #${p.my.rank} of ${p.classSize}` : '');
+    document.getElementById('marksPaperBody').innerHTML = `
+      <div class="pap-detail-head">
+        ${paperCircleHtml(p)}
+        <div class="pap-detail-info">
+          <div class="pap-detail-exam">${papEsc(p.examName)}</div>
+          <div class="pap-card-date">${papEsc(document.getElementById('selectedMarksSubject').textContent)} · ${papDate(p.testDate)}</div>
+          <div class="pap-detail-my">${myLine}</div>
+        </div>
+      </div>
+      <h3 class="pap-top-title">🏆 Top 5 in this paper</h3>
+      ${paperTopHtml(p)}`;
+  }
+
+  function backToPapers() {
+    document.getElementById('marksPaperView').style.display = 'none';
+    document.getElementById('marksDetailsView').style.display = 'block';
   }
 
   function goBackMarks() {
     document.getElementById('marksSubjectsView').style.display = 'block';
     document.getElementById('marksDetailsView').style.display = 'none';
+    document.getElementById('marksPaperView').style.display = 'none';
   }
 
   loadMarksSubjects();

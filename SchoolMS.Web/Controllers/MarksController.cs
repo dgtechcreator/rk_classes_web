@@ -200,8 +200,11 @@ public class MarksController(MarksService svc, LookupService lookup, MastersServ
         // Fetch raw per-student per-exam aggregates
         var raw = svc.GetStudentRankings(yearId, classId, sectionId);
 
+        // Overall + class-wise use full-class denominators (missed papers count as 0), see MarksRepo.GetOverallRankings.
+        var overallRows = svc.GetOverallRankings(yearId, classId, sectionId);
+
         // ── 1. Overall Top 5 (all exams combined) ──────────────────────
-        var overallTop5 = raw
+        var overallTop5 = overallRows
             .GroupBy(x => x.StudentId)
             .Select(g => new TopStudent {
                 StudentId     = g.Key,
@@ -225,7 +228,7 @@ public class MarksController(MarksService svc, LookupService lookup, MastersServ
             .ToList();
 
         // ── 2. Class-wise Top 5 ─────────────────────────────────────────
-        var classwiseTop5 = raw
+        var classwiseTop5 = overallRows
             .GroupBy(x => (x.StudentId, x.ClassName))
             .Select(g => new TopStudent {
                 StudentId     = g.Key.StudentId,

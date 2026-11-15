@@ -8,7 +8,36 @@ public class StudentService(StudentRepo repo)
     public (List<Student> data, int total) GetAll(int pg, int ps, string? s, int? cls, int? sec, int? bat, int? yr, string? status)
         => repo.GetAll(pg, ps, s, cls, sec, bat, yr, status);
     public Student? GetById(int id) => repo.GetById(id);
-    public int Save(Student s, string? pic, int by) => repo.Save(s, pic, by);
+    /// <summary>
+    /// Roll numbers are unique inside one Class + Medium (section). A blank roll is given the next free number, so
+    /// attendance can always be called by roll. A typed roll that another active student already has is refused.
+    /// </summary>
+    public int Save(Student s, string? pic, int by)
+    {
+        if (s.ClassId != null && s.SectionId != null)
+        {
+            var roll = (s.RollNo ?? "").Trim();
+            if (roll == "")
+                s.RollNo = repo.NextRollNo(s.ClassId.Value, s.SectionId.Value, s.StudentId).ToString();
+            else if (repo.RollNoTaken(s.ClassId.Value, s.SectionId.Value, roll, s.StudentId))
+                throw new InvalidOperationException(RollTakenMessage(roll));
+            else
+                s.RollNo = roll;
+        }
+        return repo.Save(s, pic, by);
+    }
+
+    /// <summary>Error text when the typed roll number is already used in the same class and medium; null when it is free or blank.</summary>
+    public string? CheckRollNo(Student s)
+    {
+        if (s.ClassId == null || s.SectionId == null) return null;
+        var roll = (s.RollNo ?? "").Trim();
+        if (roll == "") return null;
+        return repo.RollNoTaken(s.ClassId.Value, s.SectionId.Value, roll, s.StudentId) ? RollTakenMessage(roll) : null;
+    }
+
+    static string RollTakenMessage(string roll) =>
+        $"Roll No {roll} is already used by another student in this class and medium. Please give a different number (or leave it blank).";
     public void SetPhoto(int id, string? path) => repo.SetPhoto(id, path);
     public void SetBasicDetails(int id, DateTime dateOfBirth, string? email) => repo.SetBasicDetails(id, dateOfBirth, email);
     public void SetAgreedDiscount(int id, decimal amount, string? reason, int by) => repo.SetAgreedDiscount(id, amount, reason, by);
