@@ -4,7 +4,7 @@ namespace SchoolMS.Web.Auth;
 /// Stores class-note files OUTSIDE wwwroot (App_Data/class-notes) so they can only be fetched through the notes API, which checks
 /// that the caller is staff with the right or a parent / student of that class. The type is decided from the file's own bytes.
 /// </summary>
-public class NoteFileStore(IWebHostEnvironment env)
+public class NoteFileStore(UploadLocations loc)
 {
     public const long MaxBytes = 15 * 1024 * 1024;
 
@@ -17,7 +17,8 @@ public class NoteFileStore(IWebHostEnvironment env)
         [".jpg"] = "image/jpeg", [".jpeg"] = "image/jpeg", [".png"] = "image/png", [".txt"] = "text/plain",
     };
 
-    string Dir => Path.Combine(env.ContentRootPath, "App_Data", "class-notes");
+    // New files go to the deploy-safe folder (see UploadLocations); old files may still sit in App_Data.
+    string Dir => loc.NotesDir;
 
     public static string ContentType(string fileName) => Types.TryGetValue(Path.GetExtension(fileName), out var t) ? t : "application/octet-stream";
 
@@ -55,6 +56,7 @@ public class NoteFileStore(IWebHostEnvironment env)
     {
         if (string.IsNullOrWhiteSpace(stored) || stored.Contains('/') || stored.Contains('\\') || stored.Contains("..")) return null;
         var full = Path.Combine(Dir, stored);
+        if (!File.Exists(full)) full = Path.Combine(loc.LegacyNotesDir, stored);   // not copied across yet
         return File.Exists(full) ? new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.Read) : null;
     }
 }

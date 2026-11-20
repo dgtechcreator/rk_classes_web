@@ -1,0 +1,123 @@
+@using SchoolMS.Domain
+@using SchoolMS.Web.Utils
+@model List<StudyFollowup>
+@{
+    ViewData["Title"] = "Study Follow-up";
+    var card = (StudyStudentCard)ViewBag.Card;
+    var all = (List<StudyFollowup>)ViewBag.All;
+    var subjects = ViewBag.Subjects as List<string> ?? new();
+    bool isAdmin = ViewBag.IsAdmin == true; int uid = ViewBag.Uid;
+    string tel(string? p) => new string((p ?? "").Where(char.IsDigit).ToArray());
+    string ResCls(string? r) => r switch { "Gave it" => "r-gave", "Partly" => "r-part", "Could not give" => "r-no", _ => "r-na" };
+    string fromS = ViewBag.From ?? "", toS = ViewBag.To ?? "", kindS = ViewBag.Kind ?? "";
+}
+<style>
+.sf-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:16px 18px; margin-bottom:14px; }
+.sf-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; } .sf-grid label { display:block; font-size:12px; font-weight:700; margin-bottom:3px; }
+.sf-grid .full { grid-column:1 / -1; }
+.sf-stats { display:flex; gap:10px; flex-wrap:wrap; } .sf-stats div { background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px; padding:6px 14px; text-align:center; min-width:84px; font-size:12px; } .sf-stats b { display:block; font-size:19px; }
+.sf-item { border-left:4px solid #2563eb; background:#f8fafc; border-radius:8px; padding:10px 14px; margin-bottom:10px; } .sf-item.oral { border-left-color:#7c3aed; }
+.sf-item .t { font-weight:800; } .sf-item .m { font-size:12px; color:#6b7280; margin-top:2px; } .sf-item .b { font-size:13px; margin-top:6px; white-space:pre-wrap; }
+.sf-pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:800; white-space:nowrap; }
+.r-gave { background:#dcfce7; color:#166534; } .r-part { background:#fef3c7; color:#92400e; } .r-no { background:#fee2e2; color:#991b1b; } .r-na { background:#f3f4f6; color:#374151; }
+.sf-seg { display:inline-flex; border:1px solid #d1d5db; border-radius:10px; overflow:hidden; margin-bottom:12px; } .sf-seg button { border:0; background:#fff; padding:8px 18px; font-weight:800; font-size:13px; cursor:pointer; } .sf-seg button.on { background:#2563eb; color:#fff; }
+.sf-chk { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; }
+</style>
+<div class="pg-hdr"><div class="pg-row">
+  <div><h1>📚 @card.FullName</h1><p>@string.Join(" · ", new[] { card.AdmissionNo, card.ClassName, card.SectionName, card.BatchName }.Where(x => !string.IsNullOrWhiteSpace(x)))</p></div>
+  <div><a class="btn" href="/StudyFollowup/Index" style="text-decoration:none;">← All follow-ups</a></div>
+</div></div>
+
+<div class="sf-card"><div class="sf-grid">
+  <div style="grid-column:span 2;"><label>All-time totals of this student</label>
+    <div class="sf-stats">
+      <div><b style="color:#2563eb">@all.Count(x => !x.IsOral)</b>Parent calls</div>
+      <div><b style="color:#7c3aed">@all.Count(x => x.IsOral)</b>Oral tests</div>
+      <div><b style="color:#16a34a">@all.Count(x => x.IsOral && x.Result == StudyRules.Gave)</b>Gave it</div>
+      <div><b style="color:#d97706">@all.Count(x => x.IsOral && x.Result == StudyRules.Partly)</b>Partly</div>
+      <div><b style="color:#dc2626">@all.Count(x => x.IsOral && x.Result == StudyRules.CouldNot)</b>Could not</div>
+    </div></div>
+  <div><label>Phones</label>
+    @foreach (var p in new[] { ("Student", card.Phone), ("Father", card.FatherPhone), ("Mother", card.MotherPhone) }.Where(x => !string.IsNullOrWhiteSpace(x.Item2)).DistinctBy(x => tel(x.Item2))) {
+      <div style="font-size:12.5px;">@p.Item1: <a href="tel:@p.Item2">@p.Item2</a> · <a href="https://wa.me/91@(tel(p.Item2).TakeLast(10).Aggregate("", (a, c) => a + c))" target="_blank">WhatsApp</a></div> }
+  </div>
+</div></div>
+
+<div class="sf-card">
+  <h3 style="margin:0 0 10px;font-size:16px;">Add a follow-up</h3>
+  <div class="sf-seg"><button id="kCall" class="on" onclick="setKind('Call')">📞 Parent call</button><button id="kOral" onclick="setKind('Oral')">🗣️ Oral test</button></div>
+  <div class="sf-grid">
+    <div><label>Done on</label><input type="datetime-local" id="fAt" class="fc" value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")"/></div>
+
+    <div class="for-call"><label>How *</label><select id="fMode" class="fs">@foreach (var m in StudyRules.Modes) { <option>@m</option> }</select></div>
+    <div class="for-call"><label>Spoke to</label><select id="fSpoke" class="fs"><option value="">—</option>@foreach (var m in StudyRules.SpokeTo) { <option>@m</option> }</select></div>
+    <div class="for-call"><label>About</label><select id="fCat" class="fs"><option value="">—</option>@foreach (var m in StudyRules.Categories) { <option>@m</option> }</select></div>
+    <div class="for-call"><label>How it ended *</label><select id="fOutcome" class="fs"><option value="">— Select —</option>@foreach (var m in StudyRules.Outcomes) { <option>@m</option> }</select></div>
+    <div class="full for-call"><label>What the parent said</label><textarea id="fParent" class="fc" rows="2" maxlength="1000" placeholder="Parent's words: reason, promise, complaint..."></textarea></div>
+    <div class="full for-call"><label>What we told / discussed (the conversation)</label><textarea id="fNotes" class="fc" rows="3" maxlength="1500" placeholder="What you told the parent about the child's studies"></textarea></div>
+    <div class="for-call"><label>Follow up again on</label><input type="date" id="fNext" class="fc" min="@DateTime.Today.ToString("yyyy-MM-dd")"/></div>
+    <div class="full for-call"><label class="sf-chk"><input type="checkbox" id="fTell"/> Also send "what we told" to the parent as a notification</label></div>
+
+    <div class="for-oral" style="display:none;"><label>Subject *</label><input type="text" id="fSubject" class="fc" list="sfSubj" maxlength="100" placeholder="e.g. Maths"/>
+      <datalist id="sfSubj">@foreach (var s in subjects) { <option value="@s"></option> }</datalist></div>
+    <div class="for-oral" style="display:none;"><label>Topic</label><input type="text" id="fTopic" class="fc" maxlength="200" placeholder="e.g. Chapter 3 - Algebra"/></div>
+    <div class="for-oral" style="display:none;"><label>Result *</label>
+      <select id="fResult" class="fs"><option value="">— Select —</option>@foreach (var m in StudyRules.Results) { <option>@m</option> }</select></div>
+    <div class="for-oral" style="display:none;"><label>Marks (optional)</label><input type="number" id="fMarks" class="fc" min="0" step="0.5"/></div>
+    <div class="for-oral" style="display:none;"><label>Out of</label><input type="number" id="fOutOf" class="fc" min="1" step="0.5" value="10"/></div>
+    <div class="full for-oral" style="display:none;"><label>Remark for the parent (optional)</label><textarea id="fRemark" class="fc" rows="2" maxlength="1500" placeholder="e.g. needs to revise formulas, practise daily"></textarea></div>
+    <div class="for-oral" style="display:none;"><label>Follow up again on</label><input type="date" id="fNext2" class="fc" min="@DateTime.Today.ToString("yyyy-MM-dd")"/></div>
+    <div class="full for-oral" style="display:none;"><label class="sf-chk"><input type="checkbox" id="fTellOral" checked/> Send this result to the parent as a notification</label></div>
+  </div>
+  <div id="fErr" style="display:none;color:#dc2626;font-size:12.5px;margin-top:8px;"></div>
+  <div style="margin-top:12px;"><button class="btn btn-p" onclick="addFollowup()">Save follow-up</button></div>
+</div>
+
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:18px 0 8px;">
+  <h3 style="font-size:16px;margin:0;">History (@Model.Count@(Model.Count != all.Count ? " of " + all.Count : ""))</h3>
+  <form method="get" style="display:flex;gap:6px;flex-wrap:wrap;">
+    <select name="kind" class="fs" style="width:auto;"><option value="">All</option><option value="Call" selected="@(kindS == "Call")">Parent calls</option><option value="Oral" selected="@(kindS == "Oral")">Oral tests</option></select>
+    <input type="date" name="from" value="@fromS" class="fc" style="width:auto;" title="From date"/><input type="date" name="to" value="@toS" class="fc" style="width:auto;" title="To date"/>
+    <button class="btn btn-p" type="submit">Filter</button><a class="btn" href="/StudyFollowup/Student/@card.StudentId" style="text-decoration:none;">Clear</a>
+  </form>
+</div>
+@if (!Model.Any()) { <div style="color:#6b7280;font-size:13px;">No follow-up found.</div> }
+@foreach (var f in Model) {
+  <div class="sf-item @(f.IsOral ? "oral" : "")">
+    <div style="display:flex;justify-content:space-between;gap:8px;">
+      <div><span class="t">@f.FollowupAt.ToString("dd MMM yyyy, h:mm tt")</span> · <b>@(f.IsOral ? "🗣️ Oral test" : "📞 Parent call")</b></div>
+      @if (isAdmin || f.FollowedBy == uid) { <button class="btn" style="color:#dc2626;font-size:11px;padding:2px 8px;" onclick="delFollowup(@f.FollowupId)">Delete</button> }
+    </div>
+    <div class="m">by <b>@(string.IsNullOrWhiteSpace(f.FollowedByName) ? "—" : f.FollowedByName)</b>@(f.IsOral ? "" : " · " + f.Mode + (string.IsNullOrWhiteSpace(f.SpokeTo) ? "" : " · spoke to " + f.SpokeTo))@(f.ParentNotified ? " · ✓ parent notified" : "")</div>
+    @if (f.IsOral) {
+      <div class="b"><b>@f.Subject</b>@(string.IsNullOrWhiteSpace(f.Topic) ? "" : " - " + f.Topic) &nbsp;<span class="sf-pill @ResCls(f.Result)">@f.Result</span>@if (StudyHelpers.Score(f) != "") { <b style="margin-left:6px;">@StudyHelpers.Score(f)</b> }</div>
+      @if (!string.IsNullOrWhiteSpace(f.Notes)) { <div class="b"><b>Remark:</b> @f.Notes</div> }
+    } else {
+      <div class="b"><b>@(f.Category ?? "Studies")</b> · @f.Outcome</div>
+      @if (!string.IsNullOrWhiteSpace(f.ParentSaid)) { <div class="b"><b>Parent said:</b> @f.ParentSaid</div> }
+      @if (!string.IsNullOrWhiteSpace(f.Notes)) { <div class="b"><b>We told:</b> @f.Notes</div> }
+    }
+    @if (f.NextDate != null) { <div class="m" style="margin-top:6px;color:#1e40af;font-weight:700;">Follow up again: @f.NextDate.Value.ToString("dd MMM yyyy")</div> }
+  </div>
+}
+<script>
+let kind = 'Call';
+function setKind(k) {
+  kind = k;
+  document.getElementById('kCall').classList.toggle('on', k === 'Call'); document.getElementById('kOral').classList.toggle('on', k === 'Oral');
+  document.querySelectorAll('.for-call').forEach(e => e.style.display = k === 'Call' ? '' : 'none');
+  document.querySelectorAll('.for-oral').forEach(e => e.style.display = k === 'Oral' ? '' : 'none');
+}
+async function post(url, body) { const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return r.json(); }
+async function addFollowup() {
+  const v = id => document.getElementById(id).value, num = id => v(id) ? parseFloat(v(id)) : null, chk = id => document.getElementById(id).checked;
+  const body = kind === 'Call'
+    ? { studentId: @card.StudentId, kind, mode: v('fMode'), spokeTo: v('fSpoke') || null, category: v('fCat') || null, outcome: v('fOutcome'), parentSaid: v('fParent') || null, notes: v('fNotes') || null,
+        nextDate: v('fNext') || null, followupAt: v('fAt') || null, notifyParent: chk('fTell') }
+    : { studentId: @card.StudentId, kind, subject: v('fSubject'), topic: v('fTopic') || null, result: v('fResult'), marks: num('fMarks'), outOf: num('fMarks') == null ? null : num('fOutOf'),
+        notes: v('fRemark') || null, nextDate: v('fNext2') || null, followupAt: v('fAt') || null, notifyParent: chk('fTellOral') };
+  const j = await post('/StudyFollowup/Add', body);
+  if (j.success) location.reload(); else { const e = document.getElementById('fErr'); e.textContent = j.error || 'Could not save.'; e.style.display = 'block'; }
+}
+async function delFollowup(id) { if (!confirm('Delete this follow-up? If the parent was notified, the notification is taken back.')) return; const j = await post('/StudyFollowup/Delete', { id }); if (j.success) location.reload(); else alert(j.error || 'Could not delete.'); }
+</script>

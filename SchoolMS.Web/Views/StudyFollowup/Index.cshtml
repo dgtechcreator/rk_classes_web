@@ -1,0 +1,158 @@
+@using SchoolMS.Domain
+@using SchoolMS.Web.Utils
+@model StudySummary
+@{
+    ViewData["Title"] = "Study Follow-up";
+    var classes = ViewBag.Classes as List<string> ?? new(); var sections = ViewBag.Sections as List<string> ?? new(); var batches = ViewBag.Batches as List<string> ?? new();
+    var followers = ViewBag.Followers as List<(int Key, string FollowedByName)> ?? new();
+    var subjects = ViewBag.Subjects as List<string> ?? new();
+    string view = ViewBag.View;
+    string fromS = ViewBag.From ?? "", toS = ViewBag.To ?? "";
+
+    // address of this page with some filters replaced (the others stay)
+    string Link(string path, params (string k, string? v)[] set)
+    {
+        var d = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in Context.Request.Query) d[kv.Key] = kv.Value.ToString();
+        foreach (var (k, v) in set) d[k] = v;
+        return path + "?" + string.Join("&", d.Select(x => x.Key + "=" + Uri.EscapeDataString(x.Value ?? "")));
+    }
+    string D(DateTime d) => d.ToString("yyyy-MM-dd");
+    var today = DateTime.Today;
+    var presets = new (string label, string from, string to)[] {
+        ("Today", D(today), D(today)), ("Yesterday", D(today.AddDays(-1)), D(today.AddDays(-1))), ("Last 7 days", D(today.AddDays(-6)), D(today)),
+        ("Last 30 days", D(today.AddDays(-29)), D(today)), ("This month", D(new DateTime(today.Year, today.Month, 1)), D(today)), ("All time", "", ""),
+    };
+    string ResCls(string? r) => r switch { "Gave it" => "r-gave", "Partly" => "r-part", "Could not give" => "r-no", _ => "r-na" };
+}
+<style>
+.sf-kpi { display:flex; gap:10px; flex-wrap:wrap; margin:12px 0; } .sf-kpi div { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:8px 16px; text-align:center; min-width:96px; } .sf-kpi b { display:block; font-size:20px; }
+.sf-f { display:flex; flex-wrap:wrap; gap:8px; } .sf-f .fs, .sf-f .fc { width:auto; flex:1 1 150px; }
+.sf-pre { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; } .sf-pre a { padding:4px 12px; border-radius:20px; border:1px solid #e5e7eb; background:#fff; font-size:12px; font-weight:700; color:#374151; text-decoration:none; }
+.sf-pre a.on { background:#2563eb; border-color:#2563eb; color:#fff; }
+.sf-tab { display:flex; gap:6px; margin-bottom:10px; } .sf-tab a { padding:6px 16px; border-radius:8px; font-size:13px; font-weight:800; text-decoration:none; color:#374151; background:#f3f4f6; } .sf-tab a.on { background:#111827; color:#fff; }
+.sf-pill { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:800; white-space:nowrap; }
+.k-Call { background:#dbeafe; color:#1e40af; } .k-Oral { background:#ede9fe; color:#5b21b6; }
+.r-gave { background:#dcfce7; color:#166534; } .r-part { background:#fef3c7; color:#92400e; } .r-no { background:#fee2e2; color:#991b1b; } .r-na { background:#f3f4f6; color:#374151; }
+.sf-note { font-size:11.5px; color:#6b7280; max-width:340px; }
+.sf-find { position:relative; } .sf-res { position:absolute; z-index:30; left:0; right:0; top:100%; background:#fff; border:1px solid #e5e7eb; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12); max-height:300px; overflow:auto; display:none; }
+.sf-res a { display:block; padding:8px 12px; text-decoration:none; color:#111; border-bottom:1px solid #f3f4f6; font-size:13px; } .sf-res a:hover { background:#f8fafc; } .sf-res small { color:#6b7280; }
+</style>
+<div class="pg-hdr"><div class="pg-row">
+  <div><h1>📚 Study Follow-up</h1><p>Calls to parents about studies and oral tests - what was said, the result, date and time. Oral test results go straight to the parent.</p></div>
+  <div class="df g8"><a class="btn btn-p" href="@Link("/StudyFollowup/Export")" style="text-decoration:none;"><i class="fas fa-file-excel"></i> Export to Excel</a></div>
+</div></div>
+
+<div class="card" style="padding:14px;margin-top:12px;">
+  <label style="font-weight:800;font-size:13px;display:block;margin-bottom:4px;">➕ New follow-up - find the student</label>
+  <div class="sf-find">
+    <input type="text" id="sfFind" class="fc" placeholder="Type student / father / mother name or admission no. (2+ letters)" autocomplete="off"/>
+    <div class="sf-res" id="sfRes"></div>
+  </div>
+</div>
+
+<div class="sf-kpi">
+  <div><b>@Model.Entries.Count</b>Entries</div>
+  <div><b style="color:#2563eb">@Model.Calls</b>Parent calls</div>
+  <div><b style="color:#7c3aed">@Model.Orals</b>Oral tests</div>
+  <div><b style="color:#16a34a">@Model.Gave</b>Gave it</div>
+  <div><b style="color:#d97706">@Model.Partly</b>Partly</div>
+  <div><b style="color:#dc2626">@Model.CouldNot</b>Could not give</div>
+  <div><b>@Model.Students.Count</b>Students</div>
+  <div><b style="color:#dc2626">@Model.DueStudents</b>Follow-up due</div>
+</div>
+
+<div class="sf-pre">
+  @foreach (var p in presets) { <a class="@(fromS == p.from && toS == p.to ? "on" : "")" href="@Link("/StudyFollowup/Index", ("from", p.from), ("to", p.to))">@p.label</a> }
+</div>
+
+<div class="card" style="padding:14px;margin-bottom:14px;">
+  <form method="get" class="sf-f">
+    <input type="hidden" name="view" value="@view"/>
+    <input type="text" name="q" value="@ViewBag.Q" class="fc" placeholder="Search student, subject, topic, notes..." style="flex:2 1 220px;"/>
+    <select name="kind" class="fs"><option value="">Calls + oral tests</option><option value="Call" selected="@(ViewBag.Kind == "Call")">Parent calls only</option><option value="Oral" selected="@(ViewBag.Kind == "Oral")">Oral tests only</option></select>
+    <select name="result" class="fs"><option value="">Any oral result</option>@foreach (var o in StudyRules.Results) { <option selected="@(ViewBag.Result == o)">@o</option> }</select>
+    <input type="text" name="subject" value="@ViewBag.Subject" list="sfSubjects" class="fc" placeholder="Subject"/>
+    <datalist id="sfSubjects">@foreach (var s in subjects) { <option value="@s"></option> }</datalist>
+    <select name="className" class="fs"><option value="">All classes</option>@foreach (var c in classes) { <option selected="@(ViewBag.ClassName == c)">@c</option> }</select>
+    <select name="sectionName" class="fs"><option value="">All medium / stream</option>@foreach (var c in sections) { <option selected="@(ViewBag.SectionName == c)">@c</option> }</select>
+    <select name="batchName" class="fs"><option value="">All batches</option>@foreach (var c in batches) { <option selected="@(ViewBag.BatchName == c)">@c</option> }</select>
+    <select name="followedBy" class="fs"><option value="">Done by: anyone</option>@foreach (var f in followers) { <option value="@f.Key" selected="@(ViewBag.FollowedBy == f.Key)">@f.FollowedByName</option> }</select>
+    <select name="status" class="fs"><option value="">Any student</option><option value="due" selected="@(ViewBag.Status == "due")">Follow-up due</option></select>
+    <input type="date" name="from" value="@fromS" class="fc" title="From date"/><input type="date" name="to" value="@toS" class="fc" title="To date"/>
+    <button class="btn btn-p" type="submit">Search</button><a class="btn" href="/StudyFollowup/Index" style="text-decoration:none;">Clear</a>
+  </form>
+</div>
+
+<div class="sf-tab">
+  <a class="@(view == "log" ? "on" : "")" href="@Link("/StudyFollowup/Index", ("view", "log"))">Date &amp; time wise (@Model.Entries.Count)</a>
+  <a class="@(view == "students" ? "on" : "")" href="@Link("/StudyFollowup/Index", ("view", "students"))">Student wise (@Model.Students.Count)</a>
+</div>
+
+<div class="card"><div class="tbl-wrap">
+@if (view == "log")
+{
+  if (!Model.Entries.Any()) { <div class="empty"><div class="empty-ico">📚</div><h3>No follow-up in this period</h3><p>Search a student above to add the first one, or widen the dates.</p></div> }
+  else {
+  <table>
+    <thead><tr><th>Date &amp; time</th><th>Student</th><th>Type</th><th>What</th><th>Result / outcome</th><th>What was said</th><th>By</th><th>Next</th></tr></thead>
+    <tbody>
+    @foreach (var f in Model.Entries) {
+      <tr>
+        <td style="white-space:nowrap;font-size:12.5px;"><b>@f.FollowupAt.ToString("dd MMM yyyy")</b><div class="sf-note">@f.FollowupAt.ToString("h:mm tt")</div></td>
+        <td><a href="/StudyFollowup/Student/@f.StudentId" class="fw7" style="text-decoration:none;">@f.StudentName</a><div class="sf-note">@string.Join(" · ", new[] { f.ClassName?.Trim(), f.SectionName?.Trim(), f.BatchName?.Trim() }.Where(x => !string.IsNullOrWhiteSpace(x)))</div></td>
+        <td><span class="sf-pill k-@f.Kind">@StudyRules.KindLabel(f.Kind)</span></td>
+        <td style="font-size:12.5px;">
+          @if (f.IsOral) { <b>@f.Subject</b><div class="sf-note">@f.Topic</div> }
+          else { <b>@(f.Category ?? "Studies")</b><div class="sf-note">@f.Mode@(string.IsNullOrWhiteSpace(f.SpokeTo) ? "" : " · spoke to " + f.SpokeTo)</div> }
+        </td>
+        <td>
+          @if (f.IsOral) { <span class="sf-pill @ResCls(f.Result)">@f.Result</span>@if (StudyHelpers.Score(f) != "") { <b style="margin-left:6px;font-size:12.5px;">@StudyHelpers.Score(f)</b> } }
+          else { <span style="font-size:12.5px;font-weight:700;">@f.Outcome</span> }
+          @if (f.ParentNotified) { <div class="sf-note" style="color:#16a34a;">✓ parent notified</div> }
+        </td>
+        <td><div class="sf-note" style="max-width:340px;">@if (!string.IsNullOrWhiteSpace(f.ParentSaid)) { <span><b>Parent:</b> @f.ParentSaid</span><br/> }@if (!string.IsNullOrWhiteSpace(f.Notes)) { <span><b>@(f.IsOral ? "Remark:" : "We:")</b> @f.Notes</span> }</div></td>
+        <td style="font-size:12px;">@(string.IsNullOrWhiteSpace(f.FollowedByName) ? "—" : f.FollowedByName)</td>
+        <td style="white-space:nowrap;font-size:12px;">@(f.NextDate == null ? "—" : f.NextDate.Value.ToString("dd MMM yyyy"))</td>
+      </tr> }
+    </tbody>
+  </table> }
+}
+else
+{
+  if (!Model.Students.Any()) { <div class="empty"><div class="empty-ico">📚</div><h3>No students in this period</h3><p>Students with a call or an oral test appear here.</p></div> }
+  else {
+  <table>
+    <thead><tr><th>Student</th><th>Class · Medium · Batch</th><th>Parent calls</th><th>Oral tests</th><th>Gave</th><th>Partly</th><th>Could not</th><th>Last follow-up</th><th>Next</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var r in Model.Students) {
+      var l = r.Last!;
+      <tr>
+        <td><a href="/StudyFollowup/Student/@r.StudentId" class="fw7" style="text-decoration:none;">@r.StudentName</a><div class="sf-note">@r.AdmissionNo @(string.IsNullOrWhiteSpace(r.Phone) ? "" : "· " + r.Phone)</div></td>
+        <td style="font-size:12px;">@string.Join(" · ", new[] { r.ClassName, r.SectionName, r.BatchName }.Where(x => !string.IsNullOrWhiteSpace(x)))</td>
+        <td>@r.Calls</td><td>@r.Orals</td>
+        <td style="color:#16a34a;font-weight:700;">@r.Gave</td><td style="color:#d97706;font-weight:700;">@r.Partly</td><td style="color:#dc2626;font-weight:700;">@r.CouldNot</td>
+        <td style="font-size:12px;white-space:nowrap;"><b>@l.FollowupAt.ToString("dd MMM yyyy, h:mm tt")</b><div class="sf-note">@StudyRules.KindLabel(l.Kind)@(l.IsOral ? " · " + l.Subject : "")</div></td>
+        <td style="white-space:nowrap;font-size:12px;">@if (r.NextDate != null) { <b style="color:@(r.Due ? "#dc2626" : "#1e40af")">@r.NextDate.Value.ToString("dd MMM yyyy")</b>@if (r.Due) { <div class="sf-note" style="color:#dc2626;">due</div> } } else { <span style="color:#9ca3af;">—</span> }</td>
+        <td><a class="btn btn-p" href="/StudyFollowup/Student/@r.StudentId" style="text-decoration:none;font-size:12px;">Open</a></td>
+      </tr> }
+    </tbody>
+  </table> }
+}
+</div></div>
+<script>
+(function () {
+  const box = document.getElementById('sfFind'), res = document.getElementById('sfRes'); let t;
+  box.addEventListener('input', () => {
+    clearTimeout(t); const q = box.value.trim();
+    if (q.length < 2) { res.style.display = 'none'; return; }
+    t = setTimeout(async () => {
+      const r = await fetch('/StudyFollowup/Students?q=' + encodeURIComponent(q)); const j = await r.json();
+      res.innerHTML = j.length ? j.map(s => '<a href="/StudyFollowup/Student/' + s.studentId + '"><b></b> <small></small></a>').join('') : '<a style="color:#6b7280;">No student found</a>';
+      [...res.querySelectorAll('a')].forEach((a, i) => { if (!j[i]) return; a.querySelector('b').textContent = j[i].fullName; a.querySelector('small').textContent = ' ' + [j[i].admissionNo, j[i].className, j[i].sectionName].filter(Boolean).join(' · '); });
+      res.style.display = 'block';
+    }, 300);
+  });
+  document.addEventListener('click', e => { if (!res.contains(e.target) && e.target !== box) res.style.display = 'none'; });
+})();
+</script>

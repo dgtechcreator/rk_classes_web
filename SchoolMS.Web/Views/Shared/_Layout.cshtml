@@ -338,6 +338,10 @@
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Notes"?"active":"")" href="/Notes/Index">
       <span class="nav-ic"><i class="fas fa-file-lines"></i></span> Notes &amp; Papers
     </a>}
+    @if(Context.Session.HasPerm("study_followup")){
+    <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="StudyFollowup"?"active":"")" href="/StudyFollowup/Index">
+      <span class="nav-ic"><i class="fas fa-book-reader"></i></span> Study Follow-up
+    </a>}
     @if(Context.Session.HasPerm("lecture_summary")){
     <a class="nav-item @(ViewContext.RouteData.Values["controller"]?.ToString()=="Lecture" && ViewContext.RouteData.Values["action"]?.ToString()=="Summary"?"active":"")" href="/Lecture/Summary">
       <span class="nav-ic"><i class="fas fa-chart-pie"></i></span> Lecture Summary

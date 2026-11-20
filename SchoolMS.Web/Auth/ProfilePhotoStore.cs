@@ -5,12 +5,12 @@ namespace SchoolMS.Web.Auth;
 /// both write the same files and the same /images/{folder}/{guid}.ext paths in the DB. The file type is decided from the
 /// file's own bytes (never from the client's file name), so only real JPEG / PNG / WEBP images can ever be saved.
 /// </summary>
-public class ProfilePhotoStore(IWebHostEnvironment env)
+public class ProfilePhotoStore(UploadLocations loc)
 {
     public const long MaxBytes = 5 * 1024 * 1024;
     public static readonly string[] Folders = { "students", "faculty", "users" };
 
-    /// <summary>Saves the upload under wwwroot/images/{folder}. Returns the web path to store in the DB, or an error message.</summary>
+    /// <summary>Saves the upload (in the deploy-safe uploads folder, see UploadLocations). Returns the web path /images/{folder}/{file} to store in the DB, or an error message.</summary>
     public (string? path, string? error) Save(IFormFile? file, string folder)
     {
         if (file == null || file.Length == 0) return (null, "Please choose a photo.");
@@ -26,7 +26,7 @@ public class ProfilePhotoStore(IWebHostEnvironment env)
         }
         if (ext == null) return (null, "Only JPG, PNG or WEBP photos are allowed.");
 
-        var dir = Path.Combine(env.WebRootPath, "images", folder);
+        var dir = loc.PhotoDir(folder);
         Directory.CreateDirectory(dir);
         var fn = $"{Guid.NewGuid():N}{ext}";
         using (var fs = new FileStream(Path.Combine(dir, fn), FileMode.CreateNew))
@@ -46,8 +46,12 @@ public class ProfilePhotoStore(IWebHostEnvironment env)
             if (name.Length == 0 || name.Contains('/') || name.Contains('\\') || name.Contains("..")) return;
             try
             {
-                var full = Path.Combine(env.WebRootPath, "images", folder, name);
-                if (File.Exists(full)) File.Delete(full);
+                // New folder first, then the old in-site folder (files not copied across yet).
+                foreach (var dir in new[] { loc.PhotoDir(folder), loc.LegacyPhotoDir(folder) }.Distinct())
+                {
+                    var full = Path.Combine(dir, name);
+                    if (File.Exists(full)) File.Delete(full);
+                }
             }
             catch { /* a locked / missing file must never fail the request */ }
             return;

@@ -53,6 +53,8 @@ public class PagePermissionFilter : IActionFilter
         Add("FeeStructure", new("fees_due"), "FeesDue", "CollectFee", "GenerateMonthly");
         Add("FeeFollowup",  new("fees_due"), "Index", "Student", "Add", "Delete", "Export");
 
+        Add("StudyFollowup", new("study_followup"), "Index", "Student", "Add", "Delete", "Export", "Students");
+
         Add("Expenses",     new("expenses_view"), "Index");
         Add("Expenses",     new("expenses", true), "Create", "Edit", "Save", "Delete");
 

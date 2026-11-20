@@ -12,6 +12,7 @@ using SchoolMS.Web.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<SchoolMS.Web.Auth.UserAccessCache>();
+builder.Services.AddSingleton<SchoolMS.Web.Auth.UploadLocations>();
 builder.Services.AddSingleton<SchoolMS.Web.Auth.ProfilePhotoStore>();
 builder.Services.AddSingleton<SchoolMS.Web.Auth.NoteFileStore>();
 builder.Services.AddSingleton<AppSettingsRepo>();
@@ -145,6 +146,8 @@ builder.Services.AddScoped<BroadcastService>();
 builder.Services.AddScoped<WebAuthnRepo>();
 builder.Services.AddScoped<FeeFollowupRepo>();
 builder.Services.AddScoped<FeeFollowupService>();
+builder.Services.AddScoped<StudyFollowupRepo>();
+builder.Services.AddScoped<StudyFollowupService>();
 builder.Services.AddScoped<ClassroomService>();
 builder.Services.AddScoped<LoginActivityRepo>();
 builder.Services.AddScoped<LoginActivityService>();
@@ -223,6 +226,28 @@ if (!app.Environment.IsDevelopment())
 // .apk is not a known type to the static-file middleware, so the app's update download (wwwroot/app/RKClasses.apk) needs it.
 var staticTypes = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
 staticTypes.Mappings[".apk"] = "application/vnd.android.package-archive";
+// Profile photos live in a folder OUTSIDE the deployed site (see UploadLocations) so a deploy can never delete them. Served at the
+// same /images/... URLs; anything not found there (logos, photos still in wwwroot) falls through to the normal static files below.
+{
+    var uploads = app.Services.GetRequiredService<SchoolMS.Web.Auth.UploadLocations>();
+    var uploadLog = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Uploads");
+    uploadLog.LogInformation("{Where}", uploads.Description);
+    if (uploads.PhotosRoot != null)
+    {
+        try
+        {
+            var copied = uploads.MigrateLegacy();
+            if (copied > 0) uploadLog.LogInformation("Copied {Count} existing photo / note file(s) into the uploads folder.", copied);
+        }
+        catch (Exception ex) { uploadLog.LogWarning(ex, "Could not copy old uploads across; they stay readable from the old folders."); }
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploads.PhotosRoot),
+            RequestPath = "/images",
+            ContentTypeProvider = staticTypes,
+        });
+    }
+}
 app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = staticTypes });
 
 // Clear old cookies from browser
@@ -294,6 +319,7 @@ try
     scope.ServiceProvider.GetRequiredService<ActivityRepo>().EnsureSchema();
     scope.ServiceProvider.GetRequiredService<LoginActivityRepo>().EnsureSchema();
     scope.ServiceProvider.GetRequiredService<FeeFollowupRepo>().EnsureSchema();
+    scope.ServiceProvider.GetRequiredService<StudyFollowupRepo>().EnsureSchema();
     _ = scope.ServiceProvider.GetRequiredService<LectureRepo>();   // creates Classrooms + Lectures.ClassroomId if missing
     scope.ServiceProvider.GetRequiredService<DiscontinuedRepo>().EnsureSchema();
     scope.ServiceProvider.GetRequiredService<BatchHolidayRepo>().EnsureSchema();

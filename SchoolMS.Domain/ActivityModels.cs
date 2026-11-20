@@ -18,6 +18,8 @@ public static class ActivityType
     public const string LectureDone = "lecture_done";
     /// <summary>A message the admin sent (Send Notification).</summary>
     public const string Notice = "notice";
+    /// <summary>Study follow-up: an oral test result, or a summary of a call about the child's studies.</summary>
+    public const string Study = "study";
 }
 
 /// <summary>One thing that happened to one student (marked absent, marks entered, fee received, lecture scheduled...).</summary>

@@ -70,6 +70,13 @@ IF COL_LENGTH('dbo.ParentAccounts', 'NotifSeenAt') IS NULL
             });
     }
 
+    /// <summary>Takes a notification back (e.g. a study follow-up that was deleted) - the parent no longer sees it.</summary>
+    public void RemoveByKey(int studentId, string dedupeKey)
+    {
+        EnsureSchema();
+        db.ExecSql("DELETE FROM StudentActivities WHERE StudentId = @S AND DedupeKey = @Key", new() { { "@S", studentId }, { "@Key", Cut(dedupeKey, 150) } });
+    }
+
     /// <summary>One row for every active student of the class (and section / batch when given). Returns how many were added.</summary>
     public int InsertForGroup(int classId, int? sectionId, int? batchId, string kind, string title, string message, string dedupeKey, int? referenceId)
     {

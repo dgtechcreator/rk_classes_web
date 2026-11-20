@@ -100,6 +100,47 @@ public class ActivityNotifier(ActivityRepo repo, NotificationService staffNotifs
                 $"Fee balance of ₹{balance:N0} is pending for {Name(studentId)}. Please pay at the earliest.", $"feedue:{date:yyyyMMdd}", null);
         });
 
+    // ── study follow-up (oral tests, calls about studies) ───────────────────────────────────
+
+    static string StudyKey(int followupId) => $"study:{followupId}";
+
+    /// <summary>The parent hears the result of an oral test (subject, topic, gave it or not, score, the teacher's remark).</summary>
+    public void OralTestResult(StudyFollowup f)
+        => Safe(nameof(OralTestResult), () =>
+        {
+            var name = Name(f.StudentId);
+            var what = string.IsNullOrWhiteSpace(f.Subject) ? "the oral test" : $"the {f.Subject!.Trim()} oral test";
+            if (!string.IsNullOrWhiteSpace(f.Topic)) what += $" (topic: {f.Topic!.Trim()})";
+            var score = f.Marks != null && f.OutOf is > 0 ? $" Score: {f.Marks:0.##}/{f.OutOf:0.##}." : "";
+            var remark = string.IsNullOrWhiteSpace(f.Notes) ? "" : $" Remark: {f.Notes!.Trim().TrimEnd('.', '!')}.";
+            var day = Day(f.FollowupAt);
+            var msg = f.Result switch
+            {
+                StudyRules.Gave     => $"{name} gave {what} on {day} - answered well.{score}{remark}",
+                StudyRules.Partly   => $"{name} gave {what} on {day} - answered only partly.{score}{remark} Please help to revise it at home.",
+                StudyRules.CouldNot => $"{name} could NOT give {what} on {day}.{score}{remark} Please help to revise it at home.",
+                _                   => $"{what} of {name} could not be taken on {day}.{remark}",
+            };
+            msg = msg.Replace("  ", " ");
+            var title = f.Result switch { StudyRules.Gave => "Oral test: done well", StudyRules.Partly => "Oral test: partly done", StudyRules.CouldNot => "Oral test: not done", _ => "Oral test" };
+            repo.Upsert(f.StudentId, ActivityType.Study, title, msg, StudyKey(f.FollowupId), f.FollowupId);
+        });
+
+    /// <summary>Optional: a short note of what the institute told the parent about the child's studies.</summary>
+    public void StudyCallSummary(StudyFollowup f)
+        => Safe(nameof(StudyCallSummary), () =>
+        {
+            var name = Name(f.StudentId);
+            var about = string.IsNullOrWhiteSpace(f.Category) || f.Category == "Other" ? "studies" : f.Category!.Trim().ToLowerInvariant();
+            var next = f.NextDate == null ? "" : $" We will follow up again on {Day(f.NextDate.Value)}.";
+            repo.Upsert(f.StudentId, ActivityType.Study, "Study follow-up",
+                $"About {name}'s {about}: {(f.Notes ?? "").Trim().TrimEnd('.', '!')}.{next}", StudyKey(f.FollowupId), f.FollowupId);
+        });
+
+    /// <summary>A deleted follow-up is taken back from the parent's notifications.</summary>
+    public void StudyFollowupRemoved(int studentId, int followupId)
+        => Safe(nameof(StudyFollowupRemoved), () => repo.RemoveByKey(studentId, StudyKey(followupId)));
+
     // ── notes / practice papers ───────────────────────────────────────────────────────────
 
     public void NotesPosted(ClassNote n)
